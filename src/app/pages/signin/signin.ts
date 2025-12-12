@@ -125,27 +125,28 @@ export class Signin {
     ) {}
 
     onSubmit() {
-        if (this.signinForm.valid) {
-            this.isLoading = true;
-            this.errorMessage = '';
+        this.router.navigate(['/dashboard']);
+        // if (this.signinForm.valid) {
+        //     this.isLoading = true;
+        //     this.errorMessage = '';
             
-            const { email, password, rememberMe } = this.signinForm.value;
+        //     const { email, password, rememberMe } = this.signinForm.value;
             
-            this.authService.signin(email!, password!, rememberMe!).subscribe({
-                next: (response) => {
-                    this.isLoading = false;
-                    console.log('Sign in successful:', response);
-                    // Redirect to dashboard on successful login
-                    this.router.navigate(['/dashboard']);
-                },
-                error: (error) => {
-                    this.isLoading = false;
-                    this.errorMessage = error.error?.message || 'Sign in failed. Please try again.';
-                    console.error('Sign in error:', error);
-                }
-            });
-        } else {
-            console.log('Form is invalid');
-        }
+        //     this.authService.signin(email!, password!, rememberMe!).subscribe({
+        //         next: (response) => {
+        //             this.isLoading = false;
+        //             console.log('Sign in successful:', response);
+        //             // Redirect to dashboard on successful login
+        //             this.router.navigate(['/dashboard']);
+        //         },
+        //         error: (error) => {
+        //             this.isLoading = false;
+        //             this.errorMessage = error.error?.message || 'Sign in failed. Please try again.';
+        //             console.error('Sign in error:', error);
+        //         }
+        //     });
+        // } else {
+        //     console.log('Form is invalid');
+        // }
     }
 }

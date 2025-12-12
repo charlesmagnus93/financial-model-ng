@@ -43,7 +43,7 @@ import { ButtonModule } from "primeng/button";
 
                 <!-- CTA Buttons  -->
                 <div class="hidden md:flex md:items-center md:gap-4">
-                    <p-button type="button">Sign In</p-button>
+                    <p-button type="button" (click)="goTo()">Sign In</p-button>
                     <!-- <p-button type="button">Request Demo</p-button> -->
                 </div>
                 </div>
@@ -54,4 +54,8 @@ import { ButtonModule } from "primeng/button";
 
 export class HeaderWidget {
     constructor(public router: Router) {}
+
+    goTo() {
+        this.router.navigate(['/login']);
+    }
 }

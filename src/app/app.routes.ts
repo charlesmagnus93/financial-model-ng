@@ -5,13 +5,13 @@ import { Dashboard } from './pages/dashboard/dashboard';
 import { Signin } from './pages/signin/signin';
 
 export const routes: Routes = [
+    { path: '', component: Landing },
+    { path: 'login', component: Signin },
     {
-        path: '',
+        path: 'dashboard',
         component: AppLayout,
         children: [
             { path: '', component: Dashboard }
         ]
     },
-    { path: 'login', component: Signin },
-    { path: 'landing', component: Landing },
 ];
