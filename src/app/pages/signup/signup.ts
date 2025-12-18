@@ -1,25 +1,23 @@
-import { Component, OnInit } from "@angular/core";
-import { ButtonModule } from 'primeng/button';
-import { CheckboxModule } from 'primeng/checkbox';
-import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
-import { RippleModule } from 'primeng/ripple';
-import { Message } from 'primeng/message';
-import { FormGroup, FormControl, FormsModule, ReactiveFormsModule, Validators } from "@angular/forms";
-import { RouterModule, Router } from "@angular/router";
-// import { HttpClientModule } from '@angular/common/http';
-import { AuthService } from '../services/auth.service';
-import { GoogleAuthService } from '../services/google-auth.service';
-import { CommonModule } from '@angular/common';
+import { CommonModule } from "@angular/common";
+import { Component } from "@angular/core";
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from "@angular/forms";
+import { Router, RouterModule } from "@angular/router";
+import { ButtonModule } from "primeng/button";
+import { InputTextModule } from "primeng/inputtext";
+import { Message } from "primeng/message";
+import { PasswordModule } from "primeng/password";
+import { RippleModule } from "primeng/ripple";
+import { GoogleAuthService } from "../services/google-auth.service";
+import { AuthService } from "../services/auth.service";
 
 @Component({
 
-    selector: 'app-signin',
+    selector: 'app-signup',
     standalone: true,
-    imports: [ReactiveFormsModule, FormsModule, RouterModule, PasswordModule, InputTextModule, ButtonModule, CheckboxModule, RippleModule, Message, /*HttpClientModule,*/ CommonModule],
+    imports: [ReactiveFormsModule, FormsModule, RouterModule, PasswordModule, InputTextModule, ButtonModule, RippleModule, Message, CommonModule],
     providers: [AuthService, GoogleAuthService],
     template: `
-    <form [formGroup]="signinForm">
+    <form [formGroup]="signupForm">
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
                 <div class="flex flex-col items-center justify-center">
                     <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
@@ -53,16 +51,16 @@ import { CommonModule } from '@angular/common';
                             <div>
                                 <label for="email" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
                                 <input pInputText id="email" type="text" placeholder="Email address" class="w-full md:w-120 mb-4" formControlName="email" />
-                                @if(signinForm.controls['email'].invalid && (signinForm.controls['email'].dirty || signinForm.controls['email'].touched)) {
+                                @if(signupForm.controls['email'].invalid && (signupForm.controls['email'].dirty || signupForm.controls['email'].touched)) {
                                     <p-message severity="error" variant="simple" size="small">
-                                        @if(signinForm.controls['email'].errors?.['required']) {
+                                        @if(signupForm.controls['email'].errors?.['required']) {
                                             <div class="p-message p-component p-message-error p-message-simple p-message-sm " aria-live="polite" role="alert">
                                                 <div class="p-message-content">
                                                     <span class="p-message-text">Email is required</span>
                                                 </div>
                                             </div>
                                         }
-                                        @if(signinForm.controls['email'].errors?.['email']) {
+                                        @if(signupForm.controls['email'].errors?.['email']) {
                                             <div class="p-message p-component p-message-error p-message-simple p-message-sm " aria-live="polite" role="alert">
                                                 <div class="p-message-content">
                                                     <span class="p-message-text">Email is invalid</span>
@@ -74,16 +72,16 @@ import { CommonModule } from '@angular/common';
     
                                 <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Password</label>
                                 <p-password id="password1" formControlName="password" placeholder="Password" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false"></p-password>
-                                @if(signinForm.controls['password'].invalid && (signinForm.controls['password'].dirty || signinForm.controls['password'].touched)) {
+                                @if(signupForm.controls['password'].invalid && (signupForm.controls['password'].dirty || signupForm.controls['password'].touched)) {
                                     <p-message severity="error" variant="simple" size="small">
-                                        @if(signinForm.controls['password'].errors?.['required']) {
+                                        @if(signupForm.controls['password'].errors?.['required']) {
                                             <div class="p-message p-component p-message-error p-message-simple p-message-sm" aria-live="polite" role="alert">
                                                 <div class="p-message-content">
                                                     <span class="p-message-text">Password is required</span>
                                                 </div>
                                             </div>
                                         }
-                                        @if(signinForm.controls['password'].errors?.['pattern']) {
+                                        @if(signupForm.controls['password'].errors?.['pattern']) {
                                             <div class="p-message p-component p-message-error p-message-simple p-message-sm" aria-live="polite" role="alert">
                                                 <div class="p-message-content">
                                                     <span class="p-message-text">Password is invalid</span>
@@ -93,14 +91,11 @@ import { CommonModule } from '@angular/common';
                                     </p-message>
                                 }
 
-    
-                                <div class="flex items-center justify-between mt-2 mb-8 gap-8">
-                                    <div class="flex items-center">
-                                        <p-checkbox formControlName="rememberMe" id="rememberme1" binary class="mr-2"></p-checkbox>
-                                        <label for="rememberme1">Remember me</label>
-                                    </div>
-                                    <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary" routerLink="/">Forgot password?</span>
-                                </div>
+                                <!-- <label for="username" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2"></label>
+                                <input type="text" pInputText id="username" formControlName="username" placeholder="username" styleClass="mb-4" [fluid]="true" /> -->
+
+                                <div class="flex items-center justify-between mt-2 mb-8 gap-8"></div>
+
                                 <!-- Google OAuth Button -->
                                 <p-button
                                     type="button"
@@ -108,7 +103,7 @@ import { CommonModule } from '@angular/common';
                                     label="Continue with Google"
                                     styleClass="w-full mb-4"
                                     severity="secondary"
-                                    (click)="onGoogleSignIn()">
+                                    (click)="onGoogleSignUp()">
                                     <i class="pi pi-google mr-2"></i>
                                 </p-button>
 
@@ -119,7 +114,7 @@ import { CommonModule } from '@angular/common';
                                     <div class="flex-1 border-t border-surface-300 dark:border-surface-600"></div>
                                 </div>
                                 <!--  -->
-                                <p-button type="submit" [disabled]="!signinForm.valid || isLoading" [label]="isLoading ? 'Sign in...' : 'Sign In'" styleClass="w-full" (click)="onSubmit()"></p-button>
+                                <p-button type="submit" [disabled]="!signupForm.valid || isLoading" [label]="isLoading ? 'Sign up...' : 'Sign Up'" styleClass="w-full" (click)="onSubmit()"></p-button>
                                 @if(errorMessage) {
                                     <div class="flex justify-center mt-4">
                                         <p-message severity="error" variant="simple" size="small" [text]="errorMessage"></p-message>
@@ -130,16 +125,18 @@ import { CommonModule } from '@angular/common';
                     </div>
                 </div>
             </div>
-    </form>`
+    </form>
+    
+    `
 })
-export class Signin implements OnInit {
+export class Signup {
     isLoading = false;
     errorMessage = '';
 
-    signinForm = new FormGroup({
+    signupForm = new FormGroup({
         email: new FormControl('', [Validators.required, Validators.email]),
         password: new FormControl('', [Validators.required, Validators.pattern('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$')]),
-        rememberMe: new FormControl(false)
+        username: new FormControl('')
     });
 
     constructor(
@@ -148,47 +145,25 @@ export class Signin implements OnInit {
         private router: Router
     ) {}
 
-    ngOnInit() {
-        // Initialize Google OAuth
-        this.googleAuthService.initGoogleAuth();
-
-        // Pre-fill email if remember me was previously checked
-        const savedEmail = localStorage.getItem('rememberedEmail');
-        const rememberMeChecked = this.authService.isRememberMe();
-
-        if (savedEmail && rememberMeChecked) {
-            this.signinForm.patchValue({
-                email: savedEmail,
-                rememberMe: true
-            });
-        }
-    }
-
     onSubmit() {
-        if (this.signinForm.valid) {
+        console.log('Submitting sign-up form', this.signupForm.value);
+        if (this.signupForm.valid) {
             this.isLoading = true;
             this.errorMessage = '';
 
-            const { email, password, rememberMe } = this.signinForm.value;
+            const { email, password, username } = this.signupForm.value;
 
-            // Save email for remember me functionality
-            if (rememberMe) {
-                localStorage.setItem('rememberedEmail', email!);
-            } else {
-                localStorage.removeItem('rememberedEmail');
-            }
-
-            this.authService.signin(email!, password!, rememberMe!).subscribe({
+            this.authService.signup(email!, password!, username!).subscribe({
                 next: (response) => {
                     this.isLoading = false;
-                    console.log('Sign in successful:', response.user);
+                    console.log('Sign up successful:', response.user);
                     // Redirect to dashboard on successful login
                     this.router.navigate(['/dashboard']);
                 },
                 error: (error) => {
                     this.isLoading = false;
-                    this.errorMessage = error.error?.message || 'Sign in failed. Please try again.';
-                    console.error('Sign in error:', error);
+                    this.errorMessage = error.error?.message || 'Sign up failed. Please try again.';
+                    console.error('Sign up error:', error);
                 }
             });
         } else {
@@ -196,14 +171,13 @@ export class Signin implements OnInit {
         }
     }
 
-    onGoogleSignIn() {
+    onGoogleSignUp() {
         this.isLoading = true;
         this.errorMessage = '';
-
         this.googleAuthService.signInWithGoogle().subscribe({
             next: (response) => {
                 this.isLoading = false;
-                console.log('Google sign in successful:', response);
+                console.log('Google sign up successful:', response);
                 // Redirect to dashboard on successful login
                 this.router.navigate(['/dashboard']);
             },
