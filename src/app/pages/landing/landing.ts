@@ -38,9 +38,9 @@ import { IndustriesWidget } from "./comp/industrieswidget";
     HeaderWidget,
     FeaturesWidget,
     AnalyticsWidget,
-    CTAWidget,
+    // CTAWidget,
     FooterWidget,
-    TestimonialWidget,
+    // TestimonialWidget,
     IndustriesWidget
 ],
     // template: `

@@ -22,7 +22,8 @@ export class AuthService {
    * @returns Observable with authentication response
    */
   signin(email: string, password: string, rememberMe: boolean = false): Observable<AuthRes> {
-    const credentials = { username: email, password };
+    // Backend expects email/password (not username) for login
+    const credentials = { email, password };
 
     return this.apiService.post('/auth/login', credentials).pipe(
       tap((response: AuthRes) => {

@@ -14,11 +14,11 @@ import { ButtonModule } from "primeng/button";
                 <div class="flex h-16 items-center justify-between">
                  <!-- Logo  -->
                 <div class="flex items-center">
-                    <a href="/" class="flex items-center gap-2">
+                    <a [routerLink]="'/dashboard'" class="flex items-center gap-2">
                     <div class="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <span class="text-white">Rx</span>
+                        <span class="text-white">Fm</span>
                     </div>
-                    <span class="text-gray-900">PharmaFinance</span>
+                    <span class="text-gray-900">Financials Models</span>
                     </a>
                 </div>
 

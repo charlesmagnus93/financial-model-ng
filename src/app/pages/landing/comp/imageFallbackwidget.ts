@@ -38,25 +38,25 @@ import { Component, Input } from '@angular/core';
                 </p>
 
                 <div class="space-y-4 pt-4">
-                <div
-                    class="flex items-start gap-3"
-                    *ngFor="let solution of solutions; let i = index"
-                >
-                    <!-- Remplacer CheckCircle par un SVG simple -->
-                    <svg
-                    class="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    viewBox="0 0 24 24"
-                    >
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M9 12l2 2l4 -4m6 2a9 9 0 1 1 -18 0a9 9 0 0 1 18 0z"
-                    />
-                    </svg>
+                  @for (solution of solutions; track solution) {
+                    <div class="flex items-start gap-3">
+                        <!-- Remplacer CheckCircle par un SVG simple -->
+                        <svg
+                        class="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        viewBox="0 0 24 24"
+                        >
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12l2 2l4 -4m6 2a9 9 0 1 1 -18 0a9 9 0 0 1 18 0z"
+                        />
+                        </svg>
+    
+                        <span class="text-gray-700">{{ solution }}</span>
+                    </div>
 
-                    <span class="text-gray-700">{{ solution }}</span>
-                </div>
+                  }
                 </div>
 
             </div>

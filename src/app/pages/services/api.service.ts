@@ -47,18 +47,18 @@ export class ApiService {
       });
     }
     // format body data as x-www-form-urlencoded if content type is set accordingly
-    let body: any;
-    if (data) {
-      body = new URLSearchParams(data).toString();
-    }
+    // let body: any = data;
+    // if (data) {
+    //   body = new URLSearchParams(data).toString();
+    // }
 
     // Set content type for requests with body
     if (data && !httpHeaders.has('Content-Type')) {
-      // httpHeaders = httpHeaders.set('Content-Type', 'application/json');
-      httpHeaders = httpHeaders.set(
-        'Content-Type',
-        'application/x-www-form-urlencoded'
-      );
+      httpHeaders = httpHeaders.set('Content-Type', 'application/json');
+      // httpHeaders = httpHeaders.set(
+      //   'Content-Type',
+      //   'application/x-www-form-urlencoded'
+      // );
     }
 
     // Build query parameters
@@ -82,11 +82,11 @@ export class ApiService {
         return this.http.get<T>(url, options);
       case 'POST':
         // console.log('POST request to:', url, 'with data:', body, 'and options:', options);
-        return this.http.post<T>(url, body, options);
+        return this.http.post<T>(url, data, options);
       case 'PUT':
-        return this.http.put<T>(url, body, options);
+        return this.http.put<T>(url, data, options);
       case 'PATCH':
-        return this.http.patch<T>(url, body, options);
+        return this.http.patch<T>(url, data, options);
       case 'DELETE':
         return this.http.delete<T>(url, options);
       default:
