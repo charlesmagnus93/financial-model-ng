@@ -112,7 +112,7 @@ interface CommissionRow {
               }
             </select>
           </div>
-          <div class="col-span-12 md:col-span-3">
+          <div class="col-span-12 md:col-span-2">
             <div class="text-sm font-semibold mb-1">Product</div>
             <select class="p-inputtext w-full" formControlName="product">
               @for (p of products; track p) {
@@ -156,7 +156,7 @@ interface CommissionRow {
               inputStyleClass="w-full text-center"
             />
           </div>
-          <div class="col-span-12 md:col-span-1 flex items-end">
+          <div class="col-span-12 md:col-span-2 flex items-end">
             <button type="button" class="p-button p-button-primary w-full" (click)="addRowFromForm()">
               Add
             </button>

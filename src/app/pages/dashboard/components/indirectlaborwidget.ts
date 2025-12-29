@@ -83,7 +83,7 @@ interface LaborRow {
             [formGroup]="newRowForm"
             class="grid grid-cols-12 gap-3 items-end"
           >
-            <div class="col-span-12 md:col-span-7">
+            <div class="col-span-12 md:col-span-5">
               <div class="text-sm font-semibold mb-1">Role</div>
               <input
                 type="text"
@@ -104,7 +104,7 @@ interface LaborRow {
                 inputStyleClass="w-full text-center"
               />
             </div>
-            <div class="col-span-12 md:col-span-1">
+            <div class="col-span-12 md:col-span-3">
               <p-button
                 label="Add"
                 icon="pi pi-plus"

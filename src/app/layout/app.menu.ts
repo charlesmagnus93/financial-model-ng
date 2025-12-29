@@ -38,55 +38,55 @@ export class AppMenu {
               {
                 label: 'Input Landing Page',
                 icon: 'pi pi-fw pi-sign-in',
-                routerLink: ['/dashboard/input-landing'],
+                routerLink: ['/dashboard/pharma-input-landing'],
                 queryParams: { section: 'input' },
               },
               {
                 label: 'Key Metrics Dashboard',
                 icon: 'pi pi-fw pi-chart-bar',
-                routerLink: ['/dashboard/key-metrics'],
+                routerLink: ['/dashboard/pharma-key-metrics'],
                 queryParams: { section: 'metrics' },
               },
               {
                 label: 'Financial Performance',
                 icon: 'pi pi-fw pi-chart-line',
-                routerLink: ['/dashboard/financial-performance'],
-                queryParams: { section: 'performance' },
+                routerLink: ['/dashboard/pharma-financial-performance'],
+                queryParams: { section: 'overview' },
               },
               {
                 label: 'Financial Position',
                 icon: 'pi pi-fw pi-briefcase',
-                routerLink: ['/dashboard/financial-position'],
-                queryParams: { section: 'position' },
+                routerLink: ['/dashboard/pharma-financial-position'],
+                queryParams: { section: 'balance-sheet' },
               },
               {
                 label: 'Cash Flow Statement',
                 icon: 'pi pi-fw pi-dollar',
-                routerLink: ['/dashboard/cash-flow'],
+                routerLink: ['/dashboard/pharma-cash-flow'],
                 queryParams: { section: 'cashflow' },
               },
               {
                 label: 'Sensitivity Analysis',
                 icon: 'pi pi-fw pi-sliders-h',
-                routerLink: ['/dashboard/sensitivity-analysis'],
+                routerLink: ['/dashboard/pharma-sensitivity-analysis'],
                 queryParams: { section: 'sensitivity' },
               },
               {
                 label: 'Scenario / IFs Analysis',
                 icon: 'pi pi-fw pi-sitemap',
-                routerLink: ['/dashboard/scenario-ifs'],
+                routerLink: ['/dashboard/pharma-scenario-ifs'],
                 queryParams: { section: 'scenario' },
               },
               {
                 label: 'Monte Carlo Simulation',
                 icon: 'pi pi-fw pi-discord',
-                routerLink: ['/dashboard/simulation-montecarlo'],
+                routerLink: ['/dashboard/pharma-simulation-montecarlo'],
                 queryParams: { section: 'montecarlo' },
               },
               {
                 label: 'Break-even & Payback',
                 icon: 'pi pi-fw pi-stopwatch',
-                routerLink: ['/dashboard/break-even-payback'],
+                routerLink: ['/dashboard/pharma-break-even-payback'],
                 queryParams: { section: 'breakeven' },
               },
             ],
@@ -95,14 +95,14 @@ export class AppMenu {
       },
       {
         label: 'Other Models',
-        items: [
-          {
-            label: 'Add New Model',
-            icon: 'pi pi-fw pi-plus',
-            routerLink: ['/dashboard'],
-            queryParams: { section: 'add-model' },
-          },
-        ],
+        // items: [
+        //   {
+        //     label: 'Add New Model',
+        //     icon: 'pi pi-fw pi-plus',
+        //     routerLink: ['/dashboard'],
+        //     queryParams: { section: 'add-model' },
+        //   },
+        // ],
       },
     ];
   }

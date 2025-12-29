@@ -91,64 +91,12 @@ interface FixedVariableRow {
           </div>
         </form>
 
-        <!-- <form [formGroup]="form" class="flex flex-col gap-4">
-          <div formArrayName="rows" class="space-y-3">
-            @for (row of rows.controls; track row; let i = $index) {
-            <div
-              [formGroupName]="i"
-              class="grid grid-cols-12 gap-3 items-center"
-            >
-              <div class="col-span-12 md:col-span-5">
-                <div class="text-sm font-semibold mb-1">Product</div>
-                <select class="p-inputtext w-full" formControlName="product">
-                  @for (p of products; track p) {
-                  <option [value]="p">{{ p }}</option>
-                  }
-                </select>
-              </div>
-              <div class="col-span-12 md:col-span-3">
-                <div class="text-sm font-semibold mb-1">Fixed Cost</div>
-                <p-inputnumber
-                  formControlName="fixedCost"
-                  mode="decimal"
-                  [minFractionDigits]="2"
-                  [maxFractionDigits]="4"
-                  [step]="1000"
-                  [showButtons]="true"
-                  inputStyleClass="w-full text-center"
-                />
-              </div>
-              <div class="col-span-12 md:col-span-3">
-                <div class="text-sm font-semibold mb-1">Variable Cost</div>
-                <p-inputnumber
-                  formControlName="variableCost"
-                  mode="decimal"
-                  [minFractionDigits]="2"
-                  [maxFractionDigits]="4"
-                  [step]="0.001"
-                  [showButtons]="true"
-                  inputStyleClass="w-full text-center"
-                />
-              </div>
-              <div class="col-span-12 md:col-span-1 text-right md:text-left">
-                <p-button
-                  label="Remove"
-                  variant="outlined"
-                  severity="danger"
-                  (click)="removeRow(i)"
-                />
-              </div>
-            </div>
-            }
-          </div>
-        </form> -->
-
         <div class="border-t border-surface-800 pt-4">
           <div class="text-lg font-semibold mb-3">
             Add Fixed & Variable Cost
           </div>
           <form [formGroup]="newRowForm" class="grid grid-cols-12 gap-3">
-            <div class="col-span-12">
+            <div class="col-span-12 md:col-span-6">
               <div class="text-sm font-semibold mb-1">Product</div>
               <select class="p-inputtext w-full" formControlName="product">
                 <option value="">Add new...</option>
@@ -157,7 +105,7 @@ interface FixedVariableRow {
                 }
               </select>
             </div>
-            <div class="col-span-12">
+            <div class="col-span-12 md:col-span-6">
               <div class="text-sm font-semibold mb-1">Product (custom)</div>
               <input
                 type="text"

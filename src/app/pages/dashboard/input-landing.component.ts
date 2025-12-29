@@ -4,66 +4,102 @@ import { FormsModule } from '@angular/forms';
 import { TabsModule } from 'primeng/tabs';
 import { AssumptionCoreWidget } from './components/assumptioncorewidget';
 import { DistributorCommissionWidget } from './components/distributorcommissionwidget';
-import inputData from '../../../../input.json';
-import { DirectLaborWidget } from "./components/directlaborwidget";
-import { IndirectLaborWidget } from "./components/indirectlaborwidget";
-import { FixedVariableCostWidget } from "./components/fixedvariablecostwidget";
-import { UtilityScheduleWidget } from "./components/utilityschedulewidget";
-import { AccountsReceivableWidget } from "./components/accountsreceivablewidget";
-import { ProjectionWidget } from "./components/projectionwidget";
+import { DirectLaborWidget } from './components/directlaborwidget';
+import { IndirectLaborWidget } from './components/indirectlaborwidget';
+import { FixedVariableCostWidget } from './components/fixedvariablecostwidget';
+import { UtilityScheduleWidget } from './components/utilityschedulewidget';
+import { AccountsReceivableWidget } from './components/accountsreceivablewidget';
+import { ProjectionWidget } from './components/projectionwidget';
+import { InventoryAccountsPayableWidget } from './components/inventoryaccountspayablewidget';
+import { FixedAssetsScheduleWidget } from './components/fixedassetsschedulewidget';
+import { CostFinancingAssumptionsWidget } from './components/costfinancingassumptionswidget';
+import { SeniorDebtWidget } from './components/seniordebtwidget';
+import { RevolverLoanWidget } from './components/revolverloanwidget';
+import { OverdraftWidget } from './components/overdraftwidget';
+import { TaxScheduleWidget } from './components/taxschedulewidget';
+import { InflationScheduleWidget } from './components/inflationschedulewidget';
+import { RiskScheduleWidget } from './components/riskschedulewidget';
 
 @Component({
   standalone: true,
   selector: 'app-input-landing',
-  imports: [CommonModule, FormsModule, TabsModule, AssumptionCoreWidget, DistributorCommissionWidget, DirectLaborWidget, IndirectLaborWidget, FixedVariableCostWidget, UtilityScheduleWidget, AccountsReceivableWidget, ProjectionWidget],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TabsModule,
+    AssumptionCoreWidget,
+    DistributorCommissionWidget,
+    DirectLaborWidget,
+    IndirectLaborWidget,
+    FixedVariableCostWidget,
+    UtilityScheduleWidget,
+    AccountsReceivableWidget,
+    ProjectionWidget,
+    InventoryAccountsPayableWidget,
+    FixedAssetsScheduleWidget,
+    CostFinancingAssumptionsWidget,
+    SeniorDebtWidget,
+    RevolverLoanWidget,
+    OverdraftWidget,
+    TaxScheduleWidget,
+    InflationScheduleWidget,
+    RiskScheduleWidget,
+  ],
   template: `
     <p-tabs [(value)]="activeTab" class="w-full" scrollable>
       <p-tablist>
         @for (section of sections; track section.key) {
-          <p-tab [value]="section.key" class="whitespace-nowrap">
-            {{ section.label }}
-          </p-tab>
+        <p-tab [value]="section.key" class="whitespace-nowrap">
+          {{ section.label }}
+        </p-tab>
         }
       </p-tablist>
 
       <p-tabpanels>
         @for (section of sections; track section.key) {
-          <p-tabpanel [value]="section.key">
-            @switch (section.key) {
-              @case ('projection') {
-                <projection-widget></projection-widget>
-              }
-              @case ('core') {
-                <div class="grid grid-cols-12 gap-6 w-full">
-                  <core-assumption-widget class="col-span-12"></core-assumption-widget>
-                </div>
-              }
-              @case ('commission') {
-                <distributor-commission-widget></distributor-commission-widget>
-              }
-              @case ('direct-labour') {
-                <direct-labor-widget></direct-labor-widget>
-              }
-              @case ('indirect-labour') {
-                <indirect-labor-widget></indirect-labor-widget>
-              }
-              @case ('fixed-variable-costs') {
-                <fixed-variable-cost-widget></fixed-variable-cost-widget>
-              }
-              @case ('utility-schedule') {
-                <utility-schedule-widget></utility-schedule-widget>
-              }
-              @case ('accounts-receivable') {
-                <accounts-receivable-widget></accounts-receivable-widget>
-              }
-              @default {
-                <div class="card">
-                  <div class="text-lg font-semibold mb-2">{{ section.label }}</div>
-                  <p class="text-sm text-surface-300">Section content coming soon.</p>
-                </div>
-              }
-            }
-          </p-tabpanel>
+        <p-tabpanel [value]="section.key">
+          @switch (section.key) { @case ('projection') {
+          <projection-widget></projection-widget>
+          } @case ('core') {
+          <div class="grid grid-cols-12 gap-6 w-full">
+            <core-assumption-widget
+              class="col-span-12"
+            ></core-assumption-widget>
+          </div>
+          } @case ('commission') {
+          <distributor-commission-widget></distributor-commission-widget>
+          } @case ('direct-labour') {
+          <direct-labor-widget></direct-labor-widget>
+          } @case ('indirect-labour') {
+          <indirect-labor-widget></indirect-labor-widget>
+          } @case ('fixed-variable-costs') {
+          <fixed-variable-cost-widget></fixed-variable-cost-widget>
+          } @case ('utility-schedule') {
+          <utility-schedule-widget></utility-schedule-widget>
+          } @case ('accounts-receivable') {
+          <accounts-receivable-widget></accounts-receivable-widget>
+          } @case ('inventory-accounts-payable') {
+          <inventory-accounts-payable-widget></inventory-accounts-payable-widget>
+          } @case ('fixed-assets-schedule') {
+          <fixed-assets-schedule-widget></fixed-assets-schedule-widget>
+          } @case ('cost-financing-assumptions') {
+          <cost-financing-assumptions-widget></cost-financing-assumptions-widget>
+          } @case ('senior-debt') {
+          <senior-debt-widget></senior-debt-widget>
+          } @case ('revolver-loan') {
+          <revolver-loan-widget></revolver-loan-widget>
+          } @case ('overdraft') {
+          <overdraft-widget></overdraft-widget>
+          } @case ('tax-schedule') {
+          <tax-schedule-widget></tax-schedule-widget>
+          } @case ('inflation-schedule') {
+          <inflation-schedule-widget></inflation-schedule-widget>
+          } @case ('risk-schedule') {
+          <risk-schedule-widget></risk-schedule-widget>
+          } @default {
+          <projection-widget></projection-widget>
+          } }
+        </p-tabpanel>
         }
       </p-tabpanels>
     </p-tabs>
@@ -76,12 +112,22 @@ export class InputLandingComponent {
     { key: 'commission', label: 'Distributors Commission Input' },
     { key: 'direct-labour', label: 'Direct Labour Structure' },
     { key: 'indirect-labour', label: 'Indirect Labour Structure' },
-    { key: 'fixed-variable-costs', label: 'Fixed & Variable Costs Input Table' },
+    {
+      key: 'fixed-variable-costs',
+      label: 'Fixed & Variable Costs Input Table',
+    },
     { key: 'utility-schedule', label: 'Utility Schedule' },
     { key: 'accounts-receivable', label: 'Accounts Receivable Input Table' },
-    { key: 'inventory-accounts-payable', label: 'Inventory & Accounts Payable Input Table' },
+    {
+      key: 'inventory-accounts-payable',
+      label: 'Inventory & Accounts Payable Input Table',
+    },
     { key: 'fixed-assets-schedule', label: 'Fixed Assets Schedule' },
-    { key: 'cost-financing-assumptions', label: 'Cost & Financing Assumptions' },
+    {
+      key: 'cost-financing-assumptions',
+      label: 'Cost & Financing Assumptions',
+    },
+    { key: 'senior-debt', label: 'Senior Debt' },
     { key: 'revolver-loan', label: 'Revolver Loan' },
     { key: 'overdraft', label: 'Overdraft' },
     { key: 'tax-schedule', label: 'Tax Schedule' },

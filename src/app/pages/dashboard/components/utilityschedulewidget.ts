@@ -28,7 +28,7 @@ interface UtilityRow {
     <p-fluid class="flex">
       <div class="card flex flex-col gap-4 w-full fp-10">
         <div class="text-xl font-semibold">Utility Schedule</div>
-        <p class="text-sm text-surface-300">
+        <p class="text-sm">
           Adjust electricity, water, and steam usage assumptions for each projection year. Use the plus/minus controls to tweak values or add a new year below.
         </p>
 
@@ -302,7 +302,7 @@ interface UtilityRow {
                 inputStyleClass="w-full text-center"
               />
             </div>
-            <div class="col-span-12">
+            <div class="col-span-12 md:col-span-2">
               <p-button label="Add" icon="pi pi-plus" (click)="addRowFromForm()"></p-button>
             </div>
           </form>
