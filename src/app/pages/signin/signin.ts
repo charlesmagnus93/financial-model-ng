@@ -42,7 +42,7 @@ import { CommonModule } from '@angular/common';
                                         />
                                     </g>
                                 </svg>
-                                <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome to PrimeLand!</div>
+                                <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome to Longevity Financials Models</div>
                                 <span class="text-muted-color font-medium">Sign in to continue</span>
                             </div>
 
@@ -52,7 +52,7 @@ import { CommonModule } from '@angular/common';
     
                             <div>
                                 <label for="email" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
-                                <input pInputText id="email" type="text" placeholder="Email address" class="w-full md:w-120 mb-4" formControlName="email" />
+                                <input pInputText id="email" type="text" placeholder="Email address" class="w-full mb-4" formControlName="email" />
                                 @if(signinForm.controls['email'].invalid && (signinForm.controls['email'].dirty || signinForm.controls['email'].touched)) {
                                     <p-message severity="error" variant="simple" size="small">
                                         @if(signinForm.controls['email'].errors?.['required']) {
@@ -117,6 +117,10 @@ import { CommonModule } from '@angular/common';
                                     <div class="flex-1 border-t border-surface-300 dark:border-surface-600"></div>
                                     <span class="px-4 text-muted-color text-sm">or</span>
                                     <div class="flex-1 border-t border-surface-300 dark:border-surface-600"></div>
+                                </div>
+                                <div class="text-center text-sm mb-4 text-muted-color">
+                                    <span>Don't have an account?</span>
+                                    <a class="text-primary font-medium ml-1 no-underline cursor-pointer" routerLink="/signup">Sign up</a>
                                 </div>
                                 <!--  -->
                                 <p-button type="submit" [disabled]="!signinForm.valid || isLoading" [label]="isLoading ? 'Sign in...' : 'Sign In'" styleClass="w-full" (click)="onSubmit()"></p-button>

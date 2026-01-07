@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TabsModule } from 'primeng/tabs';
+import { ButtonModule } from 'primeng/button';
+import { MonteCarloSimulationWidget } from './components/montecarlosimulationwidget';
 
 interface MonteCarloSection {
   key: string;
@@ -11,50 +13,95 @@ interface MonteCarloSection {
 @Component({
   standalone: true,
   selector: 'app-simulation-montecarlo',
-  imports: [CommonModule, TabsModule],
+  imports: [CommonModule, TabsModule, MonteCarloSimulationWidget, ButtonModule],
   template: `
-    <p-tabs [(value)]="activeTab" class="w-full" scrollable>
-      <p-tablist>
-        @for (section of sections; track section.key) {
-          <p-tab [value]="section.key" class="whitespace-nowrap">
-            {{ section.label }}
-          </p-tab>
-        }
-      </p-tablist>
+    <div class="flex flex-col gap-4">
+      <div class="flex items-center justify-between">
+        <p-button
+          label="Back"
+          icon="pi pi-arrow-left"
+          variant="outlined"
+          severity="secondary"
+          [disabled]="isFirstSection"
+          (click)="goToPrevious()"
+        ></p-button>
+        <div class="text-sm text-surface-400">
+          Section {{ currentSectionIndex + 1 }} of {{ sections.length }} -
+          {{ currentSectionLabel }}
+        </div>
+        <p-button
+          label="Next"
+          icon="pi pi-arrow-right"
+          iconPos="right"
+          [disabled]="isLastSection"
+          (click)="goToNext()"
+        ></p-button>
+      </div>
 
-      <p-tabpanels>
-        @for (section of sections; track section.key) {
-          <p-tabpanel [value]="section.key">
-            <div class="card">
-              <div class="text-lg font-semibold mb-2">{{ section.label }}</div>
-              <p class="text-sm text-surface-400 mb-3">
-                {{ section.description }}
-              </p>
-              <div
-                class="border border-dashed border-surface-800 rounded p-4 text-sm text-surface-400"
-              >
-                Monte Carlo content for {{ section.label }} will appear here.
-              </div>
-            </div>
-          </p-tabpanel>
-        }
-      </p-tabpanels>
-    </p-tabs>
+      <p-tabs [(value)]="activeTab" class="w-full" scrollable>
+        <p-tablist>
+          @for (section of sections; track section.key) {
+            <p-tab [value]="section.key" class="whitespace-nowrap">
+              {{ section.label }}
+            </p-tab>
+          }
+        </p-tablist>
+
+        <p-tabpanels>
+          @for (section of sections; track section.key) {
+            <p-tabpanel [value]="section.key">
+              @switch (section.key) {
+                @case ('simulation-monte-carlo') {
+                  <monte-carlo-simulation-widget />
+                }
+                @default {
+                  <monte-carlo-simulation-widget />
+                }
+              }
+            </p-tabpanel>
+          }
+        </p-tabpanels>
+      </p-tabs>
+    </div>
   `,
 })
 export class MonteCarloSimulationComponent {
   sections: MonteCarloSection[] = [
     {
-      key: 'simulation-setup',
-      label: 'Simulation Setup',
-      description: 'Define distributions, iterations, and sampling approach.',
-    },
-    {
-      key: 'simulation-results',
-      label: 'Results & Insights',
-      description: 'View percentile outcomes, tornado charts, and key drivers.',
-    },
+      key: 'simulation-monte-carlo',
+      label: 'Monte Carlo Simulation Configuration'
+    }
   ];
 
-  activeTab = this.sections[0]?.key ?? 'simulation-setup';
+  activeTab = this.sections[0]?.key ?? 'simulation-monte-carlo';
+
+  get currentSectionIndex(): number {
+    return this.sections.findIndex((section) => section.key === this.activeTab);
+  }
+
+  get currentSectionLabel(): string {
+    return this.sections[this.currentSectionIndex]?.label ?? '';
+  }
+
+  get isFirstSection(): boolean {
+    return this.currentSectionIndex <= 0;
+  }
+
+  get isLastSection(): boolean {
+    return this.currentSectionIndex >= this.sections.length - 1;
+  }
+
+  goToPrevious(): void {
+    const prevIndex = this.currentSectionIndex - 1;
+    if (prevIndex >= 0) {
+      this.activeTab = this.sections[prevIndex].key;
+    }
+  }
+
+  goToNext(): void {
+    const nextIndex = this.currentSectionIndex + 1;
+    if (nextIndex < this.sections.length) {
+      this.activeTab = this.sections[nextIndex].key;
+    }
+  }
 }

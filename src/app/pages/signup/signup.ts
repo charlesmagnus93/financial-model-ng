@@ -1,6 +1,6 @@
 import { CommonModule } from "@angular/common";
 import { Component } from "@angular/core";
-import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from "@angular/forms";
+import { AbstractControl, FormControl, FormGroup, FormsModule, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from "@angular/forms";
 import { Router, RouterModule } from "@angular/router";
 import { ButtonModule } from "primeng/button";
 import { InputTextModule } from "primeng/inputtext";
@@ -17,7 +17,7 @@ import { AuthService } from "../services/auth.service";
     imports: [ReactiveFormsModule, FormsModule, RouterModule, PasswordModule, InputTextModule, ButtonModule, RippleModule, Message, CommonModule],
     providers: [AuthService, GoogleAuthService],
     template: `
-    <form [formGroup]="signupForm">
+    <form [formGroup]="signupForm" autocomplete="off">
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
                 <div class="flex flex-col items-center justify-center">
                     <div style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
@@ -40,8 +40,8 @@ import { AuthService } from "../services/auth.service";
                                         />
                                     </g>
                                 </svg>
-                                <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome to PrimeLand!</div>
-                                <span class="text-muted-color font-medium">Sign in to continue</span>
+                                <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome to Longevity Financials Models</div>
+                                <span class="text-muted-color font-medium">Sign up to continue</span>
                             </div>
 
                             <div class="text-center mb-8">
@@ -50,7 +50,7 @@ import { AuthService } from "../services/auth.service";
     
                             <div>
                                 <label for="email" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
-                                <input pInputText id="email" type="text" placeholder="Email address" class="w-full md:w-120 mb-4" formControlName="email" />
+                                <input pInputText id="email" type="text" placeholder="Email address" class="w-full mb-4" formControlName="email" autocomplete="off" />
                                 @if(signupForm.controls['email'].invalid && (signupForm.controls['email'].dirty || signupForm.controls['email'].touched)) {
                                     <p-message severity="error" variant="simple" size="small">
                                         @if(signupForm.controls['email'].errors?.['required']) {
@@ -71,7 +71,7 @@ import { AuthService } from "../services/auth.service";
                                 }
     
                                 <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Password</label>
-                                <p-password id="password1" formControlName="password" placeholder="Password" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false"></p-password>
+                                <p-password id="password1" formControlName="password" placeholder="Password" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false" autocomplete="off"></p-password>
                                 @if(signupForm.controls['password'].invalid && (signupForm.controls['password'].dirty || signupForm.controls['password'].touched)) {
                                     <p-message severity="error" variant="simple" size="small">
                                         @if(signupForm.controls['password'].errors?.['required']) {
@@ -85,6 +85,27 @@ import { AuthService } from "../services/auth.service";
                                             <div class="p-message p-component p-message-error p-message-simple p-message-sm" aria-live="polite" role="alert">
                                                 <div class="p-message-content">
                                                     <span class="p-message-text">Password is invalid</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    </p-message>
+                                }
+
+                                <label for="confirmPassword" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Confirm Password</label>
+                                <p-password id="confirmPassword" formControlName="confirmPassword" placeholder="Confirm password" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false" autocomplete="off"></p-password>
+                                @if((signupForm.controls['confirmPassword'].invalid && (signupForm.controls['confirmPassword'].dirty || signupForm.controls['confirmPassword'].touched)) || (signupForm.hasError('passwordMismatch') && (signupForm.controls['confirmPassword'].dirty || signupForm.controls['confirmPassword'].touched || signupForm.controls['password'].dirty || signupForm.controls['password'].touched))) {
+                                    <p-message severity="error" variant="simple" size="small">
+                                        @if(signupForm.controls['confirmPassword'].errors?.['required']) {
+                                            <div class="p-message p-component p-message-error p-message-simple p-message-sm" aria-live="polite" role="alert">
+                                                <div class="p-message-content">
+                                                    <span class="p-message-text">Confirm password is required</span>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if(signupForm.hasError('passwordMismatch')) {
+                                            <div class="p-message p-component p-message-error p-message-simple p-message-sm" aria-live="polite" role="alert">
+                                                <div class="p-message-content">
+                                                    <span class="p-message-text">Passwords do not match</span>
                                                 </div>
                                             </div>
                                         }
@@ -132,12 +153,23 @@ import { AuthService } from "../services/auth.service";
 export class Signup {
     isLoading = false;
     errorMessage = '';
+    passwordsMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+        const password = control.get('password')?.value;
+        const confirmPassword = control.get('confirmPassword')?.value;
+
+        if (!password || !confirmPassword) {
+            return null;
+        }
+
+        return password === confirmPassword ? null : { passwordMismatch: true };
+    };
 
     signupForm = new FormGroup({
         email: new FormControl('', [Validators.required, Validators.email]),
         password: new FormControl('', [Validators.required, Validators.pattern('^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$')]),
+        confirmPassword: new FormControl('', [Validators.required]),
         username: new FormControl('')
-    });
+    }, { validators: this.passwordsMatchValidator });
 
     constructor(
         private authService: AuthService,

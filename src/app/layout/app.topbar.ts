@@ -1,11 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { MenuItem } from 'primeng/api';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { StyleClassModule } from 'primeng/styleclass';
-import { ChipModule } from 'primeng/chip';
-import { AppConfigurator } from './app.configurator';
+import { ChipModule } from 'primeng/chip'
 import { LayoutService } from './service/layout.service';
+import { AuthService } from '../pages/services/auth.service';
+import { User } from '../models/user.model';
 
 @Component({
     selector: 'app-topbar',
@@ -60,14 +61,14 @@ import { LayoutService } from './service/layout.service';
                         <span>Messages</span>
                     </button> -->
                     @if (image) {
-                        <p-chip [label]="fullname" [image]="image" alt="Avatar image" />
+                        <p-chip [label]="displayName()" [image]="image" alt="Avatar image" />
                     } @else {
                         <p-chip class="!py-0 !pl-0 !pr-4">
                             <span class="bg-primary text-primary-contrast rounded-full w-8 h-8 flex items-center justify-center">
-                                P
+                                {{ userInitial() }}
                             </span>
                             <span class="ml-2 font-medium">
-                                PRIME
+                                {{ displayName() }}
                             </span>
                         </p-chip>
                     }
@@ -79,13 +80,24 @@ import { LayoutService } from './service/layout.service';
 export class AppTopbar {
     items!: MenuItem[];
 
-    constructor(public layoutService: LayoutService) {}
+    user = signal<User | null>(null);
+
+    displayName = computed(() => {
+        const user = this.user();
+        const name = (user?.name || '').trim();
+        return name || user?.email || 'User';
+    });
+    
+    userInitial = computed(() => this.displayName().charAt(0).toUpperCase() || 'U');
+
+    constructor(public layoutService: LayoutService, private authService: AuthService) {
+        this.user.set(this.authService.getUser());
+    }
 
     toggleDarkMode() {
         this.layoutService.layoutConfig.update((state) => ({ ...state, darkTheme: !state.darkTheme }));
     }
 
-    image: string = 'https://primefaces.org/cdn/primeng/images/demo/avatar/amyelsner.png';
-    fullname: string = 'Amy Elsner';
+    image: string | null = null;
 
 }

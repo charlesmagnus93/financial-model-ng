@@ -24,7 +24,7 @@ export const routes: Routes = [
         component: AppLayout,
         canActivate: [AuthGuard],
         children: [
-            { path: '', component: Dashboard },
+            { path: '', component: InputLandingComponent },
             { path: 'pharma-input-landing', component: InputLandingComponent },
             { path: 'pharma-key-metrics', component: KeyMetricsComponent },
             { path: 'pharma-financial-performance', component: FinancialPerformanceComponent },

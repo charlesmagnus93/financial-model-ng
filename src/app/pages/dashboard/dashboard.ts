@@ -1,30 +1,19 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { StatsWidget } from './components/statswidget';
-import { AssumptionCoreWidget } from './components/assumptioncorewidget';
-import { ChartViewComponent } from '../../shared/chart-view.component';
-import { ChartConfiguration } from 'chart.js';
 import { TabsModule } from 'primeng/tabs';
+import { ButtonModule } from 'primeng/button';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
   imports: [
     RouterModule,
-    // StatsWidget,
-    // AssumptionCoreWidget,
-    // ChartViewComponent,
     TabsModule,
+    ButtonModule,
   ],
   template: `
+
     <router-outlet></router-outlet>
-    <!-- <app-chart-view
-      class="col-span-12 xl:col-span-6"
-      title="Sample Metrics"
-      [type]="'bar'"
-      [data]="demoChartData"
-      [options]="demoChartOptions"
-    /> -->
   `,
 })
 export class Dashboard implements OnInit, OnDestroy {
@@ -41,38 +30,6 @@ export class Dashboard implements OnInit, OnDestroy {
   ];
 
   activeTab = 'input';
-
-  demoChartData: ChartConfiguration['data'] = {
-    labels: ['Q1', 'Q2', 'Q3', 'Q4'],
-    datasets: [
-      {
-        data: [120, 150, 180, 210],
-        label: 'Revenue ($k)',
-        backgroundColor: '#3b82f6',
-        borderRadius: 6,
-      },
-      {
-        data: [80, 95, 130, 160],
-        label: 'Costs ($k)',
-        backgroundColor: '#22c55e',
-        borderRadius: 6,
-      },
-    ],
-  };
-
-  demoChartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: { stacked: false },
-      y: { beginAtZero: true },
-    },
-    plugins: {
-      legend: {
-        position: 'bottom',
-      },
-    },
-  };
 
   private queryParamSub?: Subscription;
 
@@ -101,4 +58,6 @@ export class Dashboard implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.queryParamSub?.unsubscribe();
   }
+
+  exportModel(): void {}
 }
