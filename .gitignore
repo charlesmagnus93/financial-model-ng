@@ -22,6 +22,9 @@ yarn-error.log
 
 # 
 cmd
+input.json
+output.json
+api_contract.md
 
 # Visual Studio Code
 .vscode/*

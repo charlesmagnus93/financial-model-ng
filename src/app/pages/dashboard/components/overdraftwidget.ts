@@ -168,7 +168,7 @@ interface AmortizationRow {
               />
             </div>
             <div class="col-span-3">
-              <p-button label="Add" icon="pi pi-plus" (click)="addRowFromForm()"></p-button>
+              <p-button label="Add" severity="success" variant="outlined" icon="pi pi-plus" (click)="addRowFromForm()"></p-button>
             </div>
           </form>
         </div>

@@ -142,6 +142,8 @@ interface FixedVariableRow {
               <p-button
                 label="Add"
                 icon="pi pi-plus"
+                severity="success"
+                variant="outlined"
                 (click)="addRowFromForm()"
               ></p-button>
             </div>

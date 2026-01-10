@@ -106,7 +106,7 @@ interface RiskRow {
             [formGroup]="newRowForm"
             class="grid grid-cols-12 gap-3 items-end"
           >
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-12 md:col-span-2">
               <div class="text-sm font-semibold mb-1">Year</div>
               <select class="p-inputtext w-full" formControlName="year">
                 @for (y of yearOptions; track y) {
@@ -114,7 +114,7 @@ interface RiskRow {
                 }
               </select>
             </div>
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-12 md:col-span-2">
               <div class="text-sm font-semibold mb-1">Inherent Risk</div>
               <p-inputnumber
                 formControlName="inherent"
@@ -126,7 +126,7 @@ interface RiskRow {
                 inputStyleClass="w-full text-center"
               />
             </div>
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-12 md:col-span-2">
               <div class="text-sm font-semibold mb-1">Climate Risk</div>
               <p-inputnumber
                 formControlName="climate"
@@ -138,7 +138,7 @@ interface RiskRow {
                 inputStyleClass="w-full text-center"
               />
             </div>
-            <div class="col-span-12 md:col-span-3">
+            <div class="col-span-12 md:col-span-2">
               <div class="text-sm font-semibold mb-1">Political Risk</div>
               <p-inputnumber
                 formControlName="political"
@@ -150,8 +150,8 @@ interface RiskRow {
                 inputStyleClass="w-full text-center"
               />
             </div>
-            <div class="col-span-12">
-              <p-button label="Add" icon="pi pi-plus" (click)="addRowFromForm()"></p-button>
+            <div class="col-span-4 md:col-span-4">
+              <p-button label="Add" severity="success" variant="outlined" icon="pi pi-plus" (click)="addRowFromForm()"></p-button>
             </div>
           </form>
         </div>

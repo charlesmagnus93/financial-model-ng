@@ -303,7 +303,7 @@ interface UtilityRow {
               />
             </div>
             <div class="col-span-12 md:col-span-2">
-              <p-button label="Add" icon="pi pi-plus" (click)="addRowFromForm()"></p-button>
+              <p-button  severity="success" variant="outlined" label="Add" icon="pi pi-plus" (click)="addRowFromForm()"></p-button>
             </div>
           </form>
         </div>

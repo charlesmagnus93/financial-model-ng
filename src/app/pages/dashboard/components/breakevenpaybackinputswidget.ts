@@ -124,7 +124,7 @@ interface BreakEvenMetrics {
                 </div>
 
                 @if (getMetrics(row).contributionMargin <= 0) {
-                  <div class="bg-red-950/40 text-red-200 text-sm px-3 py-2 rounded">
+                  <div class="bg-red-100 text-red-600 text-sm px-3 py-2 rounded">
                     Contribution margin non-positive
                   </div>
                 }

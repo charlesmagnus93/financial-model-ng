@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TabsModule } from 'primeng/tabs';
+import { Router } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
 import { AssumptionCoreWidget } from './components/assumptioncorewidget';
 import { DistributorCommissionWidget } from './components/distributorcommissionwidget';
 import { DirectLaborWidget } from './components/directlaborwidget';
@@ -19,7 +21,6 @@ import { OverdraftWidget } from './components/overdraftwidget';
 import { TaxScheduleWidget } from './components/taxschedulewidget';
 import { InflationScheduleWidget } from './components/inflationschedulewidget';
 import { RiskScheduleWidget } from './components/riskschedulewidget';
-import { ButtonModule } from 'primeng/button';
 
 @Component({
   standalone: true,
@@ -126,6 +127,14 @@ import { ButtonModule } from 'primeng/button';
             } }
           </p-tabpanel>
           }
+          @if (isLastSection) {
+            <p-button
+              label="Submit Customer Data"
+              icon="pi pi-check"
+              class="w-full"
+              (click)="submitModel()"
+            ></p-button>
+          }
         </p-tabpanels>
       </p-tabs>
     </div>
@@ -163,6 +172,8 @@ export class InputLandingComponent {
 
   activeTab = 'projection';
 
+  constructor(private router: Router) {}
+
   get currentSectionIndex(): number {
     return this.sections.findIndex((section) => section.key === this.activeTab);
   }
@@ -191,6 +202,11 @@ export class InputLandingComponent {
     if (nextIndex < this.sections.length) {
       this.activeTab = this.sections[nextIndex].key;
     }
+  }
+
+  submitModel(): void {
+    localStorage.setItem('model_setup_complete', 'true');
+    this.router.navigate(['/dashboard/pharma-results']);
   }
 }
 

@@ -108,6 +108,8 @@ interface LaborRow {
               <p-button
                 label="Add"
                 icon="pi pi-plus"
+                severity="success"
+                variant="outlined"
                 (onClick)="addRowFromForm()"
               ></p-button>
             </div>

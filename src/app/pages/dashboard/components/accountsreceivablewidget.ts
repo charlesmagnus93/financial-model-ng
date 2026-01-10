@@ -163,7 +163,7 @@ interface ReceivableRow {
               />
             </div>
             <div class="col-span-2">
-              <p-button label="Add Year" icon="pi pi-plus" (click)="addRowFromForm()"></p-button>
+              <p-button label="Add Year" severity="success" variant="outlined" icon="pi pi-plus" (click)="addRowFromForm()"></p-button>
             </div>
           </form>
         </div>

@@ -157,7 +157,7 @@ interface CommissionRow {
             />
           </div>
           <div class="col-span-12 md:col-span-2 flex items-end">
-            <button type="button" class="p-button p-button-primary w-full" (click)="addRowFromForm()">
+            <button type="button" severity="success" variant="outlined" icon="pi pi-plus" class="p-button p-button-success p-button-outlined w-full" (click)="addRowFromForm()">
               Add
             </button>
           </div>
