@@ -14,7 +14,7 @@ import { FluidModule } from 'primeng/fluid';
 import { InputTextModule } from 'primeng/inputtext';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface BreakEvenRow {
   product: string;
@@ -307,18 +307,21 @@ export class BreakEvenPaybackInputsWidget implements OnInit {
   newRowForm: FormGroup;
   customRowForm: FormGroup;
 
-  products = Object.keys((inputData.unit_costs as Record<string, unknown>) ?? {});
+  products: string[] = [];
   productOptions = [...this.products, 'Add new...'];
 
   barType: ChartType = 'bar';
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
 
     this.newRowForm = this.fb.group({
-      product: [this.products[0] ?? ''],
+      product: [''],
       fixedCost: [0],
       sellingPrice: [0],
       variableCost: [0],
@@ -327,7 +330,7 @@ export class BreakEvenPaybackInputsWidget implements OnInit {
     });
 
     this.customRowForm = this.fb.group({
-      product: [this.productOptions[0] ?? 'Add new...'],
+      product: ['Add new...'],
       customProduct: [''],
       sellingPrice: [0],
       targetProfit: [0],
@@ -336,7 +339,15 @@ export class BreakEvenPaybackInputsWidget implements OnInit {
   }
 
   ngOnInit(): void {
-    const rows = this.buildRowsFromInput().map((row) => this.createRow(row));
+    const rows = this.buildRowsFromOutput().map((row) => this.createRow(row));
+    this.products = rows.map((row) => row.get('product')?.value);
+    this.productOptions = [...this.products, 'Add new...'];
+    this.newRowForm.patchValue({
+      product: this.products[0] ?? '',
+    });
+    this.customRowForm.patchValue({
+      product: this.productOptions[0] ?? 'Add new...',
+    });
     this.form.setControl('rows', this.fb.array(rows));
   }
 
@@ -426,28 +437,26 @@ export class BreakEvenPaybackInputsWidget implements OnInit {
     };
   }
 
-  private buildRowsFromInput(): BreakEvenRow[] {
-    const unitCosts =
-      (inputData.unit_costs as Record<
-        string,
-        { production?: number; price?: number; freight?: number }
-      >) ?? {};
-    const volumes = (inputData.total_production_units as Record<string, number>) ?? {};
+  private buildRowsFromOutput(): BreakEvenRow[] {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const table = output?.break_even ?? {};
+    const products = (table.index as string[]) ?? [];
+    const data = table.data ?? {};
 
-    const products = this.products.length ? this.products : Object.keys(unitCosts);
-    return products.map((product) => {
-      const price = Number(unitCosts[product]?.price ?? 0);
-      const production = Number(unitCosts[product]?.production ?? 0);
-      const freight = Number(unitCosts[product]?.freight ?? 0);
-      return {
-        product,
-        fixedCost: 0,
-        sellingPrice: price,
-        variableCost: production + freight,
-        targetProfit: 0,
-        expectedVolume: Number(volumes[product] ?? 0),
-      };
-    });
+    const fixedCost = this.asNumberArray(data['Fixed Cost']);
+    const variableCost = this.asNumberArray(data['Variable Cost per Unit']);
+    const sellingPrice = this.asNumberArray(data['Selling Price']);
+    const targetProfit = this.asNumberArray(data['Target Profit']);
+    const expectedVolume = this.asNumberArray(data['Expected Volume']);
+
+    return products.map((product, idx) => ({
+      product,
+      fixedCost: fixedCost[idx] ?? 0,
+      sellingPrice: sellingPrice[idx] ?? 0,
+      variableCost: variableCost[idx] ?? 0,
+      targetProfit: targetProfit[idx] ?? 0,
+      expectedVolume: expectedVolume[idx] ?? 0,
+    }));
   }
 
   private createRow(values: BreakEvenRow): FormGroup {
@@ -556,5 +565,10 @@ export class BreakEvenPaybackInputsWidget implements OnInit {
         marginOfSafetyPercent,
       };
     });
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

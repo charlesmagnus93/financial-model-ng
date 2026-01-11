@@ -9,7 +9,7 @@ import {
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface RiskRow {
   year: number;
@@ -162,9 +162,12 @@ interface RiskRow {
 export class RiskScheduleWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  yearOptions: number[] = inputData.years ?? [];
+  yearOptions: number[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
@@ -178,11 +181,21 @@ export class RiskScheduleWidget implements OnInit {
   }
 
   ngOnInit(): void {
+    this.yearOptions = this.pharmaModelService.getYearOptions();
     const rows = this.buildRowsFromInput();
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
+
+    this.newRowForm.reset({
+      year: this.yearOptions[0] ?? new Date().getFullYear(),
+      inherent: 0,
+      climate: 0,
+      political: 0,
+    });
   }
 
   get rows(): FormArray<FormGroup> {
@@ -205,16 +218,26 @@ export class RiskScheduleWidget implements OnInit {
   }
 
   private buildRowsFromInput(): RiskRow[] {
-    const base = inputData.risk ?? {};
+    const snapshot = this.pharmaModelService.getInputSnapshot();
+    const base = snapshot.risk ?? {};
     const inherent = (base.inherent as number[]) ?? [];
     const climate = (base.climate as number[]) ?? [];
     const political = (base.political as number[]) ?? [];
-    const years = this.yearOptions;
-    const maxLen = Math.max(inherent.length, climate.length, political.length, years.length);
+    const years = snapshot.years ?? [];
+    if (
+      inherent.length === 0 &&
+      climate.length === 0 &&
+      political.length === 0 &&
+      years.length === 0
+    ) {
+      return [];
+    }
+    const yearList = years.length ? years : this.yearOptions;
+    const maxLen = Math.max(inherent.length, climate.length, political.length, yearList.length);
     const rows: RiskRow[] = [];
     for (let i = 0; i < maxLen; i++) {
       rows.push({
-        year: years[i] ?? years[0] ?? new Date().getFullYear(),
+        year: yearList[i] ?? yearList[0] ?? new Date().getFullYear(),
         inherent: inherent[i] ?? 0,
         climate: climate[i] ?? 0,
         political: political[i] ?? 0,
@@ -229,6 +252,30 @@ export class RiskScheduleWidget implements OnInit {
       inherent: [values.inherent ?? 0],
       climate: [values.climate ?? 0],
       political: [values.political ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const years = this.pharmaModelService.getInputSnapshot().years ?? this.yearOptions;
+    const inherent: number[] = [];
+    const climate: number[] = [];
+    const political: number[] = [];
+
+    years.forEach((year: number, idx: number) => {
+      const match = this.rows.controls.find(
+        (group) => Number(group.get('year')?.value) === Number(year)
+      );
+      inherent[idx] = Number(match?.get('inherent')?.value ?? 0);
+      climate[idx] = Number(match?.get('climate')?.value ?? 0);
+      political[idx] = Number(match?.get('political')?.value ?? 0);
+    });
+
+    this.pharmaModelService.patchInput({
+      risk: {
+        inherent,
+        climate,
+        political,
+      },
     });
   }
 }

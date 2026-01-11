@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface ScenarioDatasetConfig {
   label: string;
@@ -49,42 +49,12 @@ interface ScenarioDatasetConfig {
     </div>
   `,
 })
-export class ScenarioAnalysisWidget {
+export class ScenarioAnalysisWidget implements OnInit {
   lineType: ChartType = 'line';
-
-  years = (inputData.years as number[]) ?? [];
-
-  scenarioConfigs: ScenarioDatasetConfig[] = [
-    { label: 'base', color: '#7ed0ff', multiplier: 1 },
-    { label: 'best', color: '#8ddca4', multiplier: 1.08 },
-    { label: 'worst', color: '#ff9aa2', multiplier: 0.94 },
-  ];
-
-  netRevenueData: ChartConfiguration['data'] = {
-    labels: this.years,
-    datasets: this.scenarioConfigs.map((cfg) => ({
-      label: cfg.label,
-      data: this.buildSeries(2_800_000, 23_000_000, cfg.multiplier),
-      borderColor: cfg.color,
-      backgroundColor: 'transparent',
-      fill: false,
-      tension: 0.25,
-      pointRadius: 0,
-    })),
-  };
-
-  netIncomeData: ChartConfiguration['data'] = {
-    labels: this.years,
-    datasets: this.scenarioConfigs.map((cfg) => ({
-      label: cfg.label,
-      data: this.buildSeries(900_000, 9_000_000, cfg.multiplier * 0.95),
-      borderColor: cfg.color,
-      backgroundColor: 'transparent',
-      fill: false,
-      tension: 0.25,
-      pointRadius: 0,
-    })),
-  };
+  years: number[] = [];
+  scenarioConfigs: ScenarioDatasetConfig[] = [];
+  netRevenueData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  netIncomeData: ChartConfiguration['data'] = { labels: [], datasets: [] };
 
   chartOptions: ChartConfiguration['options'] = {
     responsive: true,
@@ -123,13 +93,48 @@ export class ScenarioAnalysisWidget {
     },
   };
 
-  private buildSeries(start: number, end: number, scenarioMultiplier: number): number[] {
-    const count = this.years.length || 1;
-    if (count <= 1) return [start * scenarioMultiplier];
-    const step = (end - start) / (count - 1);
-    return Array.from({ length: count }, (_, idx) =>
-      (start + step * idx) * scenarioMultiplier
-    );
+  constructor(private pharmaModelService: PharmaModelService) {}
+
+  ngOnInit(): void {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const scenarios = output?.scenario_results ?? {};
+    const colors = ['#7ed0ff', '#8ddca4', '#ff9aa2', '#fbbf24'];
+    const scenarioKeys = Object.keys(scenarios);
+
+    this.scenarioConfigs = scenarioKeys.map((label, idx) => ({
+      label,
+      color: colors[idx % colors.length],
+      multiplier: 1,
+    }));
+
+    const baseScenario = scenarios[scenarioKeys[0]] ?? {};
+    this.years = (baseScenario.index as number[]) ?? [];
+
+    this.netRevenueData = {
+      labels: this.years,
+      datasets: this.scenarioConfigs.map((cfg) => ({
+        label: cfg.label,
+        data: this.asNumberArray(scenarios[cfg.label]?.data?.['Net Revenue']),
+        borderColor: cfg.color,
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.25,
+        pointRadius: 0,
+      })),
+    };
+
+    this.netIncomeData = {
+      labels: this.years,
+      datasets: this.scenarioConfigs.map((cfg) => ({
+        label: cfg.label,
+        data: this.asNumberArray(scenarios[cfg.label]?.data?.['Net Income']),
+        borderColor: cfg.color,
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.25,
+        pointRadius: 0,
+      })),
+    };
   }
 
   private formatNumber(value: number): string {
@@ -137,5 +142,10 @@ export class ScenarioAnalysisWidget {
     if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
     if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
     return value.toFixed(0);
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

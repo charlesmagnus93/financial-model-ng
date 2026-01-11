@@ -4,7 +4,7 @@ import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface UtilityRow {
   year: number;
@@ -314,15 +314,18 @@ interface UtilityRow {
 export class UtilityScheduleWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  yearOptions: number[] = inputData.years ?? [];
+  yearOptions: number[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
 
     this.newRowForm = this.fb.group({
-      year: [this.yearOptions[0] ?? new Date().getFullYear()],
+      year: [new Date().getFullYear()],
       electricityPerDay: [0],
       electricityRate: [0],
       electricityDays: [0],
@@ -337,11 +340,17 @@ export class UtilityScheduleWidget implements OnInit {
   }
 
   ngOnInit(): void {
+    this.yearOptions = this.pharmaModelService.getYearOptions();
+    this.newRowForm.patchValue({
+      year: this.yearOptions[0] ?? new Date().getFullYear(),
+    });
     const rows = this.buildRowsFromInput();
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -371,7 +380,8 @@ export class UtilityScheduleWidget implements OnInit {
   }
 
   private buildRowsFromInput(): UtilityRow[] {
-    const utilities = inputData.utility_costs?.years ?? [];
+    const input = this.pharmaModelService.getInputSnapshot();
+    const utilities = input.utility_costs?.years ?? [];
     const years = this.yearOptions;
     return utilities.map((u: any, idx: number) => ({
       year: years[idx] ?? years[0] ?? new Date().getFullYear(),
@@ -401,6 +411,48 @@ export class UtilityScheduleWidget implements OnInit {
       steamRate: [values.steamRate ?? 0],
       steamDays: [values.steamDays ?? 0],
       steamHours: [values.steamHours ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const years = this.pharmaModelService.getInputSnapshot().years ?? [];
+    const rows = new Array(years.length).fill(null).map((_, idx) => {
+      const year = years[idx] ?? this.yearOptions[idx] ?? years[0];
+      const match = this.rows.controls.find(
+        (group) => Number(group.get('year')?.value) === Number(year)
+      );
+      if (!match) {
+        return {
+          label: `Year ${idx + 1}`,
+          electricity_per_day: 0,
+          electricity_rate: 0,
+          electricity_days: 0,
+          water_per_day: 0,
+          water_rate: 0,
+          water_days: 0,
+          steam_per_hour: 0,
+          steam_rate: 0,
+          steam_days: 0,
+          steam_hours: 0,
+        };
+      }
+      return {
+        label: `Year ${idx + 1}`,
+        electricity_per_day: Number(match.get('electricityPerDay')?.value ?? 0),
+        electricity_rate: Number(match.get('electricityRate')?.value ?? 0),
+        electricity_days: Number(match.get('electricityDays')?.value ?? 0),
+        water_per_day: Number(match.get('waterPerDay')?.value ?? 0),
+        water_rate: Number(match.get('waterRate')?.value ?? 0),
+        water_days: Number(match.get('waterDays')?.value ?? 0),
+        steam_per_hour: Number(match.get('steamPerHour')?.value ?? 0),
+        steam_rate: Number(match.get('steamRate')?.value ?? 0),
+        steam_days: Number(match.get('steamDays')?.value ?? 0),
+        steam_hours: Number(match.get('steamHours')?.value ?? 0),
+      };
+    });
+
+    this.pharmaModelService.patchInput({
+      utility_costs: { years: rows },
     });
   }
 }

@@ -3,15 +3,12 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface GrossRevenueRow {
   index: number;
   year: number;
-  capsules: number;
-  liquid: number;
-  ointment: number;
-  tablets: number;
+  [product: string]: number | string;
   grossRevenue: number;
   distributorCommission: number;
   netRevenue: number;
@@ -120,114 +117,107 @@ export class GrossRevenueScheduleWidget implements OnInit {
     },
   };
 
+  constructor(private pharmaModelService: PharmaModelService) {}
+
   ngOnInit(): void {
-    const years = (inputData.years as number[]) ?? [];
-    this.rows = this.buildRows(years);
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const input = this.pharmaModelService.getInputSnapshot();
+    const years = (output?.income_statement?.index as number[]) ?? (input?.years ?? []);
+    this.rows = this.buildRows(years, output, input);
     this.chartData = this.buildChartData(years, this.rows);
   }
 
-  private buildRows(years: number[]): GrossRevenueRow[] {
-    const baseGross = 1_578_000;
-    const grossGrowth = 1.12;
-    const distributorRate = 0.05;
-    const mix = {
-      capsules: 0.08,
-      liquid: 0.06,
-      ointment: 0.2,
-      tablets: 0.66,
-    };
+  private buildRows(years: number[], output: any, input: any): GrossRevenueRow[] {
+    const income = output?.income_statement ?? {};
+    const data = income.data ?? {};
+    const grossRevenue = this.asNumberArray(data['Gross Revenue']);
+    const distributorCommission = this.asNumberArray(data['Distributors Commission']);
+    const netRevenue = this.asNumberArray(data['Net Revenue']);
+
+    const productionEstimate =
+      (input?.production_estimate as Record<string, number[]>) ?? {};
+    const unitCosts = (input?.unit_costs as Record<string, { price?: number }>) ?? {};
+    const products = Object.keys(productionEstimate);
 
     return years.map((year, idx) => {
-      const grossRevenue = baseGross * Math.pow(grossGrowth, idx);
-      const capsules = grossRevenue * mix.capsules;
-      const liquid = grossRevenue * mix.liquid;
-      const ointment = grossRevenue * mix.ointment;
-      const tablets = grossRevenue * mix.tablets;
-      const distributorCommission = grossRevenue * distributorRate;
-      const netRevenue = grossRevenue - distributorCommission;
+      const totalGross = grossRevenue[idx] ?? 0;
+      const totalScore = products.reduce((sum, product) => {
+        const estimate = productionEstimate[product]?.[idx] ?? 0;
+        const price = unitCosts[product]?.price ?? 0;
+        return sum + estimate * price;
+      }, 0);
 
-      return {
+      const allocations: Record<string, number> = {};
+      products.forEach((product) => {
+        const estimate = productionEstimate[product]?.[idx] ?? 0;
+        const price = unitCosts[product]?.price ?? 0;
+        const share = totalScore > 0 ? (estimate * price) / totalScore : 0;
+        allocations[product.toLowerCase()] = totalGross * share;
+      });
+
+      const row: GrossRevenueRow = {
         index: idx,
         year,
-        capsules,
-        liquid,
-        ointment,
-        tablets,
-        grossRevenue,
-        distributorCommission,
-        netRevenue,
+        grossRevenue: totalGross,
+        distributorCommission: distributorCommission[idx] ?? 0,
+        netRevenue: netRevenue[idx] ?? 0,
       };
+      products.forEach((product) => {
+        row[product.toLowerCase()] = allocations[product.toLowerCase()] ?? 0;
+      });
+      return row;
     });
   }
 
   private buildChartData(years: number[], rows: GrossRevenueRow[]): ChartConfiguration['data'] {
+    const products = Object.keys(rows[0] || {}).filter(
+      (key) => !['index', 'year', 'grossRevenue', 'distributorCommission', 'netRevenue'].includes(key)
+    );
+
+    const colors = ['#60a5fa', '#f472b6', '#f59e0b', '#a78bfa', '#ec4899', '#06b6d4', '#8b5cf6'];
+    const datasets = products.map((product, idx) => ({
+      label: product.charAt(0).toUpperCase() + product.slice(1),
+      data: rows.map((r) => Number(r[product])),
+      borderColor: colors[idx % colors.length],
+      backgroundColor: colors[idx % colors.length] + '26',
+      fill: false,
+      borderWidth: 2,
+      pointRadius: 3,
+    }));
+
+    datasets.push(
+      {
+      label: 'Gross Revenue',
+      data: rows.map((r) => r.grossRevenue),
+      borderColor: '#22d3ee',
+      backgroundColor: 'rgba(34, 211, 238, 0.1)',
+      fill: false,
+      borderWidth: 2,
+      pointRadius: 3,
+      },
+      {
+      label: 'Distributors Commission',
+      data: rows.map((r) => r.distributorCommission),
+      borderColor: '#fb7185',
+      backgroundColor: 'rgba(251, 113, 133, 0.1)',
+      fill: false,
+      borderWidth: 2,
+      pointRadius: 3,
+      },
+      {
+      label: 'Net Revenue',
+      data: rows.map((r) => r.netRevenue),
+      borderColor: '#34d399',
+      backgroundColor: 'rgba(52, 211, 153, 0.1)',
+      fill: false,
+      borderWidth: 2,
+      pointRadius: 3,
+      }
+    );
+
     return {
       labels: years,
-      datasets: [
-        {
-          label: 'Capsules',
-          data: rows.map((r) => r.capsules),
-          borderColor: '#60a5fa',
-          backgroundColor: 'rgba(96, 165, 250, 0.15)',
-          fill: false,
-          borderWidth: 2,
-          pointRadius: 3,
-        },
-        {
-          label: 'Liquid',
-          data: rows.map((r) => r.liquid),
-          borderColor: '#f472b6',
-          backgroundColor: 'rgba(244, 114, 182, 0.15)',
-          fill: false,
-          borderWidth: 2,
-          pointRadius: 3,
-        },
-        {
-          label: 'Ointment',
-          data: rows.map((r) => r.ointment),
-          borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245, 158, 11, 0.15)',
-          fill: false,
-          borderWidth: 2,
-          pointRadius: 3,
-        },
-        {
-          label: 'Tablets',
-          data: rows.map((r) => r.tablets),
-          borderColor: '#a78bfa',
-          backgroundColor: 'rgba(167, 139, 250, 0.15)',
-          fill: false,
-          borderWidth: 2,
-          pointRadius: 3,
-        },
-        {
-          label: 'Gross Revenue',
-          data: rows.map((r) => r.grossRevenue),
-          borderColor: '#22d3ee',
-          backgroundColor: 'rgba(34, 211, 238, 0.1)',
-          fill: false,
-          borderWidth: 2,
-          pointRadius: 3,
-        },
-        {
-          label: 'Distributors Commission',
-          data: rows.map((r) => r.distributorCommission),
-          borderColor: '#fb7185',
-          backgroundColor: 'rgba(251, 113, 133, 0.1)',
-          fill: false,
-          borderWidth: 2,
-          pointRadius: 3,
-        },
-        {
-          label: 'Net Revenue',
-          data: rows.map((r) => r.netRevenue),
-          borderColor: '#34d399',
-          backgroundColor: 'rgba(52, 211, 153, 0.1)',
-          fill: false,
-          borderWidth: 2,
-          pointRadius: 3,
-        },
-      ],
+      datasets,
     };
   }
 
@@ -242,5 +232,10 @@ export class GrossRevenueScheduleWidget implements OnInit {
           : abs.toFixed(3);
     const suffix = abs >= 1_000_000 ? 'M' : abs >= 1_000 ? 'k' : '';
     return `${sign}${formatted}${suffix}`;
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

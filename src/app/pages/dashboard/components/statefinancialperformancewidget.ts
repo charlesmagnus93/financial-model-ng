@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface FinancialPerformanceRow {
   index: number;
@@ -98,60 +98,57 @@ interface FinancialPerformanceRow {
 export class StateFinancialPerformanceWidget implements OnInit {
   rows: FinancialPerformanceRow[] = [];
 
+  constructor(private pharmaModelService: PharmaModelService) {}
+
   ngOnInit(): void {
     this.rows = this.buildRows();
   }
 
   private buildRows(): FinancialPerformanceRow[] {
-    const years = (inputData.years as number[]) ?? [];
-    const baseGross = 1_550_000;
-    const grossGrowth = 1.12;
-    const distributorRate = 0.05;
-    const costOfSalesRate = 0.62;
-    const generalAdminRate = 0.035;
-    const depreciationRate = 0.03;
-    const interestRate = 0.015;
-    const equityBase = 1_750_000;
-    const equityGrowth = 1.07;
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const income = output?.income_statement ?? {};
+    const years = (income.index as number[]) ?? [];
+    const data = income.data ?? {};
 
-    return years.map((year, idx) => {
-      const grossRevenue = baseGross * Math.pow(grossGrowth, idx);
-      const distributorCommission = grossRevenue * distributorRate;
-      const netRevenue = grossRevenue - distributorCommission;
-      const costOfSales = netRevenue * costOfSalesRate;
-      const grossProfit = netRevenue - costOfSales;
-      const generalAdmin = netRevenue * generalAdminRate;
-      const ebitda = grossProfit - generalAdmin;
-      const depreciation = netRevenue * depreciationRate;
-      const ebit = ebitda - depreciation;
-      const interest = grossRevenue * interestRate * 0.1;
-      const ebt = ebit - interest;
-      const taxes = ebt * 0.0;
-      const netIncome = ebt - taxes;
-      const equity = equityBase * Math.pow(equityGrowth, idx);
+    const grossRevenue = this.asNumberArray(data['Gross Revenue']);
+    const distributorCommission = this.asNumberArray(data['Distributors Commission']);
+    const netRevenue = this.asNumberArray(data['Net Revenue']);
+    const costOfSales = this.asNumberArray(data['Cost of Sales']);
+    const grossProfit = this.asNumberArray(data['Gross Profit']);
+    const generalAdmin = this.asNumberArray(data['General & Admin']);
+    const ebitda = this.asNumberArray(data['EBITDA']);
+    const depreciation = this.asNumberArray(data['Total Depreciation Expense']);
+    const ebit = this.asNumberArray(data['EBIT']);
+    const interest = this.asNumberArray(data['Interest']);
+    const ebt = this.asNumberArray(data['EBT']);
+    const taxes = this.asNumberArray(data['Taxes']);
+    const netIncome = this.asNumberArray(data['Net Income']);
+    const grossProfitMargin = this.asNumberArray(data['Gross Profit Margin']);
+    const ebitdaMargin = this.asNumberArray(data['EBITDA Margin']);
+    const ebitMargin = this.asNumberArray(data['EBIT Margin']);
+    const returnOnEquity = this.asNumberArray(data['Return on Equity']);
 
-      return {
-        index: idx,
-        year,
-        grossRevenue,
-        distributorCommission,
-        netRevenue,
-        costOfSales,
-        grossProfit,
-        generalAdmin,
-        ebitda,
-        depreciation,
-        ebit,
-        interest,
-        ebt,
-        taxes,
-        netIncome,
-        grossProfitMargin: netRevenue > 0 ? grossProfit / netRevenue : 0,
-        ebitdaMargin: netRevenue > 0 ? ebitda / netRevenue : 0,
-        ebitMargin: netRevenue > 0 ? ebit / netRevenue : 0,
-        returnOnEquity: equity > 0 ? netIncome / equity : 0,
-      };
-    });
+    return years.map((year, idx) => ({
+      index: idx,
+      year,
+      grossRevenue: grossRevenue[idx] ?? 0,
+      distributorCommission: distributorCommission[idx] ?? 0,
+      netRevenue: netRevenue[idx] ?? 0,
+      costOfSales: costOfSales[idx] ?? 0,
+      grossProfit: grossProfit[idx] ?? 0,
+      generalAdmin: generalAdmin[idx] ?? 0,
+      ebitda: ebitda[idx] ?? 0,
+      depreciation: depreciation[idx] ?? 0,
+      ebit: ebit[idx] ?? 0,
+      interest: interest[idx] ?? 0,
+      ebt: ebt[idx] ?? 0,
+      taxes: taxes[idx] ?? 0,
+      netIncome: netIncome[idx] ?? 0,
+      grossProfitMargin: grossProfitMargin[idx] ?? 0,
+      ebitdaMargin: ebitdaMargin[idx] ?? 0,
+      ebitMargin: ebitMargin[idx] ?? 0,
+      returnOnEquity: returnOnEquity[idx] ?? 0,
+    }));
   }
 
   formatNumber(value: number): string {
@@ -165,5 +162,10 @@ export class StateFinancialPerformanceWidget implements OnInit {
           : abs.toFixed(3);
     const suffix = abs >= 1_000_000 ? 'M' : abs >= 1_000 ? 'k' : '';
     return `${sign}${formatted}${suffix}`;
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

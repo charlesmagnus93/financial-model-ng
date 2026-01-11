@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface PositionRow {
   year: number;
@@ -168,9 +168,11 @@ export class AnalyticalTrendsWidget implements OnInit {
     },
   };
 
+  constructor(private pharmaModelService: PharmaModelService) {}
+
   ngOnInit(): void {
-    const years = (inputData.years as number[]) ?? [];
-    const rows = this.buildRows(years);
+    const rows = this.buildRows();
+    const years = rows.map((row) => row.year);
     this.cashChart = this.buildSingleChart('Cash', years, rows.map((r) => r.cash));
     this.arChart = this.buildSingleChart(
       'Accounts Receivable',
@@ -186,65 +188,44 @@ export class AnalyticalTrendsWidget implements OnInit {
     this.metricsChart = this.buildMetricsChart(years, rows);
   }
 
-  private buildRows(years: number[]): PositionRow[] {
-    const wc = inputData.working_capital ?? {};
-    const days = wc.days ?? {};
-    const arDays = (days.accounts_receivable as number[]) ?? [];
-    const inventoryDays = (days.inventory as number[]) ?? [];
-    const prepaidDays = (days.prepaid_expenses as number[]) ?? [];
-    const otherAssetDays = (days.other_assets as number[]) ?? [];
-    const apDays = (days.accounts_payable as number[]) ?? [];
-    const otherLiabilityDays = (days.other_liabilities as number[]) ?? [];
+  private buildRows(): PositionRow[] {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const balance = output?.balance_sheet ?? {};
+    const years = (balance.index as number[]) ?? [];
+    const data = balance.data ?? {};
 
-    const arFactor = 4098;
-    const inventoryFactor = 2710;
-    const prepaidFactor = 2700;
-    const otherAssetFactor = 2700;
-    const apFactor = 2725;
-    const otherLiabilityFactor = 2712;
+    const cash = this.asNumberArray(data['Cash']);
+    const accountsReceivable = this.asNumberArray(data['Accounts Receivable']);
+    const inventory = this.asNumberArray(data['Inventory']);
+    const prepaidExpenses = this.asNumberArray(data['Prepaid Expenses']);
+    const otherAssets = this.asNumberArray(data['Other Assets']);
+    const netPpe = this.asNumberArray(data['Net PP&E']);
+    const totalAssets = this.asNumberArray(data['Total Assets']);
+    const accountsPayable = this.asNumberArray(data['Accounts Payable']);
+    const otherLiabilities = this.asNumberArray(data['Other Liabilities']);
+    const overdraft = this.asNumberArray(data['Overdraft']);
+    const totalLiabilities = this.asNumberArray(data['Total Liabilities']);
+    const shareholdersEquity = this.asNumberArray(data["Shareholders' Equity"]);
+    const totalLiabilitiesEquity = this.asNumberArray(
+      data['Total Liabilities & Equity']
+    );
 
-    const cashBase = -350_000;
-    const cashGrowth = 1.18;
-    const overdraftBase = 50_000;
-    const overdraftGrowth = 1.08;
-    const netPpeBase = 250_000;
-    const netPpeGrowth = 1.05;
-
-    return years.map((year, idx) => {
-      const cash = cashBase * Math.pow(cashGrowth, idx);
-      const arBase = (arDays[idx] ?? 0) * arFactor;
-      const distributorReceivables = arBase * 0.66;
-      const accountsReceivable = arBase + distributorReceivables;
-      const inventory = (inventoryDays[idx] ?? 0) * inventoryFactor;
-      const prepaidExpenses = (prepaidDays[idx] ?? 0) * prepaidFactor;
-      const otherAssets = (otherAssetDays[idx] ?? 0) * otherAssetFactor;
-      const netPpe = netPpeBase * Math.pow(netPpeGrowth, idx);
-      const totalAssets =
-        cash + accountsReceivable + inventory + prepaidExpenses + otherAssets + netPpe;
-
-      const accountsPayable = (apDays[idx] ?? 0) * apFactor;
-      const otherLiabilities = (otherLiabilityDays[idx] ?? 0) * otherLiabilityFactor;
-      const overdraft = overdraftBase * Math.pow(overdraftGrowth, idx);
-      const totalLiabilities = accountsPayable + otherLiabilities + overdraft;
-      const shareholdersEquity = totalAssets - totalLiabilities;
-
-      return {
-        year,
-        cash,
-        accountsReceivable,
-        inventory,
-        prepaidExpenses,
-        otherAssets,
-        netPpe,
-        totalAssets,
-        accountsPayable,
-        otherLiabilities,
-        overdraft,
-        totalLiabilities,
-        shareholdersEquity,
-        totalLiabilitiesEquity: totalAssets,
-      };
-    });
+    return years.map((year, idx) => ({
+      year,
+      cash: cash[idx] ?? 0,
+      accountsReceivable: accountsReceivable[idx] ?? 0,
+      inventory: inventory[idx] ?? 0,
+      prepaidExpenses: prepaidExpenses[idx] ?? 0,
+      otherAssets: otherAssets[idx] ?? 0,
+      netPpe: netPpe[idx] ?? 0,
+      totalAssets: totalAssets[idx] ?? 0,
+      accountsPayable: accountsPayable[idx] ?? 0,
+      otherLiabilities: otherLiabilities[idx] ?? 0,
+      overdraft: overdraft[idx] ?? 0,
+      totalLiabilities: totalLiabilities[idx] ?? 0,
+      shareholdersEquity: shareholdersEquity[idx] ?? 0,
+      totalLiabilitiesEquity: totalLiabilitiesEquity[idx] ?? 0,
+    }));
   }
 
   private buildSingleChart(
@@ -351,5 +332,10 @@ export class AnalyticalTrendsWidget implements OnInit {
           : abs.toFixed(3);
     const suffix = abs >= 1_000_000 ? 'M' : abs >= 1_000 ? 'k' : '';
     return `${sign}${formatted}${suffix}`;
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

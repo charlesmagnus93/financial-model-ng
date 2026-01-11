@@ -9,6 +9,7 @@ import {
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface SensitivityVariable {
   name: string;
@@ -115,13 +116,12 @@ export class SensitivityConfigWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
 
-  private defaults: SensitivityVariable[] = [
-    { name: 'tablet_price', multipliers: [0.9, 1, 1.1] },
-    { name: 'raw_material_cost', multipliers: [0.9, 1, 1.1] },
-    { name: 'discount_rate', multipliers: [0.08, 0.1, 0.12] },
-  ];
+  private defaults: SensitivityVariable[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
@@ -133,6 +133,12 @@ export class SensitivityConfigWidget implements OnInit {
   }
 
   ngOnInit(): void {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const results = output?.sensitivity_results ?? {};
+    this.defaults = Object.keys(results).map((key) => ({
+      name: key,
+      multipliers: (results[key]?.data?.Multiplier as number[]) ?? [],
+    }));
     const rows = this.defaults.map((d) =>
       this.createRow({
         name: d.name,

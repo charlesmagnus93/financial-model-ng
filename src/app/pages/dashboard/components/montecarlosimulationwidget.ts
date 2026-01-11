@@ -13,6 +13,7 @@ import { TableModule } from 'primeng/table';
 import { FluidModule } from 'primeng/fluid';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface Option {
   label: string;
@@ -173,10 +174,9 @@ interface SummaryRow {
 export class MonteCarloSimulationWidget implements OnDestroy {
   form: FormGroup;
   metricOptions: Option[] = [
-    { label: 'NPV', value: 'npv' },
-    { label: 'Average Net Income', value: 'avgNetIncome' },
-    { label: 'Average EBITDA', value: 'avgEbitda' },
-    { label: 'Average Cash Flow', value: 'avgCashFlow' },
+    { label: 'NPV', value: 'NPV' },
+    { label: 'Average Net Income', value: 'Average Net Income' },
+    { label: 'Average EBITDA', value: 'Average EBITDA' },
   ];
 
   variableOptions: Option[] = [
@@ -220,13 +220,22 @@ export class MonteCarloSimulationWidget implements OnDestroy {
 
   private subs = new Subscription();
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
+    const input = this.pharmaModelService.getInputSnapshot();
+    const monteCarlo = input?.monte_carlo ?? {};
     this.form = this.fb.group({
-      iterations: new FormControl<number>(1000),
-      minGrowth: new FormControl<number>(0.05),
-      maxGrowth: new FormControl<number>(0.15),
-      metrics: new FormControl<string[]>(['npv', 'avgNetIncome', 'avgEbitda']),
-      variables: new FormControl<string[]>(['revenueGrowth']),
+      iterations: new FormControl<number>(monteCarlo.iterations ?? 1000),
+      minGrowth: new FormControl<number>(monteCarlo.revenue_growth_range?.[0] ?? 0.05),
+      maxGrowth: new FormControl<number>(monteCarlo.revenue_growth_range?.[1] ?? 0.15),
+      metrics: new FormControl<string[]>(
+        (monteCarlo.metrics as string[]) ?? ['NPV', 'Average Net Income', 'Average EBITDA']
+      ),
+      variables: new FormControl<string[]>(
+        (monteCarlo.variables as string[]) ?? ['revenue_growth']
+      ),
     });
 
     this.subs.add(
@@ -241,28 +250,16 @@ export class MonteCarloSimulationWidget implements OnDestroy {
   }
 
   private runSimulation(): void {
-    const iterations = this.form.get('iterations')?.value ?? 1000;
-    const minGrowth = this.form.get('minGrowth')?.value ?? 0.05;
-    const maxGrowth = this.form.get('maxGrowth')?.value ?? 0.15;
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const table = output?.monte_carlo ?? {};
+    const data = table.data ?? {};
+    const metricsSelected = this.form.get('metrics')?.value ?? [];
+    const primarySeries = this.asNumberArray(data['NPV']);
+    const fallbackSeries = this.asNumberArray(data[metricsSelected[0]]);
+    const histogramSeries = primarySeries.length ? primarySeries : fallbackSeries;
 
-    const simulatedNpv = this.generateNpvSamples(iterations, minGrowth, maxGrowth);
-    this.buildHistogram(simulatedNpv);
-    this.buildSummary(simulatedNpv);
-  }
-
-  private generateNpvSamples(iterations: number, minGrowth: number, maxGrowth: number): number[] {
-    const samples: number[] = [];
-    const meanGrowth = (minGrowth + maxGrowth) / 2;
-    const stdGrowth = (maxGrowth - minGrowth) / 6 || 0.01; // rough spread
-
-    for (let i = 0; i < iterations; i++) {
-      const growthShock = this.randomNormal(meanGrowth, stdGrowth);
-      const npvBase = 350_000; // base value
-      const noise = this.randomNormal(0, 80_000);
-      samples.push(npvBase * (1 + growthShock) + noise);
-    }
-
-    return samples.sort((a, b) => a - b);
+    this.buildHistogram(histogramSeries);
+    this.buildSummary(data, metricsSelected);
   }
 
   private buildHistogram(samples: number[]): void {
@@ -271,13 +268,14 @@ export class MonteCarloSimulationWidget implements OnDestroy {
       return;
     }
 
+    const sorted = [...samples].sort((a, b) => a - b);
     const bins = 25;
-    const min = samples[0];
-    const max = samples[samples.length - 1];
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
     const width = (max - min) / bins || 1;
 
     const counts = new Array(bins).fill(0);
-    samples.forEach((v) => {
+    sorted.forEach((v) => {
       const idx = Math.min(bins - 1, Math.max(0, Math.floor((v - min) / width)));
       counts[idx]++;
     });
@@ -300,18 +298,33 @@ export class MonteCarloSimulationWidget implements OnDestroy {
     };
   }
 
-  private buildSummary(samples: number[]): void {
-    if (!samples.length) {
+  private buildSummary(data: Record<string, unknown>, metricsSelected: string[]): void {
+    if (!metricsSelected.length) {
       this.summaryRows = [];
       return;
     }
-    const metricsSelected = this.form.get('metrics')?.value ?? [];
-    const stats = this.computeStats(samples);
 
-    this.summaryRows = metricsSelected.map((metric: any) => ({
-      metric: this.metricOptions.find((m) => m.value === metric)?.label ?? metric,
-      ...stats,
-    }));
+    this.summaryRows = metricsSelected.map((metric) => {
+      const series = this.asNumberArray(data[metric]);
+      if (!series.length) {
+        return {
+          metric,
+          count: 0,
+          mean: 0,
+          std: 0,
+          min: 0,
+          p25: 0,
+          p50: 0,
+          p75: 0,
+          max: 0,
+        };
+      }
+      const stats = this.computeStats(series);
+      return {
+        metric,
+        ...stats,
+      };
+    });
   }
 
   private computeStats(values: number[]): Omit<SummaryRow, 'metric'> {
@@ -320,11 +333,12 @@ export class MonteCarloSimulationWidget implements OnDestroy {
     const variance =
       values.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / count;
     const std = Math.sqrt(variance);
-    const min = values[0];
-    const max = values[values.length - 1];
-    const p25 = this.percentile(values, 0.25);
-    const p50 = this.percentile(values, 0.5);
-    const p75 = this.percentile(values, 0.75);
+    const sorted = [...values].sort((a, b) => a - b);
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+    const p25 = this.percentile(sorted, 0.25);
+    const p50 = this.percentile(sorted, 0.5);
+    const p75 = this.percentile(sorted, 0.75);
 
     return { count, mean, std, min, p25, p50, p75, max };
   }
@@ -338,18 +352,15 @@ export class MonteCarloSimulationWidget implements OnDestroy {
     return values[lower] + (values[upper] - values[lower]) * (idx - lower);
   }
 
-  private randomNormal(mean: number, std: number): number {
-    // Box-Muller transform
-    const u1 = Math.random();
-    const u2 = Math.random();
-    const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-    return z0 * std + mean;
-  }
-
   private formatNumber(value: number): string {
     const abs = Math.abs(value);
     if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
     if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
     return value.toFixed(0);
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0)).filter((v) => Number.isFinite(v));
   }
 }

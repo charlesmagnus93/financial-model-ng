@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface TabletPriceRow {
   index: number;
@@ -102,33 +102,28 @@ export class TabletPriceWidget implements OnInit {
     },
   };
 
+  constructor(private pharmaModelService: PharmaModelService) {}
+
   ngOnInit(): void {
     this.rows = this.buildRows();
     this.chartData = this.buildChart(this.rows);
   }
 
   private buildRows(): TabletPriceRow[] {
-    const multipliers =
-      ((inputData.sensitivity?.variables as Record<string, number[]>) ?? {})['tablet_price'] ??
-      [0.9, 1.0, 1.1];
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const table = output?.sensitivity_results?.tablet_price ?? {};
+    const multipliers = this.asNumberArray(table.data?.Multiplier);
+    const npv = this.asNumberArray(table.data?.NPV);
+    const irr = this.asNumberArray(table.data?.IRR);
+    const cases = this.asNumberArray(table.index);
 
-    const baseNpv = -310_000;
-    const npvSlope = -8_000;
-    const baseIrr = 0;
-    const irrSlope = 0;
-    const midpoint = multipliers[Math.floor(multipliers.length / 2)] ?? multipliers[0] ?? 1;
-
-    return multipliers.map((m, idx) => {
-      const npv = baseNpv + (m - midpoint) * npvSlope;
-      const irr = baseIrr + (m - midpoint) * irrSlope;
-      return {
-        index: idx,
-        year: idx + 1,
-        multiplier: m,
-        npv,
-        irr,
-      };
-    });
+    return multipliers.map((m, idx) => ({
+      index: idx,
+      year: cases[idx] ?? idx + 1,
+      multiplier: m,
+      npv: npv[idx] ?? 0,
+      irr: irr[idx] ?? 0,
+    }));
   }
 
   private buildChart(rows: TabletPriceRow[]): ChartConfiguration['data'] {
@@ -171,5 +166,10 @@ export class TabletPriceWidget implements OnInit {
           : abs.toFixed(3);
     const suffix = abs >= 1_000_000 ? 'M' : abs >= 1_000 ? 'k' : '';
     return `${sign}${formatted}${suffix}`;
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { DropdownModule } from 'primeng/dropdown';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { FluidModule } from 'primeng/fluid';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface Option {
   label: string;
@@ -74,7 +75,7 @@ interface Option {
     </p-fluid>
   `,
 })
-export class GoalSeekConfigurationWidget {
+export class GoalSeekConfigurationWidget implements OnInit {
   form: FormGroup;
 
   metricSourceOptions: Option[] = [
@@ -122,12 +123,36 @@ export class GoalSeekConfigurationWidget {
     value: 2024 + i,
   }));
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       metricSource: [this.metricSourceOptions[0].value],
       metric: [this.metricOptions[0]?.value ?? null],
       targetValue: [20000],
       year: [this.yearOptions[0].value],
+    });
+  }
+
+  ngOnInit(): void {
+    const input = this.pharmaModelService.getInputSnapshot();
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const goalInput = input?.goal_seek ?? {};
+    const goalOutput = output?.goal_seek ?? {};
+    const target = (goalOutput.data?.Target as number[])?.[0];
+
+    if (goalInput.source && this.metricsBySource[goalInput.source]) {
+      this.metricOptions = this.metricsBySource[goalInput.source];
+      this.form.patchValue({
+        metricSource: goalInput.source,
+        metric: this.metricOptions[0]?.value ?? null,
+      });
+    }
+
+    this.form.patchValue({
+      targetValue: target ?? goalInput.target ?? this.form.value.targetValue,
+      year: goalInput.year ?? this.form.value.year,
     });
   }
 

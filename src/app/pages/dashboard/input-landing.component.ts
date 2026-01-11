@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TabsModule } from 'primeng/tabs';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { AssumptionCoreWidget } from './components/assumptioncorewidget';
 import { DistributorCommissionWidget } from './components/distributorcommissionwidget';
 import { DirectLaborWidget } from './components/directlaborwidget';
@@ -21,6 +22,7 @@ import { OverdraftWidget } from './components/overdraftwidget';
 import { TaxScheduleWidget } from './components/taxschedulewidget';
 import { InflationScheduleWidget } from './components/inflationschedulewidget';
 import { RiskScheduleWidget } from './components/riskschedulewidget';
+import { PharmaModelService } from '../services/pharma-model.service';
 
 @Component({
   standalone: true,
@@ -47,6 +49,7 @@ import { RiskScheduleWidget } from './components/riskschedulewidget';
     InflationScheduleWidget,
     RiskScheduleWidget,
     ButtonModule,
+    DialogModule,
   ],
   template: `
     <div class="flex flex-col gap-4">
@@ -59,88 +62,171 @@ import { RiskScheduleWidget } from './components/riskschedulewidget';
           [disabled]="isFirstSection"
           (click)="goToPrevious()"
         ></p-button>
-        <div class="text-sm text-surface-400">
+        <p-button
+          label="Use Defaults"
+          icon="pi pi-refresh"
+          variant="outlined"
+          severity="success"
+          [disabled]="isUsingDefaults"
+          (click)="useDefaults()"
+        ></p-button>
+        <!-- <div class="text-sm text-surface-400">
           Section {{ currentSectionIndex + 1 }} of {{ sections.length }} -
           {{ currentSectionLabel }}
-        </div>
-        <p-button
-          label="Next"
-          icon="pi pi-arrow-right"
-          iconPos="right"
-          [disabled]="isLastSection"
-          (click)="goToNext()"
-        ></p-button>
+        </div> -->
+        @if (isLastSection) {
+          <p-button
+            label="Submit Customer Data"
+            icon="pi pi-check"
+            [disabled]="isSubmitting"
+            (click)="openSubmitConfirm()"
+          ></p-button>
+        } @else {
+          <p-button
+            label="Next"
+            icon="pi pi-arrow-right"
+            iconPos="right"
+            (click)="goToNext()"
+          ></p-button>
+        }
       </div>
 
-      <p-tabs [(value)]="activeTab" class="w-full" scrollable>
-        <p-tablist>
-          @for (section of sections; track section.key) {
-          <p-tab [value]="section.key" class="whitespace-nowrap">
-            {{ section.label }}
-          </p-tab>
-          }
-        </p-tablist>
+      @if (isUsingDefaults) {
+        <div
+          class="flex items-center justify-center gap-3 py-16 text-surface-500"
+        >
+          <i class="pi pi-spinner pi-spin text-xl" aria-hidden="true"></i>
+          <span class="text-sm">Loading defaults...</span>
+        </div>
+      } @else if (formVisible) {
+        <p-tabs [(value)]="activeTab" class="w-full" scrollable>
+          <p-tablist>
+            @for (section of sections; track section.key) {
+            <p-tab [value]="section.key" class="whitespace-nowrap">
+              {{ section.label }}
+            </p-tab>
+            }
+          </p-tablist>
 
-        <p-tabpanels>
-          @for (section of sections; track section.key) {
-          <p-tabpanel [value]="section.key">
-            @switch (section.key) { @case ('projection') {
-            <projection-widget></projection-widget>
-            } @case ('core') {
-            <div class="grid grid-cols-12 gap-6 w-full">
-              <core-assumption-widget
-                class="col-span-12"
-              ></core-assumption-widget>
-            </div>
-            } @case ('commission') {
-            <distributor-commission-widget></distributor-commission-widget>
-            } @case ('direct-labour') {
-            <direct-labor-widget></direct-labor-widget>
-            } @case ('indirect-labour') {
-            <indirect-labor-widget></indirect-labor-widget>
-            } @case ('fixed-variable-costs') {
-            <fixed-variable-cost-widget></fixed-variable-cost-widget>
-            } @case ('utility-schedule') {
-            <utility-schedule-widget></utility-schedule-widget>
-            } @case ('accounts-receivable') {
-            <accounts-receivable-widget></accounts-receivable-widget>
-            } @case ('inventory-accounts-payable') {
-            <inventory-accounts-payable-widget></inventory-accounts-payable-widget>
-            } @case ('fixed-assets-schedule') {
-            <fixed-assets-schedule-widget></fixed-assets-schedule-widget>
-            } @case ('cost-financing-assumptions') {
-            <cost-financing-assumptions-widget></cost-financing-assumptions-widget>
-            } @case ('senior-debt') {
-            <senior-debt-widget></senior-debt-widget>
-            } @case ('revolver-loan') {
-            <revolver-loan-widget></revolver-loan-widget>
-            } @case ('overdraft') {
-            <overdraft-widget></overdraft-widget>
-            } @case ('tax-schedule') {
-            <tax-schedule-widget></tax-schedule-widget>
-            } @case ('inflation-schedule') {
-            <inflation-schedule-widget></inflation-schedule-widget>
-            } @case ('risk-schedule') {
-            <risk-schedule-widget></risk-schedule-widget>
-            } @default {
-            <projection-widget></projection-widget>
-            } }
-          </p-tabpanel>
-          }
-          @if (isLastSection) {
-            <p-button
-              label="Submit Customer Data"
-              icon="pi pi-check"
-              class="w-full"
-              (click)="submitModel()"
-            ></p-button>
-          }
-        </p-tabpanels>
-      </p-tabs>
+          <p-tabpanels>
+            @for (section of sections; track section.key) {
+            <p-tabpanel [value]="section.key">
+              @switch (section.key) { @case ('projection') {
+              <projection-widget></projection-widget>
+              } @case ('core') {
+              <div class="grid grid-cols-12 gap-6 w-full">
+                <core-assumption-widget
+                  class="col-span-12"
+                ></core-assumption-widget>
+              </div>
+              } @case ('commission') {
+              <distributor-commission-widget></distributor-commission-widget>
+              } @case ('direct-labour') {
+              <direct-labor-widget></direct-labor-widget>
+              } @case ('indirect-labour') {
+              <indirect-labor-widget></indirect-labor-widget>
+              } @case ('fixed-variable-costs') {
+              <fixed-variable-cost-widget></fixed-variable-cost-widget>
+              } @case ('utility-schedule') {
+              <utility-schedule-widget></utility-schedule-widget>
+              } @case ('accounts-receivable') {
+              <accounts-receivable-widget></accounts-receivable-widget>
+              } @case ('inventory-accounts-payable') {
+              <inventory-accounts-payable-widget></inventory-accounts-payable-widget>
+              } @case ('fixed-assets-schedule') {
+              <fixed-assets-schedule-widget></fixed-assets-schedule-widget>
+              } @case ('cost-financing-assumptions') {
+              <cost-financing-assumptions-widget></cost-financing-assumptions-widget>
+              } @case ('senior-debt') {
+              <senior-debt-widget></senior-debt-widget>
+              } @case ('revolver-loan') {
+              <revolver-loan-widget></revolver-loan-widget>
+              } @case ('overdraft') {
+              <overdraft-widget></overdraft-widget>
+              } @case ('tax-schedule') {
+              <tax-schedule-widget></tax-schedule-widget>
+              } @case ('inflation-schedule') {
+              <inflation-schedule-widget></inflation-schedule-widget>
+              } @case ('risk-schedule') {
+              <risk-schedule-widget></risk-schedule-widget>
+              } @default {
+              <projection-widget></projection-widget>
+              } }
+            </p-tabpanel>
+            }
+          </p-tabpanels>
+        </p-tabs>
+      }
     </div>
+
+    <p-dialog
+      header="Confirmation!"
+      [(visible)]="showSubmitConfirm"
+      [modal]="true"
+      [closable]="true"
+      [style]="{ width: '26rem' }"
+      (onHide)="closeSubmitConfirm()"
+    >
+      <div class="flex flex-col gap-4">
+        <p class="text-sm text-surface-500">
+          <!-- This will submit the current inputs and run the model. -->
+          Are you sure, you want to submit the customer data and run the model ?
+        </p>
+        <div class="flex justify-end gap-2">
+          <p-button
+            label="No"
+            icon="pi pi-times"
+            severity="secondary"
+            [text]="true"
+            (click)="closeSubmitConfirm()"
+          ></p-button>
+          <p-button
+            label="Yes"
+            icon="pi pi-check"
+            [disabled]="isSubmitting"
+            (click)="confirmSubmitModel()"
+          ></p-button>
+        </div>
+      </div>
+    </p-dialog>
+
+    <p-dialog
+      header="Submission failed"
+      [(visible)]="showSubmitError"
+      [modal]="true"
+      [closable]="true"
+      [style]="{ width: '26rem' }"
+      (onHide)="closeSubmitError()"
+    >
+      <div class="flex flex-col gap-4">
+        <p class="text-sm text-surface-500">{{ submitErrorMessage }}</p>
+        <div class="flex justify-end">
+          <p-button
+            label="Close"
+            severity="secondary"
+            [text]="true"
+            (click)="closeSubmitError()"
+          ></p-button>
+        </div>
+      </div>
+    </p-dialog>
+
+    <p-dialog
+      header="Running model"
+      [(visible)]="isSubmitting"
+      [modal]="true"
+      [closable]="false"
+      [draggable]="false"
+      [style]="{ width: '22rem' }"
+    >
+      <div class="flex items-center gap-3">
+        <i class="pi pi-spinner pi-spin text-xl" aria-hidden="true"></i>
+        <span class="text-sm text-surface-500">Processing submission...</span>
+      </div>
+    </p-dialog>
   `,
 })
-export class InputLandingComponent {
+export class InputLandingComponent implements OnInit {
   sections = [
     { key: 'projection', label: 'Projection Horizon' },
     { key: 'core', label: 'Core Assumptions' },
@@ -171,8 +257,21 @@ export class InputLandingComponent {
   ];
 
   activeTab = 'projection';
+  isSubmitting = false;
+  formVisible = false;
+  isUsingDefaults = false;
+  showSubmitConfirm = false;
+  showSubmitError = false;
+  submitErrorMessage = '';
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private pharmaModelService: PharmaModelService
+  ) {}
+
+  ngOnInit(): void {
+    this.resetForm();
+  }
 
   get currentSectionIndex(): number {
     return this.sections.findIndex((section) => section.key === this.activeTab);
@@ -204,13 +303,72 @@ export class InputLandingComponent {
     }
   }
 
-  submitModel(): void {
-    localStorage.setItem('model_setup_complete', 'true');
-    this.router.navigate(['/dashboard/pharma-results']);
+  openSubmitConfirm(): void {
+    if (this.isSubmitting) {
+      return;
+    }
+    this.showSubmitConfirm = true;
+  }
+
+  closeSubmitConfirm(): void {
+    this.showSubmitConfirm = false;
+  }
+
+  confirmSubmitModel(): void {
+    if (this.isSubmitting) {
+      return;
+    }
+    this.showSubmitConfirm = false;
+    this.submitModel();
+  }
+
+  private submitModel(): void {
+    if (this.isSubmitting) {
+      return;
+    }
+    this.isSubmitting = true;
+    this.pharmaModelService.runPharmaModel().subscribe({
+      next: () => {
+        localStorage.setItem('model_setup_complete', 'true');
+        this.router.navigate(['/dashboard/pharma-results']);
+        this.isSubmitting = false;
+      },
+      error: (err: Error) => {
+        this.submitErrorMessage =
+          err?.message || 'Unable to submit data. Please try again.';
+        this.showSubmitError = true;
+        this.isSubmitting = false;
+      },
+    });
+  }
+
+  closeSubmitError(): void {
+    this.showSubmitError = false;
+  }
+
+  useDefaults(): void {
+    if (this.isUsingDefaults) {
+      return;
+    }
+    this.isUsingDefaults = true;
+    this.pharmaModelService.loadDefaults();
+    this.refreshForms(() => {
+      this.isUsingDefaults = false;
+    });
+  }
+
+  private resetForm(): void {
+    this.pharmaModelService.clearInput();
+    this.refreshForms();
+  }
+
+  private refreshForms(onComplete?: () => void): void {
+    this.formVisible = false;
+    setTimeout(() => {
+      this.formVisible = true;
+      if (onComplete) {
+        onComplete();
+      }
+    }, 0);
   }
 }
-
-
-
-
-

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { FluidModule } from 'primeng/fluid';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 @Component({
   standalone: true,
@@ -124,7 +124,10 @@ import inputData from '../../../../../input.json';
 export class CostFinancingAssumptionsWidget implements OnInit {
   form: FormGroup;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rawMaterialPerUnit: [0],
       annualRawMaterialSpend: [''],
@@ -139,11 +142,14 @@ export class CostFinancingAssumptionsWidget implements OnInit {
 
   ngOnInit(): void {
     this.form.patchValue(this.buildDefaults());
+    this.form.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   private buildDefaults() {
-    const raw = inputData.raw_material_cost ?? {};
-    const financing = inputData.financing ?? {};
+    const input = this.pharmaModelService.getInputSnapshot();
+    const raw = input.raw_material_cost ?? {};
+    const financing = input.financing ?? {};
     const annualList = Array.isArray(raw.annual) ? raw.annual : [];
     return {
       rawMaterialPerUnit: raw.per_unit ?? 0,
@@ -156,5 +162,31 @@ export class CostFinancingAssumptionsWidget implements OnInit {
       revolverInterest: financing.revolver_interest ?? 0,
       cashInterest: financing.cash_interest ?? 0,
     };
+  }
+
+  private syncToModel(): void {
+    const value = this.form.getRawValue();
+    const annualRawMaterialSpend = String(value.annualRawMaterialSpend ?? '')
+      .split(',')
+      .map((v) => Number(v.trim()))
+      .filter((v) => Number.isFinite(v));
+
+    const current = this.pharmaModelService.getInputSnapshot();
+    this.pharmaModelService.patchInput({
+      raw_material_cost: {
+        ...(current.raw_material_cost ?? {}),
+        per_unit: Number(value.rawMaterialPerUnit ?? 0),
+        annual: annualRawMaterialSpend,
+      },
+      financing: {
+        ...(current.financing ?? {}),
+        initial_investment: Number(value.initialInvestment ?? 0),
+        discount_rate: Number(value.discountRate ?? 0),
+        share_capital: Number(value.shareCapital ?? 0),
+        senior_debt_interest: Number(value.seniorDebtInterest ?? 0),
+        revolver_interest: Number(value.revolverInterest ?? 0),
+        cash_interest: Number(value.cashInterest ?? 0),
+      },
+    });
   }
 }

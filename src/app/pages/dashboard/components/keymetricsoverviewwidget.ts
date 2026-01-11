@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 @Component({
   standalone: true,
@@ -41,42 +41,11 @@ import inputData from '../../../../../input.json';
     </div>
   `,
 })
-export class KeyMetricsOverviewWidget {
+export class KeyMetricsOverviewWidget implements OnInit {
   lineType: ChartType = 'line';
-
-  labels = (inputData.years as number[]) ?? [];
-
-  netRevenueData: ChartConfiguration['data'] = {
-    labels: this.labels,
-    datasets: [
-      {
-        label: 'Net Revenue',
-        data: this.buildGrowthSeries(2_500_000, 22_000_000, this.labels.length),
-        borderColor: '#7ed0ff',
-        backgroundColor: 'rgba(126, 208, 255, 0.15)',
-        fill: true,
-        tension: 0.35,
-        borderWidth: 2,
-        pointRadius: 0,
-      },
-    ],
-  };
-
-  ebitdaData: ChartConfiguration['data'] = {
-    labels: this.labels,
-    datasets: [
-      {
-        label: 'EBITDA',
-        data: this.buildGrowthSeries(500_000, 7_500_000, this.labels.length),
-        borderColor: '#8ddca4',
-        backgroundColor: 'rgba(141, 220, 164, 0.15)',
-        fill: true,
-        tension: 0.35,
-        borderWidth: 2,
-        pointRadius: 0,
-      },
-    ],
-  };
+  labels: number[] = [];
+  netRevenueData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  ebitdaData: ChartConfiguration['data'] = { labels: [], datasets: [] };
 
   chartOptions: ChartConfiguration['options'] = {
     responsive: true,
@@ -113,14 +82,48 @@ export class KeyMetricsOverviewWidget {
     },
   };
 
-  private buildGrowthSeries(
-    start: number,
-    end: number,
-    count: number
-  ): number[] {
-    if (count <= 1) return [start];
-    const step = (end - start) / (count - 1);
-    return Array.from({ length: count }, (_, idx) => start + step * idx);
+  constructor(private pharmaModelService: PharmaModelService) {}
+
+  ngOnInit(): void {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const income = output?.income_statement ?? {};
+    const years = (income.index as number[]) ?? [];
+    const data = income.data ?? {};
+    const netRevenue = this.asNumberArray(data['Net Revenue']);
+    const ebitda = this.asNumberArray(data['EBITDA']);
+
+    this.labels = years;
+    this.netRevenueData = {
+      labels: years,
+      datasets: [
+        {
+          label: 'Net Revenue',
+          data: netRevenue,
+          borderColor: '#7ed0ff',
+          backgroundColor: 'rgba(126, 208, 255, 0.15)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    };
+
+    this.ebitdaData = {
+      labels: years,
+      datasets: [
+        {
+          label: 'EBITDA',
+          data: ebitda,
+          borderColor: '#8ddca4',
+          backgroundColor: 'rgba(141, 220, 164, 0.15)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    };
   }
 
   private formatNumber(value: number): string {
@@ -131,5 +134,10 @@ export class KeyMetricsOverviewWidget {
       return `${(value / 1_000).toFixed(1)}k`;
     }
     return value.toString();
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface BreakEvenPoint {
   product: string;
@@ -57,57 +57,16 @@ interface BreakEvenPoint {
     </div>
   `,
 })
-export class BreakEvenPaybackWidget {
+export class BreakEvenPaybackWidget implements OnInit {
   barType: ChartType = 'bar';
   lineType: ChartType = 'line';
 
-  products = Object.keys((inputData.production_estimate as Record<string, number[]>) ?? {});
-  years = (inputData.years as number[]) ?? [];
-
-  breakEvenPoints: BreakEvenPoint[] = this.buildBreakEvenPoints();
-
-  breakEvenData: ChartConfiguration['data'] = {
-    labels: this.breakEvenPoints.map((p) => p.product),
-    datasets: [
-      {
-        label: 'Break-even Units',
-        data: this.breakEvenPoints.map((p) => p.units),
-        backgroundColor: 'rgba(126, 208, 255, 0.3)',
-        borderColor: '#7ed0ff',
-        borderWidth: 1.5,
-      },
-    ],
-  };
-
-  cumulativePaybackData: ChartConfiguration['data'] = {
-    labels: this.years,
-    datasets: [
-      {
-        label: 'Cumulative',
-        data: this.buildCumulativeSeries(),
-        borderColor: '#7ed0ff',
-        backgroundColor: 'rgba(126, 208, 255, 0.12)',
-        fill: false,
-        tension: 0.2,
-        pointRadius: 3,
-      },
-    ],
-  };
-
-  discountedPaybackData: ChartConfiguration['data'] = {
-    labels: this.years,
-    datasets: [
-      {
-        label: 'Discounted Cumulative',
-        data: this.buildDiscountedSeries(),
-        borderColor: '#8ddca4',
-        backgroundColor: 'rgba(141, 220, 164, 0.12)',
-        fill: false,
-        tension: 0.2,
-        pointRadius: 3,
-      },
-    ],
-  };
+  products: string[] = [];
+  years: number[] = [];
+  breakEvenPoints: BreakEvenPoint[] = [];
+  breakEvenData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  cumulativePaybackData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  discountedPaybackData: ChartConfiguration['data'] = { labels: [], datasets: [] };
 
   barOptions: ChartConfiguration['options'] = {
     responsive: true,
@@ -171,36 +130,65 @@ export class BreakEvenPaybackWidget {
     },
   };
 
-  private buildBreakEvenPoints(): BreakEvenPoint[] {
-    const unitCosts = (inputData.unit_costs as Record<string, { production: number; price: number; freight: number }>) ?? {};
-    const markup = (inputData.markup as Record<string, number>) ?? {};
-    const fixedCostPerProduct = 250_000;
+  constructor(private pharmaModelService: PharmaModelService) {}
 
-    return this.products.map((product, idx) => {
-      const price = Number(unitCosts[product]?.price ?? 1);
-      const production = Number(unitCosts[product]?.production ?? 0.5);
-      const freight = Number(unitCosts[product]?.freight ?? 0.05);
-      const marginPerUnit = Math.max(price - production - freight, 0.01);
-      const tilt = 1 + idx * 0.15;
-      const breakevenUnits = (fixedCostPerProduct * tilt) / marginPerUnit;
-      const markupAdj = markup[product] ? 1 + markup[product] * 0.1 : 1;
-      return {
-        product,
-        units: breakevenUnits * markupAdj,
-      };
-    });
-  }
+  ngOnInit(): void {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const breakEven = output?.break_even ?? {};
+    const payback = output?.payback ?? {};
+    const discounted = output?.discounted_payback ?? {};
 
-  private buildCumulativeSeries(): number[] {
-    if (!this.years.length) return [-1_200_000];
-    const template = [-1_200_000, -1_350_000, -1_380_000, -1_520_000, -1_750_000, -2_050_000, -2_500_000, -3_000_000, -3_500_000, -4_200_000];
-    return template.slice(0, this.years.length);
-  }
+    this.products = (breakEven.index as string[]) ?? [];
+    this.years = (payback.index as number[]) ?? [];
 
-  private buildDiscountedSeries(): number[] {
-    if (!this.years.length) return [-180_000];
-    const template = [-180_000, -240_000, -260_000, -270_000, -280_000, -285_000, -288_000, -289_000, -290_000, -290_000];
-    return template.slice(0, this.years.length);
+    const units = this.asNumberArray(breakEven.data?.['Break-even Units']);
+    this.breakEvenPoints = this.products.map((product, idx) => ({
+      product,
+      units: units[idx] ?? 0,
+    }));
+
+    this.breakEvenData = {
+      labels: this.breakEvenPoints.map((p) => p.product),
+      datasets: [
+        {
+          label: 'Break-even Units',
+          data: this.breakEvenPoints.map((p) => p.units),
+          backgroundColor: 'rgba(126, 208, 255, 0.3)',
+          borderColor: '#7ed0ff',
+          borderWidth: 1.5,
+        },
+      ],
+    };
+
+    this.cumulativePaybackData = {
+      labels: this.years,
+      datasets: [
+        {
+          label: 'Cumulative',
+          data: this.asNumberArray(payback.data?.Cumulative),
+          borderColor: '#7ed0ff',
+          backgroundColor: 'rgba(126, 208, 255, 0.12)',
+          fill: false,
+          tension: 0.2,
+          pointRadius: 3,
+        },
+      ],
+    };
+
+    this.discountedPaybackData = {
+      labels: this.years,
+      datasets: [
+        {
+          label: 'Discounted Cumulative',
+          data: this.asNumberArray(discounted.data?.Cumulative),
+          borderColor: '#8ddca4',
+          backgroundColor: 'rgba(141, 220, 164, 0.12)',
+          fill: false,
+          tension: 0.2,
+          pointRadius: 3,
+        },
+      ],
+    };
   }
 
   private formatNumber(value: number): string {
@@ -208,5 +196,10 @@ export class BreakEvenPaybackWidget {
     if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(2)}M`;
     if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(2)}k`;
     return value.toFixed(0);
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

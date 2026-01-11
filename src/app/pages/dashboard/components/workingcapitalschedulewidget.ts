@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface WorkingCapitalRow {
   id: number;
@@ -158,13 +158,17 @@ export class WorkingCapitalScheduleWidget implements OnInit {
   initWorkingId = 1;
   initIventoryId = 1;
 
+  constructor(private pharmaModelService: PharmaModelService) {}
+
   ngOnInit(): void {
-    this.rows = this.buildRows();
-    this.inventorySchedule = this.buildInventorySchedule();
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const input = this.pharmaModelService.getInputSnapshot();
+    this.rows = this.buildRows(output, input);
+    this.inventorySchedule = this.buildInventorySchedule(output, input);
   }
 
-  private buildRows(): WorkingCapitalRow[] {
-    const wc = inputData.working_capital ?? {};
+  private buildRows(output: any, input: any): WorkingCapitalRow[] {
+    const wc = input?.working_capital ?? {};
     const days = wc.days ?? {};
     const arDays = (days.accounts_receivable as number[]) ?? [];
     const inventoryDays = (days.inventory as number[]) ?? [];
@@ -173,14 +177,15 @@ export class WorkingCapitalScheduleWidget implements OnInit {
     const apDays = (days.accounts_payable as number[]) ?? [];
     const otherLiabilityDays = (days.other_liabilities as number[]) ?? [];
     const calendarDays = (wc.calendar_days as number[]) ?? [];
-    const years = (inputData.years as number[]) ?? [];
-
-    const arFactor = 4098;
-    const inventoryFactor = 2710;
-    const prepaidFactor = 2700;
-    const otherAssetFactor = 2700;
-    const apFactor = 2725;
-    const otherLiabilityFactor = 2712;
+    const balanceSheet = output?.balance_sheet ?? {};
+    const years = (balanceSheet.index as number[]) ?? (input?.years ?? []);
+    const data = balanceSheet.data ?? {};
+    const accountsReceivable = this.asNumberArray(data['Accounts Receivable']);
+    const inventory = this.asNumberArray(data['Inventory']);
+    const prepaid = this.asNumberArray(data['Prepaid Expenses']);
+    const otherAssets = this.asNumberArray(data['Other Assets']);
+    const accountsPayable = this.asNumberArray(data['Accounts Payable']);
+    const otherLiabilities = this.asNumberArray(data['Other Liabilities']);
 
     const maxLen = Math.max(
       arDays.length,
@@ -197,17 +202,22 @@ export class WorkingCapitalScheduleWidget implements OnInit {
     for (let i = 0; i < maxLen; i++) {
       const id = this.initWorkingId++;
       const year = years[i] ?? years[0] ?? new Date().getFullYear();
-      const arBase = (arDays[i] ?? 0) * arFactor;
-      const distributorReceivables = arBase * 0.66;
+      const arBase = accountsReceivable[i] ?? 0;
+      const distributorReceivables = 0;
       const arTotal = arBase + distributorReceivables;
-      const inventory = (inventoryDays[i] ?? 0) * inventoryFactor;
-      const prepaid = (prepaidDays[i] ?? 0) * prepaidFactor;
-      const otherAssets = (otherAssetDays[i] ?? 0) * otherAssetFactor;
-      const accountsPayable = (apDays[i] ?? 0) * apFactor;
-      const otherLiabilities = (otherLiabilityDays[i] ?? 0) * otherLiabilityFactor;
+      const inventoryValue = inventory[i] ?? 0;
+      const prepaidValue = prepaid[i] ?? 0;
+      const otherAssetsValue = otherAssets[i] ?? 0;
+      const accountsPayableValue = accountsPayable[i] ?? 0;
+      const otherLiabilitiesValue = otherLiabilities[i] ?? 0;
 
       const netWorkingCapital =
-        arTotal + inventory + prepaid + otherAssets - accountsPayable - otherLiabilities;
+        arTotal +
+        inventoryValue +
+        prepaidValue +
+        otherAssetsValue -
+        accountsPayableValue -
+        otherLiabilitiesValue;
 
       rows.push({
         id,
@@ -222,11 +232,11 @@ export class WorkingCapitalScheduleWidget implements OnInit {
         arBase,
         distributorReceivables,
         arTotal,
-        inventory,
-        prepaid,
-        otherAssets,
-        accountsPayable,
-        otherLiabilities,
+        inventory: inventoryValue,
+        prepaid: prepaidValue,
+        otherAssets: otherAssetsValue,
+        accountsPayable: accountsPayableValue,
+        otherLiabilities: otherLiabilitiesValue,
         netWorkingCapital,
         changeInNwc: 0, // filled below
       });
@@ -244,15 +254,14 @@ export class WorkingCapitalScheduleWidget implements OnInit {
     return rows;
   }
 
-  private buildInventorySchedule(): InventoryScheduleRow[] {
-    const years = (inputData.years as number[]) ?? [];
-    const calendarDays = (inputData.working_capital?.calendar_days as number[]) ?? [];
-    const inventoryDays = (inputData.working_capital?.days?.inventory as number[]) ?? [];
+  private buildInventorySchedule(output: any, input: any): InventoryScheduleRow[] {
+    const balanceSheet = output?.balance_sheet ?? {};
+    const years = (balanceSheet.index as number[]) ?? (input?.years ?? []);
+    const calendarDays = (input?.working_capital?.calendar_days as number[]) ?? [];
+    const inventoryDays = (input?.working_capital?.days?.inventory as number[]) ?? [];
     const balanceSheetInventory = this.rows.map((r) => r.inventory);
-
-    // Simple cost of sales proxy using revenue-like scale factor
-    const baseCost = 2_000_000;
-    const growth = 1.12;
+    const income = output?.income_statement ?? {};
+    const costOfSales = this.asNumberArray(income.data?.['Cost of Sales']);
 
     const rows: InventoryScheduleRow[] = [];
     for (let i = 0; i < years.length; i++) {
@@ -260,17 +269,17 @@ export class WorkingCapitalScheduleWidget implements OnInit {
       const year = years[i];
       const daysInYear = calendarDays[i] ?? 365;
       const invDays = inventoryDays[i] ?? 50;
-      const costOfSales = baseCost * Math.pow(growth, i);
-      const calculatedInventory = (costOfSales / daysInYear) * invDays;
+      const cost = costOfSales[i] ?? 0;
+      const calculatedInventory = (cost / daysInYear) * invDays;
       const bsInventory = balanceSheetInventory[i] ?? calculatedInventory;
       const variance = bsInventory - calculatedInventory;
       const inventoryTurnover =
-        bsInventory > 0 ? costOfSales / bsInventory : 0;
+        bsInventory > 0 ? cost / bsInventory : 0;
 
       rows.push({
         id,
         year,
-        costOfSales,
+        costOfSales: cost,
         daysInYear,
         inventoryDays: invDays,
         calculatedInventory,
@@ -293,5 +302,10 @@ export class WorkingCapitalScheduleWidget implements OnInit {
           : abs.toFixed(3);
     const suffix = abs >= 1_000_000 ? 'M' : abs >= 1_000 ? 'k' : '';
     return `${sign}${formatted}${suffix}`;
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

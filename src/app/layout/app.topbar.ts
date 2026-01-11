@@ -3,15 +3,19 @@ import { MenuItem } from 'primeng/api';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { StyleClassModule } from 'primeng/styleclass';
-import { ChipModule } from 'primeng/chip'
+import { ChipModule } from 'primeng/chip';
+import { ButtonModule } from 'primeng/button';
+import { finalize } from 'rxjs';
 import { LayoutService } from './service/layout.service';
 import { AuthService } from '../pages/services/auth.service';
 import { User } from '../models/user.model';
+import { ApiService } from '../pages/services/api.service';
+import { PharmaModelService } from '../pages/services/pharma-model.service';
 
 @Component({
     selector: 'app-topbar',
     standalone: true,
-    imports: [RouterModule, CommonModule, StyleClassModule, ChipModule ],
+    imports: [RouterModule, CommonModule, StyleClassModule, ChipModule, ButtonModule],
     template: ` <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
             <button class="layout-menu-button layout-topbar-action" (click)="layoutService.onMenuToggle()">
@@ -44,6 +48,39 @@ import { User } from '../models/user.model';
                 <button type="button" class="layout-topbar-action" (click)="toggleDarkMode()">
                     <i [ngClass]="{ 'pi ': true, 'pi-moon': layoutService.isDarkTheme(), 'pi-sun': !layoutService.isDarkTheme() }"></i>
                 </button>
+            </div>
+
+            <div class="layout-config-menu">
+                @if (subscriptionStatus() === 'checking') {
+                    <button type="button" class="layout-topbar-action" disabled>
+                        <i class="pi pi-spinner pi-spin"></i>
+                    </button>
+                } @else if (subscriptionStatus() === 'inactive') {
+                    <p-button
+                        label="Subscribe to download"
+                        icon="pi pi-lock"
+                        size="small"
+                        severity="help"
+                        (click)="startSubscription()"
+                    ></p-button>
+                } @else if (subscriptionStatus() === 'active') {
+                    <p-button
+                        label="Download report"
+                        icon="pi pi-download"
+                        size="small"
+                        [loading]="isExporting()"
+                        [disabled]="isExporting()"
+                        (click)="exportReport()"
+                    ></p-button>
+                } @else {
+                    <p-button
+                        label="Retry subscription check"
+                        icon="pi pi-refresh"
+                        size="small"
+                        severity="secondary"
+                        (click)="checkSubscriptionStatus()"
+                    ></p-button>
+                }
             </div>
 
             <button class="layout-topbar-menu-button layout-topbar-action" pStyleClass="@next" enterFromClass="hidden" enterActiveClass="animate-scalein" leaveToClass="hidden" leaveActiveClass="animate-fadeout" [hideOnOutsideClick]="true">
@@ -81,6 +118,9 @@ export class AppTopbar {
     items!: MenuItem[];
 
     user = signal<User | null>(null);
+    subscriptionStatus = signal<'checking' | 'active' | 'inactive' | 'error'>('checking');
+    subscriptionMessage = signal('');
+    isExporting = signal(false);
 
     displayName = computed(() => {
         const user = this.user();
@@ -90,8 +130,14 @@ export class AppTopbar {
     
     userInitial = computed(() => this.displayName().charAt(0).toUpperCase() || 'U');
 
-    constructor(public layoutService: LayoutService, private authService: AuthService) {
+    constructor(
+        public layoutService: LayoutService,
+        private authService: AuthService,
+        private apiService: ApiService,
+        private pharmaModelService: PharmaModelService
+    ) {
         this.user.set(this.authService.getUser());
+        this.checkSubscriptionStatus();
     }
 
     toggleDarkMode() {
@@ -99,5 +145,52 @@ export class AppTopbar {
     }
 
     image: string | null = null;
+
+    checkSubscriptionStatus(): void {
+        const email = this.user()?.email;
+        this.subscriptionStatus.set('checking');
+        this.subscriptionMessage.set('');
+        this.apiService
+            .post('/subscriptions/check', { email })
+            .subscribe({
+                next: (response: { is_active: boolean; message?: string }) => {
+                    this.subscriptionStatus.set(response?.is_active ? 'active' : 'inactive');
+                    this.subscriptionMessage.set(response?.message || '');
+                },
+                error: () => {
+                    this.subscriptionStatus.set('error');
+                    this.subscriptionMessage.set('Unable to verify subscription.');
+                }
+            });
+    }
+
+    startSubscription(): void {
+        window.open('https://paystack.com', '_blank', 'noopener');
+    }
+
+    exportReport(): void {
+        if (this.subscriptionStatus() !== 'active' || this.isExporting()) {
+            return;
+        }
+        this.isExporting.set(true);
+        this.pharmaModelService
+            .exportPharmaReport()
+            .pipe(finalize(() => this.isExporting.set(false)))
+            .subscribe({
+                next: (blob) => this.downloadBlob(blob),
+                error: () => {
+                    console.error('Report export failed.');
+                }
+            });
+    }
+
+    private downloadBlob(blob: Blob): void {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'pharma-report';
+        link.click();
+        window.URL.revokeObjectURL(url);
+    }
 
 }

@@ -1,92 +1,50 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
-import {
-  FormArray,
-  FormBuilder,
-  FormControl,
-  FormGroup,
-  ReactiveFormsModule,
-} from '@angular/forms';
-import { InputTextModule } from 'primeng/inputtext';
-import { ButtonModule } from 'primeng/button';
-import { FluidModule } from 'primeng/fluid';
+import { Component, OnInit } from '@angular/core';
+import { TableModule } from 'primeng/table';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 @Component({
   standalone: true,
   selector: 'stress-testing-widget',
-  imports: [CommonModule, ReactiveFormsModule, InputTextModule, ButtonModule, FluidModule],
+  imports: [CommonModule, TableModule],
   template: `
-    <p-fluid class="flex">
-      <div class="card w-full flex flex-col gap-4">
-        <div class="text-2xl font-semibold">Stress Testing</div>
+    <div class="card w-full flex flex-col gap-4">
+      <div class="text-2xl font-semibold">Stress Testing</div>
+      <p class="text-sm text-surface-400">{{ interpretation }}</p>
 
-        <form [formGroup]="form" class="flex flex-col gap-3">
-          <div formArrayName="variables" class="flex flex-col gap-3">
-            @for (variable of variables.controls; track variable; let i = $index) {
-              <div class="flex items-center gap-3">
-                <input
-                  pInputText
-                  class="flex-1"
-                  [formControlName]="i"
-                  placeholder="Variable name"
-                />
-                <p-button
-                  label="Remove"
-                  severity="danger"
-                  variant="outlined"
-                  size="small"
-                  (click)="removeVariable(i)"
-                />
-              </div>
-            }
-          </div>
-        </form>
-
-        <div class="border border-surface-800 rounded p-4 flex flex-col gap-3">
-          <div class="text-sm font-semibold">Variable</div>
-          <input
-            pInputText
-            [formControl]="newVariableControl"
-            placeholder="Variable name"
-            class="w-full"
-          />
-          <div>
-            <p-button label="Add Variable" (click)="addVariable()" />
-          </div>
-        </div>
+      <div class="overflow-auto">
+        <p-table [value]="rows" showGridlines responsiveLayout="scroll">
+          <ng-template pTemplate="header">
+            <tr>
+              @for (col of columns; track col) {
+                <th>{{ col }}</th>
+              }
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr>
+              @for (col of columns; track col) {
+                <td>{{ row[col] }}</td>
+              }
+            </tr>
+          </ng-template>
+        </p-table>
       </div>
-    </p-fluid>
+    </div>
   `,
 })
-export class StressTestingWidget {
-  form: FormGroup;
-  newVariableControl: FormControl;
+export class StressTestingWidget implements OnInit {
+  rows: Array<Record<string, any>> = [];
+  columns: string[] = [];
+  interpretation = '';
 
-  get variables(): FormArray {
-    return this.form.get('variables') as FormArray;
-  }
+  constructor(private pharmaModelService: PharmaModelService) {}
 
-  constructor(private fb: FormBuilder) {
-    this.form = this.fb.group({
-      variables: this.fb.array([
-        new FormControl('Net Revenue'),
-        new FormControl('EBITDA'),
-      ]),
-    });
-
-    this.newVariableControl = new FormControl('');
-  }
-
-  addVariable(): void {
-    const value = (this.newVariableControl.value ?? '').trim();
-    if (!value) return;
-    this.variables.push(new FormControl(value));
-    this.newVariableControl.reset();
-  }
-
-  removeVariable(index: number): void {
-    if (index >= 0 && index < this.variables.length) {
-      this.variables.removeAt(index);
-    }
+  ngOnInit(): void {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const result = output?.scenario_tool_results?.stress_testing ?? {};
+    this.rows = result.rows ?? [];
+    this.columns = this.rows.length ? Object.keys(this.rows[0]) : [];
+    this.interpretation = result.interpretation ?? '';
   }
 }

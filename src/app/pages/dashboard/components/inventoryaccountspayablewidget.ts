@@ -9,7 +9,7 @@ import {
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface InventoryAccountsPayableRow {
   inventoryYear: number;
@@ -128,6 +128,7 @@ interface InventoryAccountsPayableRow {
             <div class="col-span-12 md:col-span-3">
               <div class="text-sm font-semibold mb-1">Year</div>
               <select class="p-inputtext w-full" formControlName="year">
+                <option [ngValue]="null">Select year</option>
                 @for (y of yearOptions; track y) {
                 <option [value]="y">{{ y }}</option>
                 }
@@ -189,27 +190,33 @@ interface InventoryAccountsPayableRow {
 export class InventoryAccountsPayableWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  yearOptions: number[] = inputData.years ?? [];
+  yearOptions: number[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
 
     this.newRowForm = this.fb.group({
-      year: [this.yearOptions[0] ?? new Date().getFullYear()],
-      daysInYear: [365],
-      inventoryDays: [0],
-      accountsPayableDays: [0],
+      year: [null],
+      daysInYear: [null],
+      inventoryDays: [null],
+      accountsPayableDays: [null],
     });
   }
 
   ngOnInit(): void {
+    this.yearOptions = this.pharmaModelService.getYearOptions();
     const rows = this.buildRowsFromInput();
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -228,10 +235,10 @@ export class InventoryAccountsPayableWidget implements OnInit {
       })
     );
     this.newRowForm.reset({
-      year: this.yearOptions[0] ?? new Date().getFullYear(),
-      daysInYear: 365,
-      inventoryDays: 0,
-      accountsPayableDays: 0,
+      year: null,
+      daysInYear: null,
+      inventoryDays: null,
+      accountsPayableDays: null,
     });
   }
 
@@ -240,17 +247,28 @@ export class InventoryAccountsPayableWidget implements OnInit {
   }
 
   private buildRowsFromInput(): InventoryAccountsPayableRow[] {
-    const wc = inputData.working_capital ?? {};
+    const input = this.pharmaModelService.getInputSnapshot();
+    const wc = input.working_capital ?? {};
     const days = wc.days ?? {};
     const inventoryDays = (days.inventory as number[]) ?? [];
     const accountsPayableDays = (days.accounts_payable as number[]) ?? [];
     const calendarDays = (wc.calendar_days as number[]) ?? [];
-    const years = this.yearOptions;
+    const inputYears = input.years ?? [];
+    if (
+      inventoryDays.length === 0 &&
+      accountsPayableDays.length === 0 &&
+      // calendarDays.length === 0 &&
+      inputYears.length === 0
+    ) {
+      return [];
+    }
+    const years = inputYears.length ? inputYears : this.yearOptions;
     const fallbackYear = years[0] ?? new Date().getFullYear();
+
     const maxLen = Math.max(
-      inventoryDays.length,
-      accountsPayableDays.length,
-      calendarDays.length,
+      inventoryDays.length, 
+      accountsPayableDays.length, 
+      calendarDays.length, 
       years.length
     );
     const rows: InventoryAccountsPayableRow[] = [];
@@ -262,7 +280,7 @@ export class InventoryAccountsPayableWidget implements OnInit {
         inventoryDays: inventoryDays[i] ?? 0,
         accountsPayableDays: accountsPayableDays[i] ?? 0,
       });
-    }
+    };
     return rows;
   }
 
@@ -275,5 +293,40 @@ export class InventoryAccountsPayableWidget implements OnInit {
       inventoryDays: [values.inventoryDays ?? 0],
       accountsPayableDays: [values.accountsPayableDays ?? 0],
     });
+  }
+
+  private syncToModel(): void {
+    const allYears =
+      this.pharmaModelService.getInputSnapshot().years ?? this.yearOptions;
+    const years = allYears.filter((year: number) => !this.isBlockedYear(year));
+    const inventoryDays: number[] = [];
+    const accountsPayableDays: number[] = [];
+    const calendarDays: number[] = [];
+
+    years.forEach((year: number, idx: number) => {
+      const match = this.rows.controls.find(
+        (group) => Number(group.get('year')?.value) === Number(year)
+      );
+      inventoryDays[idx] = Number(match?.get('inventoryDays')?.value ?? 0);
+      accountsPayableDays[idx] = Number(match?.get('accountsPayableDays')?.value ?? 0);
+      calendarDays[idx] = Number(match?.get('daysInYear')?.value ?? 365);
+    });
+
+    const current = this.pharmaModelService.getInputSnapshot();
+    this.pharmaModelService.patchInput({
+      working_capital: {
+        ...(current.working_capital ?? {}),
+        days: {
+          ...(current.working_capital?.days ?? {}),
+          inventory: inventoryDays,
+          accounts_payable: accountsPayableDays,
+        },
+        calendar_days: calendarDays,
+      },
+    });
+  }
+
+  private isBlockedYear(year: number): boolean {
+    return year >= 2026 && year <= 2040;
   }
 }

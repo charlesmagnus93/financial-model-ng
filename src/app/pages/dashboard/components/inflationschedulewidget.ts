@@ -9,7 +9,7 @@ import {
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface InflationRow {
   year: number;
@@ -111,25 +111,34 @@ interface InflationRow {
 export class InflationScheduleWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  yearOptions: number[] = inputData.years ?? [];
+  yearOptions: number[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
 
     this.newRowForm = this.fb.group({
-      year: [this.yearOptions[0] ?? new Date().getFullYear()],
+      year: [new Date().getFullYear()],
       rate: [0],
     });
   }
 
   ngOnInit(): void {
+    this.yearOptions = this.pharmaModelService.getYearOptions();
+    this.newRowForm.patchValue({
+      year: this.yearOptions[0] ?? new Date().getFullYear(),
+    });
     const rows = this.buildRowsFromInput();
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -150,23 +159,42 @@ export class InflationScheduleWidget implements OnInit {
   }
 
   private buildRowsFromInput(): InflationRow[] {
-    const rates = (inputData.inflation_series as number[]) ?? [];
+    const input = this.pharmaModelService.getInputSnapshot();
+    const rates = (input.inflation_series as number[]) ?? [];
     const years = this.yearOptions;
     const maxLen = Math.max(rates.length, years.length);
     const rows: InflationRow[] = [];
     for (let i = 0; i < maxLen; i++) {
       rows.push({
         year: years[i] ?? years[0] ?? new Date().getFullYear(),
-        rate: rates[i] ?? inputData.inflation_rate ?? 0,
+        rate: rates[i] ?? input.inflation_rate ?? 0,
       });
     }
     return rows;
   }
 
   private createRow(values: Partial<InflationRow>): FormGroup {
+    const input = this.pharmaModelService.getInputSnapshot();
     return this.fb.group({
       year: [values.year ?? this.yearOptions[0] ?? new Date().getFullYear()],
-      rate: [values.rate ?? inputData.inflation_rate ?? 0],
+      rate: [values.rate ?? input.inflation_rate ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const years = this.pharmaModelService.getInputSnapshot().years ?? this.yearOptions;
+    const series: number[] = [];
+    years.forEach((year: number, idx: number) => {
+      const match = this.rows.controls.find(
+        (group) => Number(group.get('year')?.value) === Number(year)
+      );
+      series[idx] = Number(match?.get('rate')?.value ?? 0);
+    });
+
+    const baseRate = series[0] ?? 0;
+    this.pharmaModelService.patchInput({
+      inflation_rate: baseRate,
+      inflation_series: series,
     });
   }
 }

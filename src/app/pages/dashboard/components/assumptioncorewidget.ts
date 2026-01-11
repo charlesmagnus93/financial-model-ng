@@ -11,7 +11,7 @@ import {
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface CoreAssumptionRow {
   description: string;
@@ -260,7 +260,10 @@ export class AssumptionCoreWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
@@ -278,7 +281,10 @@ export class AssumptionCoreWidget implements OnInit {
 
   ngOnInit(): void {
     this.populateFromJson();
-    this.rows.valueChanges.subscribe(() => this.recalculateRows());
+    this.rows.valueChanges.subscribe(() => {
+      this.recalculateRows();
+      this.syncToModel();
+    });
   }
 
   get rows(): FormArray<FormGroup> {
@@ -315,23 +321,25 @@ export class AssumptionCoreWidget implements OnInit {
     const rowGroups = rows.map((row) => this.createRow(row));
     this.form.setControl('rows', this.fb.array(rowGroups));
     this.recalculateRows();
+    this.syncToModel();
   }
 
   private buildRowsFromInput(): CoreAssumptionRow[] {
-    const products = Object.keys(inputData.unit_costs || {});
+    const input = this.pharmaModelService.getInputSnapshot();
+    const products = Object.keys(input?.unit_costs || {});
 
     return products.map((product) => {
       const unitCosts =
-        (inputData.unit_costs as Record<string, any>)[product] || {};
+        (input.unit_costs as Record<string, any>)[product] || {};
       const productionCost = unitCosts.production ?? 0;
       const sellingPrice = unitCosts.price ?? 0;
       const freightCost = unitCosts.freight ?? 0;
-      const markup = (inputData.markup as Record<string, number>)[product] ?? 0;
+      const markup = (input.markup as Record<string, number>)[product] ?? 0;
       const productionUnits =
-        (inputData.total_production_units as Record<string, number>)[product] ??
+        (input.total_production_units as Record<string, number>)[product] ??
         0;
       const maxCapacity = Number(
-        (inputData.production_capacity as Record<string, string | number>)[
+        (input.production_capacity as Record<string, string | number>)[
           product
         ] ?? 0
       );
@@ -381,6 +389,37 @@ export class AssumptionCoreWidget implements OnInit {
         ?.setValue((productionCost + freightCost) * productionUnits, {
           emitEvent: false,
         });
+    });
+  }
+
+  private syncToModel(): void {
+    const unitCosts: Record<string, { production: number; price: number; freight: number }> = {};
+    const markup: Record<string, number> = {};
+    const totalProductionUnits: Record<string, number> = {};
+    const productionCapacity: Record<string, number> = {};
+
+    this.rows.controls.forEach((group) => {
+      const description = String(group.get('description')?.value ?? '').trim();
+      if (!description) return;
+      unitCosts[description] = {
+        production: this.asNumber(group.get('productionCost')?.value),
+        price: this.asNumber(group.get('sellingPrice')?.value),
+        freight: this.asNumber(group.get('freightCost')?.value),
+      };
+      markup[description] = this.asNumber(group.get('markup')?.value);
+      totalProductionUnits[description] = this.asNumber(
+        group.get('productionUnits')?.value
+      );
+      productionCapacity[description] = this.asNumber(
+        group.get('maxCapacity')?.value
+      );
+    });
+
+    this.pharmaModelService.patchInput({
+      unit_costs: unitCosts,
+      markup,
+      total_production_units: totalProductionUnits,
+      production_capacity: productionCapacity,
     });
   }
 

@@ -9,7 +9,7 @@ import {
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface FixedAssetRow {
   assetType: string;
@@ -282,14 +282,17 @@ interface FixedAssetRow {
 export class FixedAssetsScheduleWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  yearOptions: number[] = inputData.years ?? [];
+  yearOptions: number[] = [];
   assetTypeOptions: string[] = [];
   methodOptions = [
     { value: 'straight_line', label: 'Straight Line' },
     { value: 'reducing_balance', label: 'Reducing Balance' },
   ];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
@@ -298,7 +301,7 @@ export class FixedAssetsScheduleWidget implements OnInit {
       assetType: [''],
       assetTypeCustom: [''],
       method: [this.methodOptions[0].value],
-      year: [this.yearOptions[0] ?? new Date().getFullYear()],
+      year: [new Date().getFullYear()],
       acquisition: [0],
       assetLife: [0],
       netBookPrevYear: [0],
@@ -307,12 +310,18 @@ export class FixedAssetsScheduleWidget implements OnInit {
   }
 
   ngOnInit(): void {
+    this.yearOptions = this.pharmaModelService.getYearOptions();
+    this.newRowForm.patchValue({
+      year: this.yearOptions[0] ?? new Date().getFullYear(),
+    });
     this.assetTypeOptions = this.buildAssetTypeOptions();
     const rows = this.buildRowsFromInput();
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -363,7 +372,8 @@ export class FixedAssetsScheduleWidget implements OnInit {
   }
 
   private buildRowsFromInput(): FixedAssetRow[] {
-    const depreciationRows = (inputData.depreciation?.rows as any[]) ?? [];
+    const input = this.pharmaModelService.getInputSnapshot();
+    const depreciationRows = (input.depreciation?.rows as any[]) ?? [];
     return depreciationRows.map((row) => ({
       assetType: row.asset_type ?? 'Asset',
       method: row.method ?? this.methodOptions[0].value,
@@ -396,7 +406,8 @@ export class FixedAssetsScheduleWidget implements OnInit {
   }
 
   private buildAssetTypeOptions(): string[] {
-    const depreciationRows = (inputData.depreciation?.rows as any[]) ?? [];
+    const input = this.pharmaModelService.getInputSnapshot();
+    const depreciationRows = (input.depreciation?.rows as any[]) ?? [];
     const set = new Set<string>();
     depreciationRows.forEach((row) => {
       if (row.asset_type) {
@@ -404,5 +415,24 @@ export class FixedAssetsScheduleWidget implements OnInit {
       }
     });
     return Array.from(set);
+  }
+
+  private syncToModel(): void {
+    const rows = this.rows.controls
+      .map((group) => ({
+        asset_type: String(group.get('assetType')?.value ?? '').trim(),
+        method: String(group.get('method')?.value ?? 'straight_line'),
+        year: Number(group.get('year')?.value ?? 0),
+        acquisition: Number(group.get('acquisition')?.value ?? 0),
+        asset_life: Number(group.get('assetLife')?.value ?? 0),
+        depreciation_rate: Number(group.get('depreciationRate')?.value ?? 0),
+        opening_net_book: Number(group.get('netBookPrevYear')?.value ?? 0),
+        opening_cumulative: Number(group.get('cumulativeDepreciation')?.value ?? 0),
+      }))
+      .filter((row) => row.asset_type);
+
+    this.pharmaModelService.patchInput({
+      depreciation: { rows },
+    });
   }
 }

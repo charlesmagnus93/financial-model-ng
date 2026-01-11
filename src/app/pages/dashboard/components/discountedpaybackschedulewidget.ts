@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface DiscountedPaybackRow {
   index: number;
@@ -101,6 +101,8 @@ export class DiscountedPaybackScheduleWidget implements OnInit {
     },
   };
 
+  constructor(private pharmaModelService: PharmaModelService) {}
+
   ngOnInit(): void {
     this.rows = this.buildRows();
     this.chartData = {
@@ -120,25 +122,20 @@ export class DiscountedPaybackScheduleWidget implements OnInit {
   }
 
   private buildRows(): DiscountedPaybackRow[] {
-    const years = (inputData.years as number[]) ?? [];
-    const discountRate = 0.12;
-    const baseCashFlow = -180_000;
-    const cashGrowth = 1.08;
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const discounted = output?.discounted_payback ?? {};
+    const years = (discounted.index as number[]) ?? [];
+    const discountedCashFlow = this.asNumberArray(
+      discounted.data?.['Discounted Cash Flow']
+    );
+    const cumulative = this.asNumberArray(discounted.data?.Cumulative);
 
-    const rows: DiscountedPaybackRow[] = [];
-    let cumulative = 0;
-    for (let idx = 0; idx < years.length; idx++) {
-      const cashFlow = baseCashFlow * Math.pow(cashGrowth, idx);
-      const discountedCashFlow = cashFlow / Math.pow(1 + discountRate, idx + 1);
-      cumulative += discountedCashFlow;
-      rows.push({
-        index: idx,
-        year: years[idx],
-        discountedCashFlow,
-        cumulative,
-      });
-    }
-    return rows;
+    return years.map((year, idx) => ({
+      index: idx,
+      year,
+      discountedCashFlow: discountedCashFlow[idx] ?? 0,
+      cumulative: cumulative[idx] ?? 0,
+    }));
   }
 
   formatNumber(value: number): string {
@@ -152,5 +149,10 @@ export class DiscountedPaybackScheduleWidget implements OnInit {
           : abs.toFixed(3);
     const suffix = abs >= 1_000_000 ? 'M' : abs >= 1_000 ? 'k' : '';
     return `${sign}${formatted}${suffix}`;
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

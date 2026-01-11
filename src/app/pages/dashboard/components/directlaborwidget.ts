@@ -8,8 +8,8 @@ import {
 } from '@angular/forms';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
-import inputData from '../../../../../input.json';
 import { FluidModule } from 'primeng/fluid';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface LaborRow {
   role: string;
@@ -123,7 +123,10 @@ export class DirectLaborWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
@@ -140,6 +143,8 @@ export class DirectLaborWidget implements OnInit {
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -157,7 +162,8 @@ export class DirectLaborWidget implements OnInit {
   }
 
   private buildRowsFromInput(): LaborRow[] {
-    const direct = (inputData.labor?.direct ?? {}) as Record<string, number>;
+    const input = this.pharmaModelService.getInputSnapshot();
+    const direct = (input.labor?.direct ?? {}) as Record<string, number>;
     return Object.keys(direct).map((role) => ({
       role,
       annualCost: direct[role] ?? 0,
@@ -168,6 +174,22 @@ export class DirectLaborWidget implements OnInit {
     return this.fb.group({
       role: [values.role ?? ''],
       annualCost: [values.annualCost ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const direct: Record<string, number> = {};
+    this.rows.controls.forEach((group) => {
+      const role = String(group.get('role')?.value ?? '').trim();
+      if (!role) return;
+      direct[role] = Number(group.get('annualCost')?.value ?? 0);
+    });
+    const current = this.pharmaModelService.getInputSnapshot();
+    this.pharmaModelService.patchInput({
+      labor: {
+        ...(current.labor ?? {}),
+        direct,
+      },
     });
   }
 }

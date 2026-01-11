@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { TableModule } from 'primeng/table';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface BaseRow {
   year: number;
@@ -62,60 +62,11 @@ interface BaseRow {
     </div>
   `,
 })
-export class BaseCaseForecastingWidget {
+export class BaseCaseForecastingWidget implements OnInit {
   lineType: ChartType = 'line';
-  years = (inputData.years as number[]) ?? [2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033];
-
-  netRevenueSeries = this.buildSeries(1_500_000, 22_000_000);
-  ebitdaSeries = this.buildSeries(500_000, 7_400_000);
-  ebitSeries = this.buildSeries(300_000, 4_700_000);
-  netIncomeSeries = this.buildSeries(300_000, 7_400_000);
-
-  rows: BaseRow[] = this.years.map((year, idx) => ({
-    year,
-    netRevenue: this.netRevenueSeries[idx],
-    ebitda: this.ebitdaSeries[idx],
-    ebit: this.ebitSeries[idx],
-    netIncome: this.netIncomeSeries[idx],
-  }));
-
-  chartData: ChartConfiguration['data'] = {
-    labels: this.years,
-    datasets: [
-      {
-        label: 'Net Revenue',
-        data: this.netRevenueSeries,
-        borderColor: '#7ed0ff',
-        backgroundColor: 'transparent',
-        tension: 0.25,
-        pointRadius: 3,
-      },
-      {
-        label: 'EBITDA',
-        data: this.ebitdaSeries,
-        borderColor: '#8ddca4',
-        backgroundColor: 'transparent',
-        tension: 0.25,
-        pointRadius: 3,
-      },
-      {
-        label: 'EBIT',
-        data: this.ebitSeries,
-        borderColor: '#fbbf24',
-        backgroundColor: 'transparent',
-        tension: 0.25,
-        pointRadius: 3,
-      },
-      {
-        label: 'Net Income',
-        data: this.netIncomeSeries,
-        borderColor: '#0a753aff',
-        backgroundColor: 'transparent',
-        tension: 0.25,
-        pointRadius: 3,
-      },
-    ],
-  };
+  years: number[] = [];
+  rows: BaseRow[] = [];
+  chartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
 
   chartOptions: ChartConfiguration['options'] = {
     responsive: true,
@@ -154,11 +105,63 @@ export class BaseCaseForecastingWidget {
     },
   };
 
-  private buildSeries(start: number, end: number): number[] {
-    const count = this.years.length || 1;
-    if (count <= 1) return [start];
-    const step = (end - start) / (count - 1);
-    return Array.from({ length: count }, (_, idx) => start + step * idx);
+  constructor(private pharmaModelService: PharmaModelService) {}
+
+  ngOnInit(): void {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const scenario = output?.scenario_results?.base ?? {};
+    this.years = (scenario.index as number[]) ?? [];
+    const data = scenario.data ?? {};
+    const netRevenueSeries = this.asNumberArray(data['Net Revenue']);
+    const ebitdaSeries = this.asNumberArray(data['EBITDA']);
+    const ebitSeries = this.asNumberArray(data['EBIT']);
+    const netIncomeSeries = this.asNumberArray(data['Net Income']);
+
+    this.rows = this.years.map((year, idx) => ({
+      year,
+      netRevenue: netRevenueSeries[idx] ?? 0,
+      ebitda: ebitdaSeries[idx] ?? 0,
+      ebit: ebitSeries[idx] ?? 0,
+      netIncome: netIncomeSeries[idx] ?? 0,
+    }));
+
+    this.chartData = {
+      labels: this.years,
+      datasets: [
+        {
+          label: 'Net Revenue',
+          data: netRevenueSeries,
+          borderColor: '#7ed0ff',
+          backgroundColor: 'transparent',
+          tension: 0.25,
+          pointRadius: 3,
+        },
+        {
+          label: 'EBITDA',
+          data: ebitdaSeries,
+          borderColor: '#8ddca4',
+          backgroundColor: 'transparent',
+          tension: 0.25,
+          pointRadius: 3,
+        },
+        {
+          label: 'EBIT',
+          data: ebitSeries,
+          borderColor: '#fbbf24',
+          backgroundColor: 'transparent',
+          tension: 0.25,
+          pointRadius: 3,
+        },
+        {
+          label: 'Net Income',
+          data: netIncomeSeries,
+          borderColor: '#0a753aff',
+          backgroundColor: 'transparent',
+          tension: 0.25,
+          pointRadius: 3,
+        },
+      ],
+    };
   }
 
   private formatNumber(value: number): string {
@@ -166,5 +169,10 @@ export class BaseCaseForecastingWidget {
     if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
     if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
     return value.toFixed(0);
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface MetricRow {
   metric: string;
@@ -84,23 +85,68 @@ interface MetricRow {
     </div>
   `,
 })
-export class InvestmentMetricsWidget {
-  npv = -309_890;
+export class InvestmentMetricsWidget implements OnInit {
+  npv = NaN;
   irr = NaN;
   payback = NaN;
   discountedPayback = NaN;
-  netIncomeActual = 7_110_000;
-  netIncomeTarget = 7_110_000;
+  netIncomeActual = NaN;
+  netIncomeTarget = NaN;
 
-  rows: MetricRow[] = [
-    {
-      metric: 'Net Income',
-      target: 20,
-      actual: 20,
-      gap: 0,
-      requiredMultiplier: 0,
-    },
-  ];
+  rows: MetricRow[] = [];
+
+  constructor(private pharmaModelService: PharmaModelService) {}
+
+  ngOnInit(): void {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const summary = output?.summary_metrics ?? {};
+    const goalSeek = output?.goal_seek ?? {};
+
+    const summaryIndex = (summary.index as string[]) ?? [];
+    const summaryValues = (summary.data?.Value as number[]) ?? [];
+
+    this.npv = this.getMetricValue(summaryIndex, summaryValues, 'NPV');
+    this.irr = this.getMetricValue(summaryIndex, summaryValues, 'IRR');
+    this.payback = this.getMetricValue(
+      summaryIndex,
+      summaryValues,
+      'Payback Period'
+    );
+    this.discountedPayback = this.getMetricValue(
+      summaryIndex,
+      summaryValues,
+      'Discounted Payback'
+    );
+
+    const goalTarget = (goalSeek.data?.Target as number[]) ?? [];
+    const goalActual = (goalSeek.data?.Actual as number[]) ?? [];
+    const goalGap = (goalSeek.data?.Gap as number[]) ?? [];
+    const goalMultiplier = (goalSeek.data?.['Required Multiplier'] as number[]) ?? [];
+    const goalIndex = (goalSeek.index as string[]) ?? [];
+
+    this.netIncomeTarget = goalTarget[0] ?? NaN;
+    this.netIncomeActual = goalActual[0] ?? NaN;
+
+    this.rows = goalIndex.map((metric, idx) => ({
+      metric,
+      target: goalTarget[idx] ?? NaN,
+      actual: goalActual[idx] ?? NaN,
+      gap: goalGap[idx] ?? NaN,
+      requiredMultiplier: goalMultiplier[idx] ?? NaN,
+    }));
+  }
+
+  private getMetricValue(
+    labels: string[],
+    values: number[],
+    target: string
+  ): number {
+    const idx = labels.indexOf(target);
+    if (idx === -1) return NaN;
+    const value = (values as Array<number | null | undefined>)[idx];
+    if (value === null || value === undefined) return NaN;
+    return Number(value);
+  }
 
   formatNumber(value: number, currency = false): string {
     if (Number.isNaN(value)) return 'nan';

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface CashFlowRow {
   index: number;
@@ -70,68 +70,55 @@ interface CashFlowRow {
 export class StatementCashFlowWidget implements OnInit {
   rows: CashFlowRow[] = [];
 
+  constructor(private pharmaModelService: PharmaModelService) {}
+
   ngOnInit(): void {
     this.rows = this.buildRows();
   }
 
   private buildRows(): CashFlowRow[] {
-    const years = (inputData.years as number[]) ?? [];
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const cashFlow = output?.cash_flow ?? {};
+    const years = (cashFlow.index as number[]) ?? [];
+    const data = cashFlow.data ?? {};
 
-    const baseGross = 1_550_000;
-    const grossGrowth = 1.12;
-    const distributorRate = 0.05;
-    const costOfSalesRate = 0.62;
-    const generalAdminRate = 0.035;
-    const depreciationRate = 0.03;
-    const interestRate = 0.015;
+    const cashFlowFromOperations = this.asNumberArray(
+      data['Cash Flow from Operations']
+    );
+    const netCashFromOperating = this.asNumberArray(
+      data['Net Cash Generated from Operating Activities']
+    );
+    const netCashUsedInvesting = this.asNumberArray(
+      data['Net Cash Used in Investing Activities']
+    );
+    const netCashUsedFinancing = this.asNumberArray(
+      data['Net Cash Used in Financing Activities']
+    );
+    const netCashFlowPeriod = this.asNumberArray(
+      data['Net Cash Flow for the Period']
+    );
+    const beginningCash = this.asNumberArray(
+      data['Cash and Cash Equivalents at the Beginning of the Period']
+    );
+    const endingCash = this.asNumberArray(
+      data['Cash and Cash Equivalents at the End of the Period']
+    );
+    const netIncreaseDecrease = this.asNumberArray(
+      data['Net Increase/Decrease in Cash']
+    );
 
-    const cashBase = -350_000;
-    const cashGrowth = 1.18;
-
-    const rows: CashFlowRow[] = [];
-    let priorEndingCash = 0;
-
-    for (let idx = 0; idx < years.length; idx++) {
-      const year = years[idx];
-      // Simple net income proxy mirroring the financial performance widget.
-      const grossRevenue = baseGross * Math.pow(grossGrowth, idx);
-      const distributorCommission = grossRevenue * distributorRate;
-      const netRevenue = grossRevenue - distributorCommission;
-      const costOfSales = netRevenue * costOfSalesRate;
-      const grossProfit = netRevenue - costOfSales;
-      const generalAdmin = netRevenue * generalAdminRate;
-      const ebitda = grossProfit - generalAdmin;
-      const depreciation = netRevenue * depreciationRate;
-      const ebit = ebitda - depreciation;
-      const interest = grossRevenue * interestRate * 0.1;
-      const netIncome = ebit - interest;
-
-      const cashFlowFromOperations = netIncome * 0.3; // light conversion from earnings to cash
-      const netCashFromOperating = cashFlowFromOperations;
-
-      const netCashUsedInvesting = -(netRevenue * 0.0005); // modest ongoing capex
-
-      const endingCash = cashBase * Math.pow(cashGrowth, idx);
-      const netChange = endingCash - priorEndingCash;
-      const netCashUsedFinancing = netChange - netCashFromOperating - netCashUsedInvesting;
-
-      rows.push({
-        index: idx,
-        year,
-        cashFlowFromOperations,
-        netCashFromOperating,
-        netCashUsedInvesting,
-        netCashUsedFinancing,
-        netCashFlowPeriod: netChange,
-        beginningCash: priorEndingCash,
-        endingCash,
-        netIncreaseDecrease: netChange,
-      });
-
-      priorEndingCash = endingCash;
-    }
-
-    return rows;
+    return years.map((year, idx) => ({
+      index: idx,
+      year,
+      cashFlowFromOperations: cashFlowFromOperations[idx] ?? 0,
+      netCashFromOperating: netCashFromOperating[idx] ?? 0,
+      netCashUsedInvesting: netCashUsedInvesting[idx] ?? 0,
+      netCashUsedFinancing: netCashUsedFinancing[idx] ?? 0,
+      netCashFlowPeriod: netCashFlowPeriod[idx] ?? 0,
+      beginningCash: beginningCash[idx] ?? 0,
+      endingCash: endingCash[idx] ?? 0,
+      netIncreaseDecrease: netIncreaseDecrease[idx] ?? 0,
+    }));
   }
 
   formatNumber(value: number): string {
@@ -145,5 +132,10 @@ export class StatementCashFlowWidget implements OnInit {
           : abs.toFixed(3);
     const suffix = abs >= 1_000_000 ? 'M' : abs >= 1_000 ? 'k' : '';
     return `${sign}${formatted}${suffix}`;
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

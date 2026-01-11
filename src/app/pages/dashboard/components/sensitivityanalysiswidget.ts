@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface SensitivityChart {
   key: string;
@@ -42,7 +42,7 @@ interface SensitivityChart {
     </div>
   `,
 })
-export class SensitivityAnalysisWidget {
+export class SensitivityAnalysisWidget implements OnInit {
   lineType: ChartType = 'line';
 
   chartOptions: ChartConfiguration['options'] = {
@@ -94,71 +94,66 @@ export class SensitivityAnalysisWidget {
     },
   };
 
-  charts: SensitivityChart[] = [
-    {
-      key: 'discount-rate',
-      title: 'Sensitivity: Discount Rate',
-      subtitle: 'NPV and IRR movement against discount rate scenarios.',
-      data: this.buildChartData(
-        this.getVariable('discount_rate', [0.08, 0.1, 0.12]),
-        { baseNpv: -2_400_000, npvSlope: 5_000_000, baseIrr: 7, irrSlope: 65 }
-      ),
-    },
-    {
-      key: 'raw-material',
-      title: 'Sensitivity: Raw Material Cost',
-      subtitle: 'Impact of raw material cost inflation on project return.',
-      data: this.buildChartData(
-        this.getVariable('raw_material_cost', [0.9, 1.0, 1.1]),
-        { baseNpv: -1_050_000, npvSlope: -800_000, baseIrr: 9, irrSlope: -45 }
-      ),
-    },
-    {
-      key: 'tablet-price',
-      title: 'Sensitivity: Tablet Price',
-      subtitle: 'Pricing power stress across NPV and IRR.',
-      data: this.buildChartData(
-        this.getVariable('tablet_price', [0.9, 1.0, 1.1]),
-        { baseNpv: -320_000, npvSlope: -150_000, baseIrr: 8, irrSlope: -22 }
-      ),
-    },
-  ];
+  charts: SensitivityChart[] = [];
 
-  private getVariable(key: string, fallback: number[]): number[] {
-    const variables = (inputData.sensitivity?.variables as Record<string, number[]>) ?? {};
-    return variables[key] ?? fallback;
-  }
+  constructor(private pharmaModelService: PharmaModelService) {}
 
-  private buildChartData(
-    multipliers: number[],
-    config: { baseNpv: number; npvSlope: number; baseIrr: number; irrSlope: number }
-  ): ChartConfiguration['data'] {
-    const labels = multipliers.map((m) => Number(m.toFixed(3)));
-    const midpoint = multipliers[Math.floor(multipliers.length / 2)] ?? multipliers[0] ?? 1;
-    const npvSeries = multipliers.map((m) => config.baseNpv + (m - midpoint) * config.npvSlope);
-    const irrSeries = multipliers.map((m) => config.baseIrr + (m - midpoint) * config.irrSlope);
-
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'NPV',
-          data: npvSeries,
-          borderColor: '#80d3ff',
-          backgroundColor: 'rgba(128, 211, 255, 0.1)',
-          fill: false,
-          tension: 0.25,
-        },
-        {
-          label: 'IRR',
-          data: irrSeries,
-          borderColor: '#8ddca4',
-          backgroundColor: 'rgba(141, 220, 164, 0.1)',
-          fill: false,
-          tension: 0.25,
-        },
-      ],
+  ngOnInit(): void {
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const sensitivity = output?.sensitivity_results ?? {};
+    const labelMap: Record<string, { title: string; subtitle: string }> = {
+      discount_rate: {
+        title: 'Sensitivity: Discount Rate',
+        subtitle: 'NPV and IRR movement against discount rate scenarios.',
+      },
+      raw_material_cost: {
+        title: 'Sensitivity: Raw Material Cost',
+        subtitle: 'Impact of raw material cost inflation on project return.',
+      },
+      tablet_price: {
+        title: 'Sensitivity: Tablet Price',
+        subtitle: 'Pricing power stress across NPV and IRR.',
+      },
     };
+
+    this.charts = Object.keys(sensitivity).map((key) => {
+      const table = sensitivity[key] ?? {};
+      const multipliers = this.asNumberArray(table.data?.Multiplier);
+      const npvSeries = this.asNumberArray(table.data?.NPV);
+      const irrSeries = this.asNumberArray(table.data?.IRR);
+      const labels = multipliers.map((m) => Number(m.toFixed(3)));
+      const meta = labelMap[key] ?? {
+        title: `Sensitivity: ${key}`,
+        subtitle: 'Scenario response across NPV and IRR.',
+      };
+
+      return {
+        key,
+        title: meta.title,
+        subtitle: meta.subtitle,
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'NPV',
+              data: npvSeries,
+              borderColor: '#80d3ff',
+              backgroundColor: 'rgba(128, 211, 255, 0.1)',
+              fill: false,
+              tension: 0.25,
+            },
+            {
+              label: 'IRR',
+              data: irrSeries,
+              borderColor: '#8ddca4',
+              backgroundColor: 'rgba(141, 220, 164, 0.1)',
+              fill: false,
+              tension: 0.25,
+            },
+          ],
+        },
+      };
+    });
   }
 
   private formatNumber(value: number): string {
@@ -166,5 +161,10 @@ export class SensitivityAnalysisWidget {
     if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(2)}M`;
     if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(2)}k`;
     return value.toFixed(2);
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

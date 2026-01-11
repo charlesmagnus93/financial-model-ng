@@ -20,6 +20,9 @@ yarn-error.log
 .settings/
 *.sublime-workspace
 
+# env files
+.env
+
 # 
 cmd
 input.json

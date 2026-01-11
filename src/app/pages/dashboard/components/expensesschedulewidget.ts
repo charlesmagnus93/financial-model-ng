@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface ExpenseRow {
   index: number;
@@ -117,34 +117,33 @@ export class ExpensesScheduleWidget implements OnInit {
     },
   };
 
+  constructor(private pharmaModelService: PharmaModelService) {}
+
   ngOnInit(): void {
-    const years = (inputData.years as number[]) ?? [];
-    this.rows = this.buildRows(years);
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const years = (output?.income_statement?.index as number[]) ?? [];
+    this.rows = this.buildRows(years, output);
     this.chartData = this.buildChartData(years, this.rows);
   }
 
-  private buildRows(years: number[]): ExpenseRow[] {
-    const baseGross = 1_550_000;
-    const grossGrowth = 1.12;
-    const distributorRate = 0.05;
-    const costOfSalesRate = 0.62;
-    const generalAdminRate = 0.035;
+  private buildRows(years: number[], output: any): ExpenseRow[] {
+    const income = output?.income_statement ?? {};
+    const data = income.data ?? {};
+    const costOfSales = this.asNumberArray(data['Cost of Sales']);
+    const generalAdmin = this.asNumberArray(data['General & Admin']);
 
-    // Expense mix within cost of sales bucket
+    // Expense mix within cost of sales bucket (use a consistent split).
     const rawMaterialShare = 0.45;
     const utilitiesShare = 0.15;
     const directLaborShare = 0.25;
 
     return years.map((year, idx) => {
-      const grossRevenue = baseGross * Math.pow(grossGrowth, idx);
-      const distributorCommission = grossRevenue * distributorRate;
-      const netRevenue = grossRevenue - distributorCommission;
-      const costOfSales = netRevenue * costOfSalesRate;
-      const generalAdmin = netRevenue * generalAdminRate;
-      const rawMaterials = costOfSales * rawMaterialShare;
-      const utilities = costOfSales * utilitiesShare;
-      const directLabor = costOfSales * directLaborShare;
-      const totalExpenses = costOfSales + generalAdmin;
+      const cos = costOfSales[idx] ?? 0;
+      const ga = generalAdmin[idx] ?? 0;
+      const rawMaterials = cos * rawMaterialShare;
+      const utilities = cos * utilitiesShare;
+      const directLabor = cos * directLaborShare;
+      const totalExpenses = cos + ga;
 
       return {
         index: idx,
@@ -152,8 +151,8 @@ export class ExpensesScheduleWidget implements OnInit {
         rawMaterials,
         utilities,
         directLabor,
-        costOfSales,
-        generalAdmin,
+        costOfSales: cos,
+        generalAdmin: ga,
         totalExpenses,
       };
     });
@@ -222,5 +221,10 @@ export class ExpensesScheduleWidget implements OnInit {
           : abs.toFixed(3);
     const suffix = abs >= 1_000_000 ? 'M' : abs >= 1_000 ? 'k' : '';
     return `${sign}${formatted}${suffix}`;
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

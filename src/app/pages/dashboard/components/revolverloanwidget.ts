@@ -10,7 +10,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
 import { TableModule } from 'primeng/table';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface RevolverRow {
   year: number;
@@ -179,27 +179,38 @@ interface AmortizationRow {
 export class RevolverLoanWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  yearOptions: number[] = inputData.years ?? [];
-  revolverRate: number = inputData.financing?.revolver_interest ?? 0;
+  yearOptions: number[] = [];
+  revolverRate = 0;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
 
     this.newRowForm = this.fb.group({
-      year: [this.yearOptions[0] ?? new Date().getFullYear()],
+      year: [new Date().getFullYear()],
       duration: [1],
       balance: [0],
     });
   }
 
   ngOnInit(): void {
+    const input = this.pharmaModelService.getInputSnapshot();
+    this.yearOptions = this.pharmaModelService.getYearOptions();
+    this.revolverRate = input.financing?.revolver_interest ?? 0;
+    this.newRowForm.patchValue({
+      year: this.yearOptions[0] ?? new Date().getFullYear(),
+    });
     const rows = this.buildRowsFromInput();
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -242,7 +253,8 @@ export class RevolverLoanWidget implements OnInit {
   }
 
   private buildRowsFromInput(): RevolverRow[] {
-    const revolverRows = (inputData.financing?.revolver as any[]) ?? [];
+    const input = this.pharmaModelService.getInputSnapshot();
+    const revolverRows = (input.financing?.revolver as any[]) ?? [];
     return revolverRows.map((row) => ({
       year: row.year ?? this.yearOptions[0] ?? new Date().getFullYear(),
       duration: row.duration ?? 1,
@@ -255,6 +267,23 @@ export class RevolverLoanWidget implements OnInit {
       year: [values.year ?? this.yearOptions[0] ?? new Date().getFullYear()],
       duration: [values.duration ?? 1],
       balance: [values.balance ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const rows = (this.form.getRawValue().rows as RevolverRow[]) ?? [];
+    const mapped = rows.map((row) => ({
+      year: row.year,
+      amount: row.balance,
+      duration: row.duration,
+      outstanding: row.balance,
+    }));
+    const current = this.pharmaModelService.getInputSnapshot();
+    this.pharmaModelService.patchInput({
+      financing: {
+        ...(current.financing ?? {}),
+        revolver: mapped,
+      },
     });
   }
 }

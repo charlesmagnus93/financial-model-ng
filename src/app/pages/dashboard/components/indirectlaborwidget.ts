@@ -9,7 +9,7 @@ import {
 import { InputNumberModule } from 'primeng/inputnumber';
 import { FluidModule } from 'primeng/fluid';
 import { ButtonModule } from 'primeng/button';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface LaborRow {
   role: string;
@@ -123,7 +123,10 @@ export class IndirectLaborWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
@@ -140,6 +143,8 @@ export class IndirectLaborWidget implements OnInit {
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -157,10 +162,8 @@ export class IndirectLaborWidget implements OnInit {
   }
 
   private buildRowsFromInput(): LaborRow[] {
-    const indirect = (inputData.labor?.indirect ?? {}) as Record<
-      string,
-      number
-    >;
+    const input = this.pharmaModelService.getInputSnapshot();
+    const indirect = (input.labor?.indirect ?? {}) as Record<string, number>;
     return Object.keys(indirect).map((role) => ({
       role,
       annualCost: indirect[role] ?? 0,
@@ -171,6 +174,22 @@ export class IndirectLaborWidget implements OnInit {
     return this.fb.group({
       role: [values.role ?? ''],
       annualCost: [values.annualCost ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const indirect: Record<string, number> = {};
+    this.rows.controls.forEach((group) => {
+      const role = String(group.get('role')?.value ?? '').trim();
+      if (!role) return;
+      indirect[role] = Number(group.get('annualCost')?.value ?? 0);
+    });
+    const current = this.pharmaModelService.getInputSnapshot();
+    this.pharmaModelService.patchInput({
+      labor: {
+        ...(current.labor ?? {}),
+        indirect,
+      },
     });
   }
 }

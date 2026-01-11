@@ -4,7 +4,7 @@ import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface ReceivableRow {
   year: number;
@@ -174,15 +174,18 @@ interface ReceivableRow {
 export class AccountsReceivableWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  yearOptions: number[] = inputData.years ?? [];
+  yearOptions: number[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
 
     this.newRowForm = this.fb.group({
-      year: [this.yearOptions[0] ?? new Date().getFullYear()],
+      year: [new Date().getFullYear()],
       daysInYear: [365],
       arDays: [0],
       prepaidDays: [0],
@@ -191,11 +194,17 @@ export class AccountsReceivableWidget implements OnInit {
   }
 
   ngOnInit(): void {
+    this.yearOptions = this.pharmaModelService.getYearOptions();
+    // this.newRowForm.patchValue({
+    //   year: this.yearOptions[0] ?? new Date().getFullYear(),
+    // });
     const rows = this.buildRowsFromInput();
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -219,18 +228,36 @@ export class AccountsReceivableWidget implements OnInit {
   }
 
   private buildRowsFromInput(): ReceivableRow[] {
-    const wc = inputData.working_capital?.days ?? {};
+    const input = this.pharmaModelService.getInputSnapshot();
+    const wc = input.working_capital?.days ?? {};
     const arDays = (wc.accounts_receivable as number[]) ?? [];
     const prepaidDays = (wc.prepaid_expenses as number[]) ?? [];
     const otherAssetDays = (wc.other_assets as number[]) ?? [];
-    const calendarDays = inputData.working_capital?.calendar_days ?? [];
-    const years = this.yearOptions;
+    const calendarDays = input.working_capital?.calendar_days ?? [];
+    const inputYears = input.years ?? [];
+    if (
+      arDays.length === 0 &&
+      prepaidDays.length === 0 &&
+      otherAssetDays.length === 0 &&
+      calendarDays.length === 0 &&
+      inputYears.length === 0
+    ) {
+      return [];
+    }
+    const years = inputYears.length ? inputYears : this.yearOptions;
+    const fallbackYear = years[0] ?? new Date().getFullYear();
 
-    const maxLen = Math.max(arDays.length, prepaidDays.length, otherAssetDays.length, calendarDays.length, years.length);
+    const maxLen = Math.max(
+      arDays.length, 
+      prepaidDays.length, 
+      otherAssetDays.length, 
+      calendarDays.length, 
+      years.length
+    );
     const rows: ReceivableRow[] = [];
     for (let i = 0; i < maxLen; i++) {
       rows.push({
-        year: years[i] ?? years[0] ?? new Date().getFullYear(),
+        year: years[i] ?? fallbackYear,
         daysInYear: calendarDays[i] ?? 365,
         arDays: arDays[i] ?? 0,
         prepaidDays: prepaidDays[i] ?? 0,
@@ -241,12 +268,45 @@ export class AccountsReceivableWidget implements OnInit {
   }
 
   private createRow(values: Partial<ReceivableRow>): FormGroup {
+    const fallbackYear = this.yearOptions[0] ?? new Date().getFullYear();
     return this.fb.group({
-      year: [values.year ?? this.yearOptions[0] ?? new Date().getFullYear()],
+      year: [values.year ?? fallbackYear],
       daysInYear: [values.daysInYear ?? 365],
       arDays: [values.arDays ?? 0],
       prepaidDays: [values.prepaidDays ?? 0],
       otherAssetDays: [values.otherAssetDays ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const years = this.pharmaModelService.getInputSnapshot().years ?? this.yearOptions;
+    const arDays: number[] = [];
+    const prepaidDays: number[] = [];
+    const otherAssetDays: number[] = [];
+    const calendarDays: number[] = [];
+
+    years.forEach((year: number, idx: number) => {
+      const match = this.rows.controls.find(
+        (group) => Number(group.get('year')?.value) === Number(year)
+      );
+      arDays[idx] = Number(match?.get('arDays')?.value ?? 0);
+      prepaidDays[idx] = Number(match?.get('prepaidDays')?.value ?? 0);
+      otherAssetDays[idx] = Number(match?.get('otherAssetDays')?.value ?? 0);
+      calendarDays[idx] = Number(match?.get('daysInYear')?.value ?? 365);
+    });
+
+    const current = this.pharmaModelService.getInputSnapshot();
+    this.pharmaModelService.patchInput({
+      working_capital: {
+        ...(current.working_capital ?? {}),
+        days: {
+          ...(current.working_capital?.days ?? {}),
+          accounts_receivable: arDays,
+          prepaid_expenses: prepaidDays,
+          other_assets: otherAssetDays,
+        },
+        calendar_days: calendarDays,
+      },
     });
   }
 }

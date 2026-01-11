@@ -117,6 +117,46 @@ export class ApiService {
     return this.request<T>('POST', path, data, params, headers);
   }
 
+  postBlob(
+    path: string,
+    data?: any,
+    params?: Record<string, any>,
+    headers?: Record<string, string>
+  ): Observable<Blob> {
+    const url = `${this.baseUrl}${path.startsWith('/') ? path : '/' + path}`;
+
+    let httpHeaders = new HttpHeaders();
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      httpHeaders = httpHeaders.set('Authorization', `Bearer ${token}`);
+    }
+
+    if (headers) {
+      Object.keys(headers).forEach((key) => {
+        httpHeaders = httpHeaders.set(key, headers[key]);
+      });
+    }
+
+    if (data && !httpHeaders.has('Content-Type')) {
+      httpHeaders = httpHeaders.set('Content-Type', 'application/json');
+    }
+
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.keys(params).forEach((key) => {
+        if (params[key] !== null && params[key] !== undefined) {
+          httpParams = httpParams.set(key, params[key].toString());
+        }
+      });
+    }
+
+    return this.http.post(url, data, {
+      headers: httpHeaders,
+      params: httpParams,
+      responseType: 'blob',
+    });
+  }
+
   /**
    * Convenience method for PUT requests
    */

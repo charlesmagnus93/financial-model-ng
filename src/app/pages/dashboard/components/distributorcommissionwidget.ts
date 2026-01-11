@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface CommissionRow {
   year: number;
@@ -169,10 +169,13 @@ interface CommissionRow {
 export class DistributorCommissionWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  years: number[] = inputData.years ?? [];
-  products: string[] = Object.keys(inputData.unit_costs || {});
+  years: number[] = [];
+  products: string[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
@@ -187,15 +190,33 @@ export class DistributorCommissionWidget implements OnInit {
   }
 
   ngOnInit(): void {
-    const seed = this.products.slice(0, 4).map((product, idx) =>
-      this.createRow({
-        year: this.years[idx] ?? this.years[0] ?? new Date().getFullYear(),
-        product,
-        commissionPct: 5,
-        revenueSharePct: 100,
-        paymentDays: 30,
-      })
-    );
+    const snapshot = this.pharmaModelService.getInputSnapshot();
+    this.years = this.pharmaModelService.getYearOptions();
+    const productSet = new Set<string>();
+    Object.keys(snapshot.unit_costs ?? {}).forEach((key) => productSet.add(key));
+    Object.keys(snapshot.production_estimate ?? {}).forEach((key) => productSet.add(key));
+    Object.keys(snapshot.total_production_units ?? {}).forEach((key) => productSet.add(key));
+    this.products = Array.from(productSet);
+
+    this.newRowForm.reset({
+      year: this.years[0] ?? new Date().getFullYear(),
+      product: this.products[0] ?? '',
+      commissionPct: 5,
+      revenueSharePct: 100,
+      paymentDays: 30,
+    });
+
+    const seed = this.products.length
+      ? this.products.slice(0, 4).map((product, idx) =>
+          this.createRow({
+            year: this.years[idx] ?? this.years[0] ?? new Date().getFullYear(),
+            product,
+            commissionPct: 5,
+            revenueSharePct: 100,
+            paymentDays: 30,
+          })
+        )
+      : [];
     this.form.setControl('rows', this.fb.array(seed));
     this.rows.valueChanges.subscribe(() => this.recalculateRows());
     this.recalculateRows();
@@ -244,14 +265,15 @@ export class DistributorCommissionWidget implements OnInit {
   }
 
   private computeEstimatedRevenue(product: string, year: number): number {
-    const years = inputData.years ?? [];
+    const snapshot = this.pharmaModelService.getInputSnapshot();
+    const years = snapshot.years ?? [];
     const idx = years.indexOf(year);
     if (idx === -1) {
       return 0;
     }
-    const productionEstimate = (inputData.production_estimate as Record<string, number[]>)?.[product]?.[idx] ?? 0;
-    const price = (inputData.unit_costs as Record<string, { price?: number }>)[product]?.price ?? 0;
-    const totalUnits = (inputData.total_production_units as Record<string, number>)[product] ?? 0;
+    const productionEstimate = (snapshot.production_estimate as Record<string, number[]>)?.[product]?.[idx] ?? 0;
+    const price = (snapshot.unit_costs as Record<string, { price?: number }>)[product]?.price ?? 0;
+    const totalUnits = (snapshot.total_production_units as Record<string, number>)[product] ?? 0;
 
     // Use production estimate proportionally to total units to approximate annual revenue.
     const estimatedUnits = productionEstimate * (totalUnits / 100); // treat estimate as percentage if small

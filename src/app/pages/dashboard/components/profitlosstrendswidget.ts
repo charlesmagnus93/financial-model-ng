@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface FinancialPerformanceRow {
   netRevenue: number;
@@ -127,45 +127,32 @@ export class ProfitLossTrendsWidget implements OnInit {
     },
   };
 
+  constructor(private pharmaModelService: PharmaModelService) {}
+
   ngOnInit(): void {
-    this.labels = (inputData.years as number[]) ?? [];
-    this.financials = this.buildFinancials();
+    const output = this.pharmaModelService.getOutputSnapshot();
+    const income = output?.income_statement ?? {};
+    const data = income.data ?? {};
+    this.labels = (income.index as number[]) ?? [];
+    this.financials = this.buildFinancials(data);
     this.incomeData = this.buildIncomeChart();
     this.marginData = this.buildMarginChart();
   }
 
-  private buildFinancials(): FinancialPerformanceRow[] {
-    const baseGross = 1_550_000;
-    const grossGrowth = 1.12;
-    const distributorRate = 0.05;
-    const costOfSalesRate = 0.62;
-    const generalAdminRate = 0.035;
-    const depreciationRate = 0.03;
-    const interestRate = 0.015;
+  private buildFinancials(data: Record<string, unknown>): FinancialPerformanceRow[] {
+    const netRevenue = this.asNumberArray(data['Net Revenue']);
+    const grossProfit = this.asNumberArray(data['Gross Profit']);
+    const ebitda = this.asNumberArray(data['EBITDA']);
+    const netIncome = this.asNumberArray(data['Net Income']);
+    const ebitdaMargin = this.asNumberArray(data['EBITDA Margin']);
 
-    return this.labels.map((_, idx) => {
-      const grossRevenue = baseGross * Math.pow(grossGrowth, idx);
-      const distributorCommission = grossRevenue * distributorRate;
-      const netRevenue = grossRevenue - distributorCommission;
-      const costOfSales = netRevenue * costOfSalesRate;
-      const grossProfit = netRevenue - costOfSales;
-      const generalAdmin = netRevenue * generalAdminRate;
-      const ebitda = grossProfit - generalAdmin;
-      const depreciation = netRevenue * depreciationRate;
-      const ebit = ebitda - depreciation;
-      const interest = grossRevenue * interestRate * 0.1;
-      const ebt = ebit - interest;
-      const taxes = ebt * 0.0;
-      const netIncome = ebt - taxes;
-
-      return {
-        netRevenue,
-        grossProfit,
-        ebitda,
-        netIncome,
-        ebitdaMargin: netRevenue > 0 ? ebitda / netRevenue : 0,
-      };
-    });
+    return this.labels.map((_, idx) => ({
+      netRevenue: netRevenue[idx] ?? 0,
+      grossProfit: grossProfit[idx] ?? 0,
+      ebitda: ebitda[idx] ?? 0,
+      netIncome: netIncome[idx] ?? 0,
+      ebitdaMargin: ebitdaMargin[idx] ?? 0,
+    }));
   }
 
   private buildIncomeChart(): ChartConfiguration['data'] {
@@ -239,5 +226,10 @@ export class ProfitLossTrendsWidget implements OnInit {
           ? `${(abs / 1_000).toFixed(1)}k`
           : abs.toFixed(0);
     return `${sign}${formatted}`;
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 }

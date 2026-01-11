@@ -9,7 +9,7 @@ import {
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface TaxRow {
   year: number;
@@ -138,9 +138,12 @@ interface TaxRow {
 export class TaxScheduleWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  yearOptions: number[] = inputData.years ?? [];
+  yearOptions: number[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       baseRate: [0],
       timingAdjustment: [0],
@@ -148,21 +151,28 @@ export class TaxScheduleWidget implements OnInit {
     });
 
     this.newRowForm = this.fb.group({
-      year: [this.yearOptions[0] ?? new Date().getFullYear()],
+      year: [new Date().getFullYear()],
       rate: [0],
     });
   }
 
   ngOnInit(): void {
+    const input = this.pharmaModelService.getInputSnapshot();
+    this.yearOptions = this.pharmaModelService.getYearOptions();
     const rows = this.buildRowsFromInput();
     this.form.patchValue({
-      baseRate: inputData.tax?.rate ?? 0,
-      timingAdjustment: inputData.tax?.timing_adjustment ?? 0,
+      baseRate: input.tax?.rate ?? 0,
+      timingAdjustment: input.tax?.timing_adjustment ?? 0,
+    });
+    this.newRowForm.patchValue({
+      year: this.yearOptions[0] ?? new Date().getFullYear(),
     });
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.form.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -183,7 +193,8 @@ export class TaxScheduleWidget implements OnInit {
   }
 
   private buildRowsFromInput(): TaxRow[] {
-    const schedule = (inputData.tax?.schedule as number[]) ?? [];
+    const input = this.pharmaModelService.getInputSnapshot();
+    const schedule = (input.tax?.schedule as number[]) ?? [];
     const years = this.yearOptions;
     const maxLen = Math.max(schedule.length, years.length);
     const rows: TaxRow[] = [];
@@ -200,6 +211,29 @@ export class TaxScheduleWidget implements OnInit {
     return this.fb.group({
       year: [values.year ?? this.yearOptions[0] ?? new Date().getFullYear()],
       rate: [values.rate ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const baseRate = Number(this.form.get('baseRate')?.value ?? 0);
+    const timingAdjustment = Number(
+      this.form.get('timingAdjustment')?.value ?? 0
+    );
+    const years = this.pharmaModelService.getInputSnapshot().years ?? this.yearOptions;
+    const schedule: number[] = [];
+    years.forEach((year: number, idx: number) => {
+      const match = this.rows.controls.find(
+        (group) => Number(group.get('year')?.value) === Number(year)
+      );
+      schedule[idx] = Number(match?.get('rate')?.value ?? 0);
+    });
+
+    this.pharmaModelService.patchInput({
+      tax: {
+        rate: baseRate,
+        timing_adjustment: timingAdjustment,
+        schedule,
+      },
     });
   }
 }

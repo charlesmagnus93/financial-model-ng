@@ -9,7 +9,7 @@ import {
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface FixedVariableRow {
   product: string;
@@ -156,9 +156,12 @@ interface FixedVariableRow {
 export class FixedVariableCostWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  products: string[] = Object.keys(inputData.unit_costs || {});
+  products: string[] = [];
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
@@ -172,11 +175,15 @@ export class FixedVariableCostWidget implements OnInit {
   }
 
   ngOnInit(): void {
+    const input = this.pharmaModelService.getInputSnapshot();
+    this.products = Object.keys(input?.unit_costs || {});
     const rows = this.buildRowsFromInput();
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -209,7 +216,8 @@ export class FixedVariableCostWidget implements OnInit {
   }
 
   private buildRowsFromInput(): FixedVariableRow[] {
-    const rows = inputData.fixed_variable_costs?.rows ?? [];
+    const input = this.pharmaModelService.getInputSnapshot();
+    const rows = input.fixed_variable_costs?.rows ?? [];
     return rows.map((r: any) => ({
       product: r.product ?? '',
       fixedCost: r.fixed_cost ?? 0,
@@ -222,6 +230,20 @@ export class FixedVariableCostWidget implements OnInit {
       product: [values.product ?? ''],
       fixedCost: [values.fixedCost ?? 0],
       variableCost: [values.variableCost ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const rows = this.rows.controls
+      .map((group) => ({
+        product: String(group.get('product')?.value ?? '').trim(),
+        fixed_cost: Number(group.get('fixedCost')?.value ?? 0),
+        variable_cost: Number(group.get('variableCost')?.value ?? 0),
+      }))
+      .filter((row) => row.product);
+
+    this.pharmaModelService.patchInput({
+      fixed_variable_costs: { rows },
     });
   }
 }

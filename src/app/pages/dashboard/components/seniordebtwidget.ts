@@ -10,7 +10,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
 import { TableModule } from 'primeng/table';
-import inputData from '../../../../../input.json';
+import { PharmaModelService } from '../../services/pharma-model.service';
 
 interface SeniorDebtRow {
   year: number;
@@ -179,27 +179,38 @@ interface AmortizationRow {
 export class SeniorDebtWidget implements OnInit {
   form: FormGroup;
   newRowForm: FormGroup;
-  yearOptions: number[] = inputData.years ?? [];
-  seniorDebtRate: number = inputData.financing?.senior_debt_interest ?? 0;
+  yearOptions: number[] = [];
+  seniorDebtRate = 0;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private pharmaModelService: PharmaModelService
+  ) {
     this.form = this.fb.group({
       rows: this.fb.array([]),
     });
 
     this.newRowForm = this.fb.group({
-      year: [this.yearOptions[0] ?? new Date().getFullYear()],
+      year: [new Date().getFullYear()],
       duration: [1],
       amount: [0],
     });
   }
 
   ngOnInit(): void {
+    const input = this.pharmaModelService.getInputSnapshot();
+    this.yearOptions = this.pharmaModelService.getYearOptions();
+    this.seniorDebtRate = input.financing?.senior_debt_interest ?? 0;
+    this.newRowForm.patchValue({
+      year: this.yearOptions[0] ?? new Date().getFullYear(),
+    });
     const rows = this.buildRowsFromInput();
     this.form.setControl(
       'rows',
       this.fb.array(rows.map((r) => this.createRow(r)))
     );
+    this.rows.valueChanges.subscribe(() => this.syncToModel());
+    this.syncToModel();
   }
 
   get rows(): FormArray<FormGroup> {
@@ -242,7 +253,8 @@ export class SeniorDebtWidget implements OnInit {
   }
 
   private buildRowsFromInput(): SeniorDebtRow[] {
-    const seniorDebt = (inputData.financing?.senior_debt as any[]) ?? [];
+    const input = this.pharmaModelService.getInputSnapshot();
+    const seniorDebt = (input.financing?.senior_debt as any[]) ?? [];
     return seniorDebt.map((row) => ({
       year: row.year ?? this.yearOptions[0] ?? new Date().getFullYear(),
       duration: row.duration ?? 1,
@@ -255,6 +267,23 @@ export class SeniorDebtWidget implements OnInit {
       year: [values.year ?? this.yearOptions[0] ?? new Date().getFullYear()],
       duration: [values.duration ?? 1],
       amount: [values.amount ?? 0],
+    });
+  }
+
+  private syncToModel(): void {
+    const rows = (this.form.getRawValue().rows as SeniorDebtRow[]) ?? [];
+    const mapped = rows.map((row) => ({
+      year: row.year,
+      amount: row.amount,
+      duration: row.duration,
+      outstanding: row.amount,
+    }));
+    const current = this.pharmaModelService.getInputSnapshot();
+    this.pharmaModelService.patchInput({
+      financing: {
+        ...(current.financing ?? {}),
+        senior_debt: mapped,
+      },
     });
   }
 }
