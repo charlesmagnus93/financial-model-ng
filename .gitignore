@@ -25,7 +25,7 @@ yarn-error.log
 
 # 
 cmd
-input.json
+# input.json
 output.json
 api_contract.md
 
