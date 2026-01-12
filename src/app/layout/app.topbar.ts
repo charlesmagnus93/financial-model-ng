@@ -1,10 +1,12 @@
-import { Component, computed, signal } from '@angular/core';
-import { MenuItem } from 'primeng/api';
+import { Component, computed, Signal, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { StyleClassModule } from 'primeng/styleclass';
 import { ChipModule } from 'primeng/chip';
 import { ButtonModule } from 'primeng/button';
+import { PopoverModule } from 'primeng/popover';
+import { TagModule } from 'primeng/tag';
+import { DividerModule } from 'primeng/divider';
 import { finalize } from 'rxjs';
 import { LayoutService } from './service/layout.service';
 import { AuthService } from '../pages/services/auth.service';
@@ -16,7 +18,7 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
 @Component({
     selector: 'app-topbar',
     standalone: true,
-    imports: [RouterModule, CommonModule, StyleClassModule, ChipModule, ButtonModule],
+    imports: [RouterModule, CommonModule, StyleClassModule, ChipModule, ButtonModule, PopoverModule, TagModule, DividerModule],
     template: ` <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
             <button class="layout-menu-button layout-topbar-action" (click)="layoutService.onMenuToggle()">
@@ -113,7 +115,7 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
                     @if (image) {
                         <p-chip [label]="displayName()" [image]="image" alt="Avatar image" />
                     } @else {
-                        <p-chip class="!py-0 !pl-0 !pr-4">
+                        <p-chip class="!py-0 !pl-0 !pr-4" (click)="op.toggle($event)">
                             <span class="bg-primary text-primary-contrast rounded-full w-8 h-8 flex items-center justify-center">
                                 {{ userInitial() }}
                             </span>
@@ -122,17 +124,32 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
                             </span>
                         </p-chip>
                     }
+                    <p-popover #op>
+                        <ng-template #content>
+                            <p-tag class="m-2" value="{{user()?.email}}" />
+                            <p-divider />
+                            <div class="flex gap-2">
+                                <p-button
+                                    icon="pi pi-sign-out"
+                                    [label]="'Sign Out'"
+                                    [disabled]="false"
+                                    severity="warn"
+                                    variant="outlined"
+                                    class="flex-auto"
+                                    styleClass="w-full whitespace-nowrap"
+                                    (onClick)="logout()"
+                                />
+                            </div>
+                        </ng-template>
+                    </p-popover>
                 </div>
             </div>
         </div>
     </div>`
 })
 export class AppTopbar {
-    items!: MenuItem[];
 
     user = signal<User | null>(null);
-    subscriptionStatus = signal<'checking' | 'active' | 'inactive' | 'error'>('active'); // deafult to 'checking'
-    subscriptionMessage = signal('');
     isExporting = signal(false);
     exportFormat = signal<'PDF' | 'CSV' | 'JSON'>('CSV');
     currentModel = signal<string | null>(null);
@@ -145,12 +162,17 @@ export class AppTopbar {
     
     userInitial = computed(() => this.displayName().charAt(0).toUpperCase() || 'U');
 
+    subscriptionStatus: Signal<'active' | 'inactive' | 'checking' | 'error'>;
+    subscriptionMessage: Signal<string | null>;
+
     constructor(
         public layoutService: LayoutService,
         private authService: AuthService,
         private apiService: ApiService,
-        private pharmaModelService: PharmaModelService
+        public pharmaModelService: PharmaModelService
     ) {
+        this.subscriptionStatus = this.pharmaModelService.subscriptionStatus;
+        this.subscriptionMessage = this.pharmaModelService.subscriptionMessage;
         this.user.set(this.authService.getUser());
         this.currentModel.set(localStorage.getItem('selected_model'));
         this.checkSubscriptionStatus();
@@ -163,21 +185,7 @@ export class AppTopbar {
     image: string | null = null;
 
     checkSubscriptionStatus(): void {
-        const email = this.user()?.email;
-        this.subscriptionStatus.set('checking');
-        this.subscriptionMessage.set('');
-        this.apiService
-            .post('/subscriptions/check', { email })
-            .subscribe({
-                next: (response: { is_active: boolean; message?: string }) => {
-                    this.subscriptionStatus.set(response?.is_active ? 'active' : 'inactive');
-                    this.subscriptionMessage.set(response?.message || '');
-                },
-                error: () => {
-                    this.subscriptionStatus.set('error');
-                    this.subscriptionMessage.set('Unable to verify subscription.');
-                }
-            });
+        this.pharmaModelService.checkSubscriptionStatus(this.user()?.email);
     }
 
     startSubscription(): void {
@@ -231,6 +239,10 @@ export class AppTopbar {
         if (value) {
             this.exportFormat.set(value);
         }
+    }
+
+    logout() {
+        this.authService.signout();
     }
 
     private downloadBlob(

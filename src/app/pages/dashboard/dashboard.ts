@@ -10,6 +10,7 @@ import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AVAILABLE_MODELS, ModelOption } from './model-options';
+import { PharmaModelService } from '../services/pharma-model.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -127,13 +128,25 @@ export class Dashboard implements OnInit, OnDestroy {
 
   private queryParamSub?: Subscription;
 
-  constructor(private route: ActivatedRoute, private router: Router) {}
+  constructor(
+    private route: ActivatedRoute, 
+    private router: Router,
+    private pharmaModelService: PharmaModelService
+  ) {}
 
   ngOnInit(): void {
     this.queryParamSub = this.route.queryParamMap.subscribe((params) => {
       const section = params.get('section');
+      const trxref = params.get('trxref');
+      const reference = params.get('reference');
       if (!section) {
         this.searchTerm = '';
+      }
+
+      const refValue = reference || trxref;
+      if (refValue) {
+        console.log('Reference param:', refValue);
+        this.pharmaModelService.verifySubscription(refValue);
       }
     });
   }

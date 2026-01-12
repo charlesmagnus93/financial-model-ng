@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
   BehaviorSubject,
@@ -20,6 +20,10 @@ const OUTPUT_STORAGE_KEY = 'pharma_model_output';
 export class PharmaModelService {
   private inputSubject = new BehaviorSubject<any>({});
   private outputSubject = new BehaviorSubject<any>(null);
+  subscriptionStatus = signal<'checking' | 'active' | 'inactive' | 'error'>(
+    'checking'
+  );
+  subscriptionMessage = signal('');
 
   input$ = this.inputSubject.asObservable();
   output$ = this.outputSubject.asObservable();
@@ -96,9 +100,50 @@ export class PharmaModelService {
     );
   }
 
-  exportModelReport(modelCode: string, format: string = 'CSV'): Observable<Blob> {
+  exportModelReport(
+    modelCode: string,
+    format: string = 'CSV'
+  ): Observable<Blob> {
     const payload = { inputs: this.getInputSnapshot(), format };
     return this.api.postBlob(`/report/${modelCode}/generate`, payload);
+  }
+
+  checkSubscriptionStatus(email?: string): void {
+    this.subscriptionStatus.set('checking');
+    this.subscriptionMessage.set('');
+    this.api.post('/subscriptions/check', { email }).subscribe({
+      next: (response: { is_active: boolean; message?: string }) => {
+        this.subscriptionStatus.set(response?.is_active ? 'active' : 'inactive');
+        this.subscriptionMessage.set(response?.message || '');
+      },
+      error: () => {
+        this.subscriptionStatus.set('error');
+        this.subscriptionMessage.set('Unable to verify subscription.');
+      },
+    });
+  }
+
+  verifySubscription(trxref: string) {
+    this.subscriptionStatus.set('checking');
+    this.subscriptionMessage.set('');
+    return this.api
+      .post('/subscriptions/verify', { reference: trxref })
+      .subscribe({
+        next: (response: {
+          is_active: boolean;
+          email?: string;
+          message?: string;
+        }) => {
+          this.subscriptionStatus.set(
+            response?.is_active ? 'active' : 'inactive'
+          );
+          this.subscriptionMessage.set(response?.message || '');
+        },
+        error: () => {
+          this.subscriptionStatus.set('error');
+          this.subscriptionMessage.set('Unable to verify subscription.');
+        },
+      });
   }
 
   private loadFromStorage(): void {
