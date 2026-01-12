@@ -181,7 +181,28 @@ export class AppTopbar {
     }
 
     startSubscription(): void {
-        window.open('https://paystack.com', '_blank', 'noopener');
+        const email = this.user()?.email;
+        const payload = {
+            email: email,
+            metadata: {
+                additionalProp1: {}
+            },
+            scenario: 'string'
+        };
+
+        this.apiService.post('/subscriptions/checkout', payload).subscribe({
+            next: (response: { checkout_url?: string, email?: string }) => {
+                const checkoutUrl = response?.checkout_url;
+                if (checkoutUrl) {
+                    window.open(checkoutUrl, '_self', 'popup');
+                } else {
+                    console.error('Subscription checkout missing checkout_url.');
+                }
+            },
+            error: (err) => {
+                console.error('Subscription checkout failed:', err.error || err);
+            }
+        });
     }
 
     exportReport(): void {
