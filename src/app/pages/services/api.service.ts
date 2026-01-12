@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -8,7 +9,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   providedIn: 'root',
 })
 export class ApiService {
-  private baseUrl = 'http://localhost:8000'; // Update with your API URL
+  private baseUrl = environment.apiBaseUrl;
 
   constructor(private http: HttpClient) {}
 
