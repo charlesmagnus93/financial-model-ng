@@ -69,6 +69,9 @@ import { AuthService } from "../services/auth.service";
                                         }
                                     </p-message>
                                 }
+
+                                <label for="username" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Username</label>
+                                <input pInputText id="username" type="text" placeholder="Username" class="w-full mb-4" formControlName="username" autocomplete="off" />
     
                                 <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Password</label>
                                 <p-password id="password1" formControlName="password" placeholder="Password" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false" autocomplete="off"></p-password>
@@ -178,7 +181,7 @@ export class Signup {
     ) {}
 
     onSubmit() {
-        console.log('Submitting sign-up form', this.signupForm.value);
+        // console.log('Submitting sign-up form', this.signupForm.value);
         if (this.signupForm.valid) {
             this.isLoading = true;
             this.errorMessage = '';
@@ -188,7 +191,7 @@ export class Signup {
             this.authService.signup(email!, password!, username!).subscribe({
                 next: (response) => {
                     this.isLoading = false;
-                    console.log('Sign up successful:', response.user);
+                    // console.log('Sign up successful:', response.user);
                     // Redirect to dashboard on successful login
                     this.router.navigate(['/dashboard']);
                 },

@@ -1,7 +1,15 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, switchMap, tap, throwError } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import {
+  BehaviorSubject,
+  Observable,
+  map,
+  shareReplay,
+  switchMap,
+  tap,
+  throwError,
+} from 'rxjs';
 import { ApiService } from './api.service';
-import inputData from '../../../../input.json';
 
 const INPUT_STORAGE_KEY = 'pharma_model_input';
 const OUTPUT_STORAGE_KEY = 'pharma_model_output';
@@ -16,7 +24,9 @@ export class PharmaModelService {
   input$ = this.inputSubject.asObservable();
   output$ = this.outputSubject.asObservable();
 
-  constructor(private api: ApiService) {
+  private defaultsRequest?: Observable<any>;
+
+  constructor(private api: ApiService, private http: HttpClient) {
     this.loadFromStorage();
   }
 
@@ -42,8 +52,16 @@ export class PharmaModelService {
     this.persist(INPUT_STORAGE_KEY, input);
   }
 
-  loadDefaults(): void {
-    this.setInput(JSON.parse(JSON.stringify(inputData)));
+  loadDefaults(): Observable<void> {
+    if (!this.defaultsRequest) {
+      this.defaultsRequest = this.http
+        .get<any>('assets/input.json')
+        .pipe(shareReplay(1));
+    }
+    return this.defaultsRequest.pipe(
+      tap((defaults) => this.setInput(JSON.parse(JSON.stringify(defaults)))),
+      map(() => undefined)
+    );
   }
 
   clearInput(): void {
@@ -63,7 +81,7 @@ export class PharmaModelService {
 
   runPharmaModel(): Observable<any> {
     const payload = { inputs: this.getInputSnapshot() };
-    console.log('Running Pharma Model with payload:', payload);
+    // console.log('Running Pharma Model with payload:', payload);
     return this.api.post('/inputs/pharma/validate', payload).pipe(
       switchMap((validation: { valid: boolean; message: string }) => {
         if (!validation?.valid) {
@@ -78,9 +96,9 @@ export class PharmaModelService {
     );
   }
 
-  exportPharmaReport(): Observable<Blob> {
-    const payload = { inputs: this.getInputSnapshot() };
-    return this.api.postBlob('/report/pharma/generate', payload);
+  exportModelReport(modelCode: string, format: string = 'CSV'): Observable<Blob> {
+    const payload = { inputs: this.getInputSnapshot(), format };
+    return this.api.postBlob(`/report/${modelCode}/generate`, payload);
   }
 
   private loadFromStorage(): void {

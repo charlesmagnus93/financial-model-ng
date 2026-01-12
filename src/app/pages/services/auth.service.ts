@@ -47,9 +47,9 @@ export class AuthService {
 
   signup(email: string, password: string, username: string | null): Observable<AuthRes> {
     const credentials = { email, password, name: username };
-    return this.apiService.post('/auth/register', credentials).pipe(
+    return this.apiService.post('/auth/register', credentials, credentials).pipe(
       tap((response: AuthRes) => {
-        console.log('Signup response:', response);
+        // console.log('Signup response:', response);
         // Store token in localStorage if provided
         if (response.access_token) {
           localStorage.setItem('authToken', response.access_token);

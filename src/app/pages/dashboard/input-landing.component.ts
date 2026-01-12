@@ -351,9 +351,15 @@ export class InputLandingComponent implements OnInit {
       return;
     }
     this.isUsingDefaults = true;
-    this.pharmaModelService.loadDefaults();
-    this.refreshForms(() => {
-      this.isUsingDefaults = false;
+    this.pharmaModelService.loadDefaults().subscribe({
+      next: () => {
+        this.refreshForms(() => {
+          this.isUsingDefaults = false;
+        });
+      },
+      error: () => {
+        this.isUsingDefaults = false;
+      },
     });
   }
 

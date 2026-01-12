@@ -185,7 +185,7 @@ export class Signin implements OnInit {
             this.authService.signin(email!, password!, rememberMe!).subscribe({
                 next: (response) => {
                     this.isLoading = false;
-                    console.log('Sign in successful:', response.user);
+                    // console.log('Sign in successful:', response.user);
                     // Redirect to dashboard on successful login
                     this.router.navigate(['/dashboard']);
                 },

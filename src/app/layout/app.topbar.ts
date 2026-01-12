@@ -11,6 +11,7 @@ import { AuthService } from '../pages/services/auth.service';
 import { User } from '../models/user.model';
 import { ApiService } from '../pages/services/api.service';
 import { PharmaModelService } from '../pages/services/pharma-model.service';
+import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
 
 @Component({
     selector: 'app-topbar',
@@ -64,14 +65,26 @@ import { PharmaModelService } from '../pages/services/pharma-model.service';
                         (click)="startSubscription()"
                     ></p-button>
                 } @else if (subscriptionStatus() === 'active') {
-                    <p-button
-                        label="Download report"
-                        icon="pi pi-download"
-                        size="small"
-                        [loading]="isExporting()"
-                        [disabled]="isExporting()"
-                        (click)="exportReport()"
-                    ></p-button>
+                    <div class="flex items-center gap-2">
+                        <select
+                            class="p-inputtext p-inputtext-sm"
+                            [value]="exportFormat()"
+                            [disabled]="!isExportAvailable() || isExporting()"
+                            (change)="onExportFormatChange($event)"
+                        >
+                            <option value="CSV">Excel</option>
+                            <option value="PDF">PDF</option>
+                            <option value="JSON">JSON</option>
+                        </select>
+                        <p-button
+                            label="Download"
+                            icon="pi pi-download"
+                            size="small"
+                            [loading]="isExporting()"
+                            [disabled]="!isExportAvailable() || isExporting()"
+                            (click)="exportReport()"
+                        ></p-button>
+                    </div>
                 } @else {
                     <p-button
                         label="Retry subscription check"
@@ -118,9 +131,11 @@ export class AppTopbar {
     items!: MenuItem[];
 
     user = signal<User | null>(null);
-    subscriptionStatus = signal<'checking' | 'active' | 'inactive' | 'error'>('checking');
+    subscriptionStatus = signal<'checking' | 'active' | 'inactive' | 'error'>('active'); // deafult to 'checking'
     subscriptionMessage = signal('');
     isExporting = signal(false);
+    exportFormat = signal<'PDF' | 'CSV' | 'JSON'>('CSV');
+    currentModel = signal<string | null>(null);
 
     displayName = computed(() => {
         const user = this.user();
@@ -137,6 +152,7 @@ export class AppTopbar {
         private pharmaModelService: PharmaModelService
     ) {
         this.user.set(this.authService.getUser());
+        this.currentModel.set(localStorage.getItem('selected_model'));
         this.checkSubscriptionStatus();
     }
 
@@ -169,28 +185,75 @@ export class AppTopbar {
     }
 
     exportReport(): void {
-        if (this.subscriptionStatus() !== 'active' || this.isExporting()) {
+        if (!this.isExportAvailable() || this.isExporting() || !this.isModelSetupComplete()) {
             return;
         }
         this.isExporting.set(true);
+        const format = this.exportFormat();
+        const modelCode = this.currentModel() || 'pharma';
         this.pharmaModelService
-            .exportPharmaReport()
+            .exportModelReport(modelCode, format)
             .pipe(finalize(() => this.isExporting.set(false)))
             .subscribe({
-                next: (blob) => this.downloadBlob(blob),
-                error: () => {
-                    console.error('Report export failed.');
+                next: (blob) => {
+                    this.downloadBlob(blob, format, modelCode)
+                },
+                error: (er) => {
+                    console.error('Report export failed:', er.error || er);
                 }
             });
     }
 
-    private downloadBlob(blob: Blob): void {
+    onExportFormatChange(event: Event): void {
+        const target = event.target as HTMLSelectElement | null;
+        const value = target?.value as 'PDF' | 'CSV' | 'JSON' | undefined;
+        if (value) {
+            this.exportFormat.set(value);
+        }
+    }
+
+    private downloadBlob(
+        blob: Blob,
+        format: 'PDF' | 'CSV' | 'JSON',
+        modelCode: string
+    ): void {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'pharma-report';
+        link.download = `${this.getModelFilePrefix(modelCode)}.${this.getExportExtension(format)}`;
         link.click();
         window.URL.revokeObjectURL(url);
+    }
+
+    private getExportExtension(format: 'PDF' | 'CSV' | 'JSON'): string {
+        switch (format) {
+            case 'CSV':
+                return 'csv';
+            case 'JSON':
+                return 'json';
+            default:
+                return 'pdf';
+        }
+    }
+
+    isExportAvailable(): boolean {
+        return this.subscriptionStatus() === 'active' && this.isSupportedModel() && this.isModelSetupComplete();
+    }
+
+    private isSupportedModel(): boolean {
+        return this.getModelFilePrefix(this.currentModel()) !== 'model-report';
+    }
+
+    private isModelSetupComplete(): boolean {
+        return localStorage.getItem('model_setup_complete') === 'true';
+    }
+
+    private getModelFilePrefix(modelCode: string | null): string {
+        const match = AVAILABLE_MODELS.find((model) => model.code === modelCode);
+        if (!match) {
+            return 'model-report';
+        }
+        return `${match.code.replace('-model', '')}-report`;
     }
 
 }

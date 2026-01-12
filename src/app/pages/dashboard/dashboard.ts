@@ -9,13 +9,7 @@ import { InputIconModule } from 'primeng/inputicon';
 import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-
-interface ModelOption {
-  id: string;
-  name: string;
-  description: string;
-  route: string[];
-}
+import { AVAILABLE_MODELS, ModelOption } from './model-options';
 
 @Component({
   selector: 'app-dashboard',
@@ -129,44 +123,7 @@ interface ModelOption {
 export class Dashboard implements OnInit, OnDestroy {
   searchTerm = '';
   showModelPicker = false;
-  availableModels: ModelOption[] = [
-    {
-      id: 'pharma-model',
-      name: 'Pharmaceutical Model',
-      description: 'Input assumptions, forecasts, and dashboards for pharma.',
-      route: ['/dashboard/pharma-input-landing'],
-    },
-    {
-      id: 'biotech-model',
-      name: 'Biotech Model',
-      description: 'Input assumptions, forecasts, and dashboards for biotech.',
-      route: ['/dashboard/biotech-input-landing'],
-    },
-    {
-      id: 'microbrewery-model',
-      name: 'Microbrewery Model',
-      description: 'Input assumptions, forecasts, and dashboards for Microbrewerys.',
-      route: ['/dashboard/microbrewery-input-landing'],
-    },
-    {
-      id: 'goat-farming-model',
-      name: 'Goat Farming Model',
-      description: 'Input assumptions, forecasts, and dashboards for Goat Farming.',
-      route: ['/dashboard/goat-farming-input-landing'],
-    },
-    {
-      id: 'cassava-ethanol-model',
-      name: 'Cassava Ethanol Model',
-      description: 'Input assumptions, forecasts, and dashboards for Cassava Ethanol.',
-      route: ['/dashboard/cassava-ethanol-input-landing'],
-    },
-    {
-      id: 'broiler-chicken-model',
-      name: 'Broiler Chicken Model',
-      description: 'Input assumptions, forecasts, and dashboards for Broiler Chicken.',
-      route: ['/dashboard/broiler-chicken-input-landing'],
-    }
-  ];
+  availableModels: ModelOption[] = AVAILABLE_MODELS;
 
   private queryParamSub?: Subscription;
 
@@ -204,7 +161,7 @@ export class Dashboard implements OnInit, OnDestroy {
   }
 
   selectModel(model: ModelOption): void {
-    localStorage.setItem('selected_model', model.id);
+    localStorage.setItem('selected_model', model.code);
     localStorage.removeItem('model_setup_complete');
     this.showModelPicker = false;
     this.router.navigate(model.route);
