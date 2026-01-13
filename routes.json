@@ -1,0 +1,8 @@
+{
+  "routes": [
+    {
+      "path": "/",
+      "preserve_path_prefix": true
+    }
+  ]
+}
