@@ -13,7 +13,13 @@ export class ModelSetupGuard implements CanActivate {
       return true;
     }
 
-    this.router.navigate(['/dashboard/pharma-input-landing']);
+    const selectedModel = localStorage.getItem('selected_model');
+    if (selectedModel === 'biotech') {
+      this.router.navigate(['/dashboard/biotech-input-landing']);
+    } else {
+      this.router.navigate(['/dashboard/pharma-input-landing']);
+    }
     return false;
   }
 }
+

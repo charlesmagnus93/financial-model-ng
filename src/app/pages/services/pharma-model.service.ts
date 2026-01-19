@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import {
   BehaviorSubject,
   Observable,
+  catchError,
   map,
   shareReplay,
   switchMap,
@@ -14,12 +15,18 @@ import { ApiService } from './api.service';
 const INPUT_STORAGE_KEY = 'pharma_model_input';
 const OUTPUT_STORAGE_KEY = 'pharma_model_output';
 
+export interface ValidationIssue {
+  path: string;
+  message: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class PharmaModelService {
   private inputSubject = new BehaviorSubject<any>({});
   private outputSubject = new BehaviorSubject<any>(null);
+  validationErrors = signal<ValidationIssue[]>([]);
   subscriptionStatus = signal<'checking' | 'active' | 'inactive' | 'error'>(
     'checking'
   );
@@ -72,6 +79,10 @@ export class PharmaModelService {
     this.setInput({});
   }
 
+  clearValidationErrors(): void {
+    this.validationErrors.set([]);
+  }
+
   patchInput(patch: Record<string, unknown>): void {
     const current = this.getInputSnapshot();
     const next = { ...current, ...patch };
@@ -86,7 +97,16 @@ export class PharmaModelService {
   runPharmaModel(): Observable<any> {
     const payload = { inputs: this.getInputSnapshot() };
     // console.log('Running Pharma Model with payload:', payload);
+    this.validationErrors.set([]);
     return this.api.post('/inputs/pharma/validate', payload).pipe(
+      catchError((error) => {
+        const issues = this.extractValidationIssues(error);
+        if (issues.length) {
+          this.validationErrors.set(issues);
+        }
+        const message = this.formatValidationError(error, issues);
+        return throwError(() => new Error(message));
+      }),
       switchMap((validation: { valid: boolean; message: string }) => {
         if (!validation?.valid) {
           return throwError(
@@ -95,7 +115,10 @@ export class PharmaModelService {
         }
         return this.api
           .post('/model/pharma/run', payload)
-          .pipe(tap((response) => this.setOutput(response)));
+          .pipe(
+            tap((response) => this.setOutput(response)),
+            tap(() => this.validationErrors.set([]))
+          );
       })
     );
   }
@@ -172,5 +195,65 @@ export class PharmaModelService {
     } catch {
       return null;
     }
+  }
+
+  private formatValidationError(
+    error: any,
+    issues: ValidationIssue[] = []
+  ): string {
+    if (issues.length) {
+      const details = issues
+        .slice(0, 3)
+        .map((issue) => issue.path)
+        .filter(Boolean)
+        .join(', ');
+      const suffix = issues.length > 3 ? '...' : '';
+      return details
+        ? `Validation failed: ${details}${suffix}`
+        : issues[0]?.message || 'Inputs failed validation.';
+    }
+    const body = error?.error;
+    if (body) {
+      if (typeof body === 'string') {
+        return body;
+      }
+      if (typeof body?.message === 'string') {
+        return body.message;
+      }
+      try {
+        return JSON.stringify(body);
+      } catch {
+        return 'Inputs failed validation.';
+      }
+    }
+    return error?.message || 'Inputs failed validation.';
+  }
+
+  private extractValidationIssues(error: any): ValidationIssue[] {
+    const body = error?.error ?? error;
+    const issues = Array.isArray(body)
+      ? body
+      : Array.isArray(body?.detail)
+        ? body.detail
+        : [];
+    if (!Array.isArray(issues)) {
+      return [];
+    }
+    return issues
+      .map((issue) => {
+        const loc = Array.isArray(issue?.loc) ? issue.loc : [];
+        const path = loc
+          .slice(2)
+          .filter((segment: any) => typeof segment === 'string')
+          .join('.');
+        const message =
+          typeof issue?.msg === 'string'
+            ? issue.msg
+            : typeof issue?.message === 'string'
+              ? issue.message
+              : 'Validation error';
+        return { path, message };
+      })
+      .filter((issue) => issue.path || issue.message);
   }
 }

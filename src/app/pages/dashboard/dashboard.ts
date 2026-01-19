@@ -40,12 +40,12 @@ import { PharmaModelService } from '../services/pharma-model.service';
             <div class="flex items-start justify-between gap-2">
               <div>
                 <div class="text-lg font-semibold">Create New Model</div>
-                <div class="text-xs text-surface-400">
+                <div class="text-xs text-surface-500">
                   Choose a model to start a new customer form.
                 </div>
               </div>
             </div>
-            <p class="text-sm text-surface-300">
+            <p class="text-sm text-surface-400">
               Select a model and complete the input form before other dashboards
               unlock.
             </p>
@@ -64,7 +64,7 @@ import { PharmaModelService } from '../services/pharma-model.service';
               <div>
                 <div class="text-lg font-semibold">{{ model.name }}</div>
               </div>
-              <p class="text-sm text-surface-300">{{ model.description }}</p>
+              <p class="text-sm text-surface-600">{{ model.description }}</p>
               <div class="mt-auto">
                 <p-button
                   label="Create"

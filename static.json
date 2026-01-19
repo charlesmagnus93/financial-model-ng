@@ -1,0 +1,13 @@
+{
+  "headers": {
+    "/**": {
+      "Cache-Control": "no-store"
+    }
+  },
+  "routes": [
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
+  ]
+}

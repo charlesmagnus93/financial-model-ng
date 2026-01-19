@@ -7,7 +7,7 @@ import {
   ReactiveFormsModule,
 } from '@angular/forms';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { FluidModule } from 'primeng/fluid';
@@ -40,7 +40,7 @@ interface BreakEvenMetrics {
     CommonModule,
     ReactiveFormsModule,
     InputNumberModule,
-    DropdownModule,
+    SelectModule,
     TableModule,
     ButtonModule,
     FluidModule,
@@ -59,12 +59,12 @@ interface BreakEvenMetrics {
                 <div class="grid grid-cols-12 gap-2 items-end">
                   <div class="col-span-12 md:col-span-2">
                     <div class="text-xs font-semibold mb-1">Product</div>
-                    <p-dropdown
+                    <p-select
                       [options]="products"
                       formControlName="product"
                       placeholder="Select product"
                       class="w-full"
-                    ></p-dropdown>
+                    ></p-select>
                   </div>
                   <div class="col-span-12 md:col-span-2">
                     <div class="text-xs font-semibold mb-1">Fixed Cost</div>
@@ -179,11 +179,11 @@ interface BreakEvenMetrics {
           <form [formGroup]="customRowForm" class="grid grid-cols-12 gap-3 items-end">
             <div class="col-span-4">
               <div class="text-xs font-semibold mb-1">Product</div>
-              <p-dropdown
+              <p-select
                 [options]="productOptions"
                 formControlName="product"
                 class="w-full"
-              ></p-dropdown>
+              ></p-select>
             </div>
             <div class="col-span-2">
               <div class="text-xs font-semibold mb-1">Product (custom)</div>
@@ -572,3 +572,4 @@ export class BreakEvenPaybackInputsWidget implements OnInit {
     return values.map((v) => Number(v ?? 0));
   }
 }
+

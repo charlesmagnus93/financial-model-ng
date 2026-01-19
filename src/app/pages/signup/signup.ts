@@ -40,7 +40,7 @@ import { AuthService } from "../services/auth.service";
                                         />
                                     </g>
                                 </svg>
-                                <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome to Longevity Financials Models</div>
+                                <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome to NumQuants</div>
                                 <span class="text-muted-color font-medium">Sign up to continue</span>
                             </div>
 

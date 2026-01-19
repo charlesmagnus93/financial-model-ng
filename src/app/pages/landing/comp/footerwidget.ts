@@ -16,9 +16,9 @@ import { Linkedin, Twitter, Youtube, Mail, LucideAngularModule } from 'lucide-an
             <div class="lg:col-span-2">
                 <div class="flex items-center gap-2 mb-4">
                 <div class="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                    <span class="text-white">Rx</span>
+                    <span class="text-white">NQ</span>
                 </div>
-                <span class="text-white">PharmaFinance</span>
+                <span class="text-white">NumQuants</span>
                 </div>
 
                 <p class="text-gray-400 mb-6">
@@ -111,7 +111,7 @@ import { Linkedin, Twitter, Youtube, Mail, LucideAngularModule } from 'lucide-an
             <div class="border-t border-gray-800 pt-8">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <p class="text-gray-400">
-                &copy; 2025 PharmaFinance. All rights reserved.
+                &copy; 2025 NumQuants. All rights reserved.
                 </p>
                 <p class="text-gray-400">
                 Empowering pharmaceutical innovation through intelligent financial modeling

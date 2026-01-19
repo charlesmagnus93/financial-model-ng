@@ -47,6 +47,11 @@ export class AppMenu {
             icon: 'pi pi-fw pi-heart-fill',
             routerLink: ['/dashboard/pharma-input-landing'],
           },
+          {
+            label: 'Biotech',
+            icon: 'pi pi-fw pi-microchip',
+            routerLink: ['/dashboard/biotech-input-landing'],
+          },
           // {
           //   label: 'Add New Model',
           //   icon: 'pi pi-fw pi-plus',

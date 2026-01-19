@@ -17,9 +17,9 @@ import { ButtonModule } from 'primeng/button';
                 <div
                   class="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center"
                 >
-                  <span class="text-white">LFM</span>
+                  <span class="text-white">NQ</span>
                 </div>
-                <span class="text-gray-900">Longevity Financials Models</span>
+                <span class="text-gray-900">NumQuants</span>
               </a>
             </div>
 

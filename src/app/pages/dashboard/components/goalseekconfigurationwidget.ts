@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { FluidModule } from 'primeng/fluid';
 import { PharmaModelService } from '../../services/pharma-model.service';
@@ -14,7 +14,7 @@ interface Option {
 @Component({
   standalone: true,
   selector: 'goal-seek-configuration-widget',
-  imports: [CommonModule, ReactiveFormsModule, DropdownModule, InputNumberModule, FluidModule],
+  imports: [CommonModule, ReactiveFormsModule, SelectModule, InputNumberModule, FluidModule],
   template: `
     <p-fluid class="flex">
       <div class="card flex flex-col gap-4 w-full">
@@ -25,25 +25,25 @@ interface Option {
         <form [formGroup]="form" class="flex flex-col gap-4">
           <div class="flex flex-col gap-2">
             <div class="text-sm font-semibold">Metric Source</div>
-            <p-dropdown
+            <p-select
               [options]="metricSourceOptions"
               optionLabel="label"
               optionValue="value"
               formControlName="metricSource"
               (onChange)="onMetricSourceChange($event.value)"
               styleClass="w-full"
-            ></p-dropdown>
+            ></p-select>
           </div>
 
           <div class="flex flex-col gap-2">
             <div class="text-sm font-semibold">Metric</div>
-            <p-dropdown
+            <p-select
               [options]="metricOptions"
               optionLabel="label"
               optionValue="value"
               formControlName="metric"
               styleClass="w-full"
-            ></p-dropdown>
+            ></p-select>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -64,11 +64,11 @@ interface Option {
 
           <div class="flex flex-col gap-2">
             <div class="text-sm font-semibold text-surface-200">Year</div>
-            <p-dropdown
+            <p-select
               [options]="yearOptions"
               formControlName="year"
               styleClass="w-full"
-            ></p-dropdown>
+            ></p-select>
           </div>
         </form>
       </div>
@@ -163,3 +163,4 @@ export class GoalSeekConfigurationWidget implements OnInit {
     });
   }
 }
+
