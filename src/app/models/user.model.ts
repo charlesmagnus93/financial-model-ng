@@ -11,10 +11,12 @@ export interface AuthRes {
 
 export interface CurrentUser {
   email: string;
+  name: string;
   method: string | 'jwt';
   claims: {
     sub: number;
     email: string;
+    name: string;
     provider: string | 'local';
     exp: number;
   };

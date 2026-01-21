@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { AppMenuitem } from './app.menuitem';
+import { AVAILABLE_MODELS, ModelOption } from '@/pages/dashboard/model-options';
 
 @Component({
   selector: 'app-menu',
@@ -22,6 +23,17 @@ import { AppMenuitem } from './app.menuitem';
   </ul> `,
 })
 export class AppMenu {
+
+  private readonly modelIcons: Record<string, string> = {
+    pharma: 'pi pi-fw pi-heart-fill',
+    biotech: 'pi pi-fw pi-microchip',
+    microbrewery: 'pi pi-fw pi-building',
+    goat_farming: 'pi pi-fw pi-home',
+    cassava_ethanol: 'pi pi-fw pi-bolt',
+    broiler_chicken: 'pi pi-fw pi-shopping-bag',
+  };
+
+  availableModels: ModelOption[] = AVAILABLE_MODELS;
   model: MenuItem[] = [];
 
   ngOnInit() {
@@ -42,16 +54,7 @@ export class AppMenu {
       {
         label: 'Yours Models',
         items: [
-          {
-            label: 'Pharmaceuticals',
-            icon: 'pi pi-fw pi-heart-fill',
-            routerLink: ['/dashboard/pharma-input-landing'],
-          },
-          {
-            label: 'Biotech',
-            icon: 'pi pi-fw pi-microchip',
-            routerLink: ['/dashboard/biotech-input-landing'],
-          },
+          ...this.availableModels.map((model) => this.toMenuItem(model)),
           // {
           //   label: 'Add New Model',
           //   icon: 'pi pi-fw pi-plus',
@@ -61,5 +64,19 @@ export class AppMenu {
         ],
       },
     ];
+  }
+
+  private toMenuItem(model: ModelOption): MenuItem {
+    return {
+      label: model.name.replace(/ Model$/i, ''),
+      icon: this.modelIcons[model.code] || 'pi pi-fw pi-circle',
+      routerLink: [model.route],
+      command: () => this.selectModel(model),
+    };
+  }
+
+  private selectModel(model: ModelOption): void {
+    localStorage.setItem('selected_model', model.code);
+    localStorage.removeItem('model_setup_complete');
   }
 }

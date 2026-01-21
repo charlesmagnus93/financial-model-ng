@@ -125,6 +125,7 @@ export class Dashboard implements OnInit, OnDestroy {
   searchTerm = '';
   showModelPicker = false;
   availableModels: ModelOption[] = AVAILABLE_MODELS;
+  private readonly subscriptionReturnRouteKey = 'subscription_return_route';
 
   private queryParamSub?: Subscription;
 
@@ -146,7 +147,17 @@ export class Dashboard implements OnInit, OnDestroy {
       const refValue = reference || trxref;
       if (refValue) {
         console.log('Reference param:', refValue);
-        this.pharmaModelService.verifySubscription(refValue);
+        this.pharmaModelService.verifySubscription(refValue).subscribe({
+          next: (response) => {
+            if (response?.is_active) {
+              this.redirectAfterSubscription();
+            }
+          },
+          error: () => {
+            // Status and message are set in the service.
+          },
+        });
+        this.clearSubscriptionParams();
       }
     });
   }
@@ -177,6 +188,49 @@ export class Dashboard implements OnInit, OnDestroy {
     localStorage.setItem('selected_model', model.code);
     localStorage.removeItem('model_setup_complete');
     this.showModelPicker = false;
-    this.router.navigate(model.route);
+    this.router.navigate([model.route]);
+  }
+
+  private redirectAfterSubscription(): void {
+    const returnRoute = localStorage.getItem(this.subscriptionReturnRouteKey);
+    if (returnRoute) {
+      localStorage.removeItem(this.subscriptionReturnRouteKey);
+      this.router.navigateByUrl(returnRoute);
+      return;
+    }
+
+    if (!this.isModelSetupComplete()) {
+      return;
+    }
+
+    const selectedModel = localStorage.getItem('selected_model');
+    const resultsRoute = this.getResultsRoute(selectedModel);
+    if (resultsRoute) {
+      this.router.navigate([resultsRoute]);
+    }
+  }
+
+  private isModelSetupComplete(): boolean {
+    return localStorage.getItem('model_setup_complete') === 'true';
+  }
+
+  private getResultsRoute(modelCode: string | null): string | null {
+    switch (modelCode) {
+      case 'pharma':
+        return '/dashboard/pharma-results';
+      case 'biotech':
+        return '/dashboard/biotech-results';
+      default:
+        return null;
+    }
+  }
+
+  private clearSubscriptionParams(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { reference: null, trxref: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 }

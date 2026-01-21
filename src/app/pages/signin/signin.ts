@@ -17,7 +17,6 @@ import { CommonModule } from '@angular/common';
     selector: 'app-signin',
     standalone: true,
     imports: [ReactiveFormsModule, FormsModule, RouterModule, PasswordModule, InputTextModule, ButtonModule, CheckboxModule, RippleModule, Message, /*HttpClientModule,*/ CommonModule],
-    providers: [AuthService, GoogleAuthService],
     template: `
     <form [formGroup]="signinForm">
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">

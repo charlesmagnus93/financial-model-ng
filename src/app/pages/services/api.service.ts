@@ -32,14 +32,7 @@ export class ApiService {
     // Build URL
     const url = `${this.baseUrl}${path.startsWith('/') ? path : '/' + path}`;
 
-    // Build headers with authorization token
     let httpHeaders = new HttpHeaders();
-
-    // Add authorization header if token exists
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      httpHeaders = httpHeaders.set('Authorization', `Bearer ${token}`);
-    }
 
     // Add custom headers
     if (headers) {
@@ -127,10 +120,6 @@ export class ApiService {
     const url = `${this.baseUrl}${path.startsWith('/') ? path : '/' + path}`;
 
     let httpHeaders = new HttpHeaders();
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      httpHeaders = httpHeaders.set('Authorization', `Bearer ${token}`);
-    }
 
     if (headers) {
       Object.keys(headers).forEach((key) => {

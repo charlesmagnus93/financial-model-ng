@@ -1,14 +1,16 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal, WritableSignal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { ApiService } from './api.service';
-import { AuthRes } from "../../models/user.model";
+import { AuthRes, User } from "../../models/user.model";
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  user: WritableSignal<User | null> = signal(this.getUser());
+
   constructor(
     private apiService: ApiService,
     private router: Router
@@ -39,7 +41,7 @@ export class AuthService {
         }
         // Store user data if provided
         if (response.user) {
-          localStorage.setItem('user', JSON.stringify(response.user));
+          this.setUser(response.user);
         }
       })
     );
@@ -47,7 +49,7 @@ export class AuthService {
 
   signup(email: string, password: string, username: string | null): Observable<AuthRes> {
     const credentials = { email, password, name: username };
-    return this.apiService.post('/auth/register', credentials, credentials).pipe(
+    return this.apiService.post('/auth/register', credentials).pipe(
       tap((response: AuthRes) => {
         // console.log('Signup response:', response);
         // Store token in localStorage if provided
@@ -56,7 +58,7 @@ export class AuthService {
         }
         // Store user data if provided
         if (response.user) {
-          localStorage.setItem('user', JSON.stringify(response.user));
+          this.setUser(response.user);
         }
       })
     );
@@ -82,7 +84,7 @@ export class AuthService {
         }
         // Store user data if provided
         if (response.user) {
-          localStorage.setItem('user', JSON.stringify(response.user));
+          this.setUser(response.user);
         }
       })
     );
@@ -93,10 +95,10 @@ export class AuthService {
    */
   signout(): void {
     localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
     localStorage.removeItem('rememberMe');
     localStorage.removeItem('tokenExpiration');
     localStorage.removeItem('authProvider');
+    this.setUser(null);
     this.router.navigate(['/login']);
   }
 
@@ -138,6 +140,15 @@ export class AuthService {
   getUser(): any {
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
+  }
+
+  setUser(user: User | null): void {
+    this.user.set(user);
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
   }
 
   /**

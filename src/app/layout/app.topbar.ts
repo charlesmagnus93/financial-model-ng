@@ -1,11 +1,10 @@
-import { Component, computed, Signal, signal } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Component, computed, inject, OnInit, Signal, signal } from '@angular/core';
+import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { StyleClassModule } from 'primeng/styleclass';
 import { ChipModule } from 'primeng/chip';
 import { ButtonModule } from 'primeng/button';
 import { PopoverModule } from 'primeng/popover';
-import { TagModule } from 'primeng/tag';
 import { DividerModule } from 'primeng/divider';
 import { finalize } from 'rxjs';
 import { LayoutService } from './service/layout.service';
@@ -18,7 +17,15 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
 @Component({
     selector: 'app-topbar',
     standalone: true,
-    imports: [RouterModule, CommonModule, StyleClassModule, ChipModule, ButtonModule, PopoverModule, TagModule, DividerModule],
+    imports: [
+        RouterModule,
+        CommonModule,
+        StyleClassModule,
+        ChipModule,
+        ButtonModule,
+        PopoverModule,
+        DividerModule
+    ],
     template: ` <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
             <button class="layout-menu-button layout-topbar-action" (click)="layoutService.onMenuToggle()">
@@ -69,7 +76,7 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
                 } @else if (subscriptionStatus() === 'active') {
                     <div class="flex items-center gap-2">
                         <select
-                            class="p-inputtext p-inputtext-sm"
+                            class="p-inputtext p-inputtext-sm cursor-pointer"
                             [value]="exportFormat()"
                             [disabled]="!isExportAvailable() || isExporting()"
                             (change)="onExportFormatChange($event)"
@@ -82,6 +89,7 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
                             label="Download"
                             icon="pi pi-download"
                             size="small"
+                            type="button"
                             [loading]="isExporting()"
                             [disabled]="!isExportAvailable() || isExporting()"
                             (click)="exportReport()"
@@ -104,18 +112,10 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
 
             <div class="layout-topbar-menu hidden lg:block">
                 <div class="layout-topbar-menu-content">
-                    <!-- <button type="button" class="layout-topbar-action">
-                        <i class="pi pi-calendar"></i>
-                        <span>Calendar</span>
-                    </button>
-                    <button type="button" class="layout-topbar-action">
-                        <i class="pi pi-inbox"></i>
-                        <span>Messages</span>
-                    </button> -->
                     @if (image) {
                         <p-chip [label]="displayName()" [image]="image" alt="Avatar image" />
                     } @else {
-                        <p-chip class="!py-0 !pl-0 !pr-4" (click)="op.toggle($event)">
+                        <p-chip class="cursor-pointer !py-0 !pl-0 !pr-4" (click)="op.toggle($event)">
                             <span class="bg-primary text-primary-contrast rounded-full w-8 h-8 flex items-center justify-center">
                                 {{ userInitial() }}
                             </span>
@@ -126,19 +126,38 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
                     }
                     <p-popover #op>
                         <ng-template #content>
-                            <p-tag class="m-2" value="{{user()?.email}}" />
-                            <p-divider />
-                            <div class="flex gap-2">
-                                <p-button
-                                    icon="pi pi-sign-out"
-                                    [label]="'Sign Out'"
-                                    [disabled]="false"
-                                    severity="warn"
-                                    variant="outlined"
-                                    class="flex-auto"
-                                    styleClass="w-full whitespace-nowrap"
-                                    (onClick)="logout()"
-                                />
+                            <div class="flex flex-col"> 
+                                <div class="flex items-center gap-3 p-2">
+                                    <span class="bg-primary text-primary-contrast rounded-full w-9 h-9 flex items-center justify-center text-sm">
+                                        {{ userInitial() }}
+                                    </span>
+                                    <div>
+                                        <div class="text-sm font-semibold">{{ displayName() }}</div>
+                                        <div class="text-xs text-surface-500">{{ user()?.email }}</div>
+                                    </div>
+                                </div>
+                                <div class="mt-1 ml-2 flex items-center gap-2 text-sm">
+                                    <span class="font-semibold text-surface-500">Paystack status</span>
+                                    <i class="text-xs"
+                                        [ngClass]="subscriptionStatus() === 'active' ? 'pi pi-check-circle text-green-600' : 'pi pi-ban text-red-500'"></i>
+                                </div>
+                                <p-divider></p-divider>
+                                <button
+                                    type="button"
+                                    class="cursor-pointer flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm transition hover:bg-surface-100 dark:hover:bg-surface-800"
+                                    (click)="goToProfile(op)"
+                                >
+                                    <i class="pi pi-user text-xs"></i>
+                                    <span>Profile</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="cursor-pointer flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm transition hover:bg-surface-100 dark:hover:bg-surface-800"
+                                    (click)="logout(); op.hide()"
+                                >
+                                    <i class="pi pi-sign-out text-xs"></i>
+                                    <span>Sign out</span>
+                                </button>
                             </div>
                         </ng-template>
                     </p-popover>
@@ -147,9 +166,10 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
         </div>
     </div>`
 })
-export class AppTopbar {
+export class AppTopbar implements OnInit {
 
-    user = signal<User | null>(null);
+    private authService = inject(AuthService);
+    user = this.authService.user;
     isExporting = signal(false);
     exportFormat = signal<'PDF' | 'CSV' | 'JSON'>('CSV');
     currentModel = signal<string | null>(null);
@@ -167,15 +187,18 @@ export class AppTopbar {
 
     constructor(
         public layoutService: LayoutService,
-        private authService: AuthService,
         private apiService: ApiService,
-        public pharmaModelService: PharmaModelService
+        public pharmaModelService: PharmaModelService,
+        private router: Router
     ) {
         this.subscriptionStatus = this.pharmaModelService.subscriptionStatus;
         this.subscriptionMessage = this.pharmaModelService.subscriptionMessage;
-        this.user.set(this.authService.getUser());
         this.currentModel.set(localStorage.getItem('selected_model'));
         this.checkSubscriptionStatus();
+    }
+
+    ngOnInit(): void {
+        this.user = this.authService.user;
     }
 
     toggleDarkMode() {
@@ -202,6 +225,7 @@ export class AppTopbar {
             next: (response: { checkout_url?: string, email?: string }) => {
                 const checkoutUrl = response?.checkout_url;
                 if (checkoutUrl) {
+                    localStorage.setItem('subscription_return_route', this.router.url);
                     window.open(checkoutUrl, '_self', 'popup');
                 } else {
                     console.error('Subscription checkout missing checkout_url.');
@@ -243,6 +267,11 @@ export class AppTopbar {
 
     logout() {
         this.authService.signout();
+    }
+
+    goToProfile(popover: any): void {
+        popover.hide();
+        this.router.navigate(['/dashboard/profile']);
     }
 
     private downloadBlob(

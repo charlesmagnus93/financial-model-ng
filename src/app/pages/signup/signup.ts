@@ -15,7 +15,6 @@ import { AuthService } from "../services/auth.service";
     selector: 'app-signup',
     standalone: true,
     imports: [ReactiveFormsModule, FormsModule, RouterModule, PasswordModule, InputTextModule, ButtonModule, RippleModule, Message, CommonModule],
-    providers: [AuthService, GoogleAuthService],
     template: `
     <form [formGroup]="signupForm" autocomplete="off">
         <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
@@ -75,6 +74,9 @@ import { AuthService } from "../services/auth.service";
     
                                 <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Password</label>
                                 <p-password id="password1" formControlName="password" placeholder="Password" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false" autocomplete="off"></p-password>
+                                <div class="text-xs text-surface-500 mb-2">
+                                    Use 8+ chars with upper/lowercase, a number, and a special character.
+                                </div>
                                 @if(signupForm.controls['password'].invalid && (signupForm.controls['password'].dirty || signupForm.controls['password'].touched)) {
                                     <p-message severity="error" variant="simple" size="small">
                                         @if(signupForm.controls['password'].errors?.['required']) {
@@ -87,7 +89,7 @@ import { AuthService } from "../services/auth.service";
                                         @if(signupForm.controls['password'].errors?.['pattern']) {
                                             <div class="p-message p-component p-message-error p-message-simple p-message-sm" aria-live="polite" role="alert">
                                                 <div class="p-message-content">
-                                                    <span class="p-message-text">Password is invalid</span>
+                                                    <span class="p-message-text">Password must match the required format.</span>
                                                 </div>
                                             </div>
                                         }

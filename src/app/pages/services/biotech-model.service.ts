@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import {
   BehaviorSubject,
   Observable,
+  catchError,
   map,
   shareReplay,
   switchMap,
@@ -129,22 +130,19 @@ export class BiotechModelService {
     this.subscriptionMessage.set('');
     return this.api
       .post('/subscriptions/verify', { reference: trxref })
-      .subscribe({
-        next: (response: {
-          is_active: boolean;
-          email?: string;
-          message?: string;
-        }) => {
+      .pipe(
+        tap((response: { is_active: boolean; email?: string; message?: string }) => {
           this.subscriptionStatus.set(
             response?.is_active ? 'active' : 'inactive'
           );
           this.subscriptionMessage.set(response?.message || '');
-        },
-        error: () => {
+        }),
+        catchError(() => {
           this.subscriptionStatus.set('error');
           this.subscriptionMessage.set('Unable to verify subscription.');
-        },
-      });
+          return throwError(() => new Error('Unable to verify subscription.'));
+        })
+      );
   }
 
   private loadFromStorage(): void {
@@ -442,4 +440,3 @@ export class BiotechModelService {
     return `VAC-${String(value).padStart(3, '0')}`;
   }
 }
-
