@@ -13,6 +13,7 @@ interface ShareholderRow {
   name: string;
   ownershipPct: number;
   investment: number;
+  equityValue: number;
 }
 
 interface IncrementHelper {
@@ -81,6 +82,14 @@ interface IncrementHelper {
               [min]="0"
               inputStyleClass="w-full"
             />
+            <label class="text-xs font-semibold">Equity value (rNPV)</label>
+            <p-inputnumber
+              [(ngModel)]="selectedRow.equityValue"
+              (ngModelChange)="saveSelectedRow()"
+              [showButtons]="true"
+              [min]="0"
+              inputStyleClass="w-full"
+            />
             <p-button
               label="Save changes"
               size="small"
@@ -116,6 +125,13 @@ interface IncrementHelper {
               [min]="0"
               inputStyleClass="w-full"
             />
+            <label class="text-xs font-semibold">Equity value (rNPV)</label>
+            <p-inputnumber
+              [(ngModel)]="newRow.equityValue"
+              [showButtons]="true"
+              [min]="0"
+              inputStyleClass="w-full"
+            />
             <p-button
               label="Add row"
               size="small"
@@ -129,9 +145,12 @@ interface IncrementHelper {
             <p-button
               label="Remove row"
               size="small"
+              severity="danger"
+              class="w-full"
               [outlined]="true"
               (onClick)="removeRow()"
               [disabled]="rows.length <= 1"
+              fluid
             ></p-button>
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
@@ -175,12 +194,13 @@ interface IncrementHelper {
         </div>
 
         <div class="overflow-auto rounded">
-          <p-table [value]="rows" showGridlines class="text-sm">
+          <p-table [value]="rows" showGridlines class="text-sm" [size]="'small'">
             <ng-template #header>
               <tr>
                 <th>Shareholder</th>
                 <th>Ownership %</th>
                 <th>Investment</th>
+                <th>Equity value (rNPV)</th>
               </tr>
             </ng-template>
             <ng-template #body let-row>
@@ -188,6 +208,7 @@ interface IncrementHelper {
                 <td>{{ row.name }}</td>
                 <td>{{ row.ownershipPct | number: '1.2-2' }}</td>
                 <td>{{ row.investment | number: '1.0-0' }}</td>
+                <td>{{ row.equityValue | number: '1.0-0' }}</td>
               </tr>
             </ng-template>
           </p-table>
@@ -210,11 +231,13 @@ export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
     name: '',
     ownershipPct: 0,
     investment: 0,
+    equityValue: 0,
   };
   newRow: ShareholderRow = {
     name: '',
     ownershipPct: 0,
     investment: 0,
+    equityValue: 0,
   };
   helper: IncrementHelper = {
     column: 'ownershipPct',
@@ -269,6 +292,7 @@ export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
     row.name = this.selectedRow.name;
     row.ownershipPct = this.selectedRow.ownershipPct;
     row.investment = this.selectedRow.investment;
+    row.equityValue = this.selectedRow.equityValue;
     this.persist();
   }
 
@@ -311,21 +335,23 @@ export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
 
   private persist(): void {
     this.biotechModelService.patchInput({
-      shareholdersInvestorsAssumptions: {
-        rows: this.rows.map((row) => ({ ...row })),
-      },
+      shareholders: this.rows.map((row) => ({
+        Shareholder: row.name,
+        'Ownership %': row.ownershipPct,
+        Investment: row.investment,
+        'Equity value (rNPV)': row.equityValue,
+      })),
     });
   }
 
   private syncFromModel(): void {
-    const stored =
-      this.biotechModelService.getInputSnapshot()
-        ?.shareholdersInvestorsAssumptions?.rows;
+    const stored = this.biotechModelService.getInputSnapshot()?.shareholders;
     if (Array.isArray(stored) && stored.length) {
       this.rows = stored.map((row: any) => ({
-        name: String(row?.name ?? ''),
-        ownershipPct: Number(row?.ownershipPct ?? 0),
-        investment: Number(row?.investment ?? 0),
+        name: String(row?.Shareholder ?? ''),
+        ownershipPct: Number(row?.['Ownership %'] ?? 0),
+        investment: Number(row?.Investment ?? 0),
+        equityValue: Number(row?.['Equity value (rNPV)'] ?? 0),
       }));
       this.selectedRowIndex = 0;
       this.syncSelectedRow();

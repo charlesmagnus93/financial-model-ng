@@ -66,7 +66,7 @@ interface IncrementHelper {
     >
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-12 gap-3 items-end">
-          <div class="col-span-12 lg:col-span-9 flex flex-col gap-2">
+          <div class="col-span-12 flex flex-col gap-2">
             <label class="text-xs font-semibold">Select row</label>
             <p-select
               [options]="rowOptions"
@@ -79,32 +79,11 @@ interface IncrementHelper {
               class="w-full"
             ></p-select>
           </div>
-          <div class="col-span-12 lg:col-span-3 flex">
-            <p-button
-              label="Remove row"
-              [outlined]="true"
-              severity="danger"
-              (onClick)="removeRow()"
-              [disabled]="rows.length <= 1"
-              class="w-full"
-              fluid
-            ></p-button>
-          </div>
         </div>
 
         <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 lg:col-span-8 rounded border border-surface-700 p-3 flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <div class="text-xs text-surface-600 font-semibold">
-                {{ isCreatingRow ? 'Add a new row' : 'Edit selected row' }}
-              </div>
-              <p-button
-                label="New row"
-                size="small"
-                [outlined]="true"
-                (onClick)="startNewRow()"
-              ></p-button>
-            </div>
+          <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
+            <div class="text-xs text-surface-600 font-semibold">Edit selected row</div>
             <form [formGroup]="rowForm" class="flex flex-col gap-2">
               <div class="grid grid-cols-12 gap-3 items-end">
                 <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
@@ -232,16 +211,162 @@ interface IncrementHelper {
               </div>
 
               <p-button
-                [label]="isCreatingRow ? 'Add row' : 'Save changes'"
+                label="Save changes"
                 size="small"
                 [outlined]="true"
-                (onClick)="saveRow()"
+                (onClick)="saveSelectedRow()"
+                fluid
+              ></p-button>
+            </form>
+          </div>
+
+          <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
+            <div class="text-xs text-surface-600 font-semibold">Add a new row</div>
+            <form [formGroup]="newRowForm" class="flex flex-col gap-2">
+              <div class="grid grid-cols-12 gap-3 items-end">
+                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
+                  <label class="text-xs font-semibold">ID_vaccine</label>
+                  <input pInputText formControlName="id" class="w-full" />
+                  <label class="text-xs font-semibold">Vaccine name</label>
+                  <input pInputText formControlName="name" class="w-full" />
+                  <label class="text-xs font-semibold">COGS patent % of sales</label>
+                  <p-inputnumber
+                    formControlName="cogsPatentPct"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">COGS post % of sales</label>
+                  <p-inputnumber
+                    formControlName="cogsPostPct"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Marketing annual % of sales</label>
+                  <p-inputnumber
+                    formControlName="marketingAnnualPct"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Marketing launch cost (USD)</label>
+                  <p-inputnumber
+                    formControlName="marketingLaunchUsd"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Indirect staff cost (USD)</label>
+                  <p-inputnumber
+                    formControlName="indirectStaffUsd"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                </div>
+                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
+                  <label class="text-xs font-semibold">Electricity (USD)</label>
+                  <p-inputnumber
+                    formControlName="electricityUsd"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Depreciation (USD)</label>
+                  <p-inputnumber
+                    formControlName="depreciationUsd"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Interest & amortization (USD)</label>
+                  <p-inputnumber
+                    formControlName="interestAmortizationUsd"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Royalties cost % of sales</label>
+                  <p-inputnumber
+                    formControlName="royaltiesPct"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">G&A total (USD)</label>
+                  <p-inputnumber
+                    formControlName="gnaTotalUsd"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Patent operating cost %</label>
+                  <p-inputnumber
+                    formControlName="patentOperatingCostPct"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Post operating cost %</label>
+                  <p-inputnumber
+                    formControlName="postOperatingCostPct"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                </div>
+              </div>
+              <p-button
+                label="Add row"
+                size="small"
+                [outlined]="true"
+                (onClick)="addRow()"
                 fluid
               ></p-button>
             </form>
           </div>
 
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
+            <p-button
+              label="Remove row"
+              [outlined]="true"
+              severity="danger"
+              (onClick)="removeRow()"
+              [disabled]="rows.length <= 1"
+              class="w-full"
+              fluid
+            ></p-button>
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
               <label class="text-xs font-semibold">Column</label>
@@ -284,7 +409,7 @@ interface IncrementHelper {
         </div>
 
         <div class="overflow-auto rounded">
-          <p-table [value]="rows" showGridlines class="text-sm">
+          <p-table [value]="rows" showGridlines class="text-sm" [size]="'small'">
             <ng-template #header>
               <tr>
                 <th>ID_vaccine</th>
@@ -323,6 +448,39 @@ interface IncrementHelper {
             </ng-template>
           </p-table>
         </div>
+
+        <div class="overflow-auto rounded">
+          <p-table [value]="summaryRows" showGridlines class="text-sm" [size]="'small'">
+            <ng-template #header>
+              <tr>
+                <th>ID_vaccine</th>
+                <th>Vaccine name</th>
+                <th>COGS patent % of sales</th>
+                <th>COGS post % of sales</th>
+                <th>Marketing annual % of sales</th>
+                <th>Marketing launch cost (USD)</th>
+                <th>Royalties cost % of sales</th>
+                <th>G&A total (USD)</th>
+                <th>Patent operating cost %</th>
+                <th>Post operating cost %</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.cogsPatentPct | number: '1.2-2' }}</td>
+                <td>{{ row.cogsPostPct | number: '1.2-2' }}</td>
+                <td>{{ row.marketingAnnualPct | number: '1.2-2' }}</td>
+                <td>{{ row.marketingLaunchUsd | number: '1.0-0' }}</td>
+                <td>{{ row.royaltiesPct | number: '1.2-2' }}</td>
+                <td>{{ row.gnaTotalUsd | number: '1.0-0' }}</td>
+                <td>{{ row.patentOperatingCostPct | number: '1.2-2' }}</td>
+                <td>{{ row.postOperatingCostPct | number: '1.2-2' }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
       </div>
     </p-fieldset>
   `,
@@ -330,8 +488,8 @@ interface IncrementHelper {
 export class BiotechProductVaccineCostFieldsetComponent implements OnInit {
   rows: VaccineCostRow[] = [];
   selectedRowId = '';
-  isCreatingRow = false;
   rowForm: FormGroup;
+  newRowForm: FormGroup;
   helper: IncrementHelper = {
     column: 'cogsPatentPct',
     incrementPerYear: 1,
@@ -373,6 +531,22 @@ export class BiotechProductVaccineCostFieldsetComponent implements OnInit {
       patentOperatingCostPct: [0],
       postOperatingCostPct: [0],
     });
+    this.newRowForm = this.formBuilder.group({
+      id: [''],
+      name: [''],
+      cogsPatentPct: [0],
+      cogsPostPct: [0],
+      marketingAnnualPct: [0],
+      marketingLaunchUsd: [0],
+      indirectStaffUsd: [0],
+      electricityUsd: [0],
+      depreciationUsd: [0],
+      interestAmortizationUsd: [0],
+      royaltiesPct: [0],
+      gnaTotalUsd: [0],
+      patentOperatingCostPct: [0],
+      postOperatingCostPct: [0],
+    });
   }
 
   ngOnInit(): void {
@@ -398,36 +572,33 @@ export class BiotechProductVaccineCostFieldsetComponent implements OnInit {
     return this.rowForm.getRawValue() as VaccineCostRow;
   }
 
+  get newRowFormValue(): VaccineCostRow {
+    return this.newRowForm.getRawValue() as VaccineCostRow;
+  }
+
+  get summaryRows() {
+    return this.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      cogsPatentPct: row.cogsPatentPct,
+      cogsPostPct: row.cogsPostPct,
+      marketingAnnualPct: row.marketingAnnualPct,
+      marketingLaunchUsd: row.marketingLaunchUsd,
+      royaltiesPct: row.royaltiesPct,
+      gnaTotalUsd: row.gnaTotalUsd,
+      patentOperatingCostPct: row.patentOperatingCostPct,
+      postOperatingCostPct: row.postOperatingCostPct,
+    }));
+  }
+
   syncSelectedRow(): void {
     const row = this.getSelectedRow();
     if (row) {
-      this.isCreatingRow = false;
       this.rowForm.reset({ ...row });
     }
   }
 
-  startNewRow(): void {
-    const nextId = this.nextVaccineId();
-    this.isCreatingRow = true;
-    this.rowForm.reset({
-      id: nextId,
-      name: 'New vaccine',
-      cogsPatentPct: 30,
-      cogsPostPct: 45,
-      marketingAnnualPct: 15,
-      marketingLaunchUsd: 1000000,
-      indirectStaffUsd: 500000,
-      electricityUsd: 100000,
-      depreciationUsd: 200000,
-      interestAmortizationUsd: 100000,
-      royaltiesPct: 3,
-      gnaTotalUsd: 1000000,
-      patentOperatingCostPct: 50,
-      postOperatingCostPct: 70,
-    });
-  }
-
-  saveRow(): void {
+  saveSelectedRow(): void {
     const value = this.rowFormValue;
     const sanitized: VaccineCostRow = {
       id: String(value.id ?? '').trim() || this.nextVaccineId(),
@@ -446,35 +617,50 @@ export class BiotechProductVaccineCostFieldsetComponent implements OnInit {
       postOperatingCostPct: Number(value.postOperatingCostPct || 0),
     };
     let nextRows = [...this.rows];
-    if (this.isCreatingRow) {
-      const existingIndex = nextRows.findIndex((row) => row.id === sanitized.id);
-      if (existingIndex >= 0) {
-        nextRows[existingIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
+    const selectedIndex = nextRows.findIndex((row) => row.id === this.selectedRowId);
+    const duplicateIndex =
+      sanitized.id === this.selectedRowId
+        ? -1
+        : nextRows.findIndex((row) => row.id === sanitized.id);
+    if (duplicateIndex >= 0) {
+      nextRows[duplicateIndex] = sanitized;
+      if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
+        nextRows.splice(selectedIndex, 1);
       }
-      this.selectedRowId = sanitized.id;
-      this.isCreatingRow = false;
+    } else if (selectedIndex >= 0) {
+      nextRows[selectedIndex] = sanitized;
     } else {
-      const selectedIndex = nextRows.findIndex((row) => row.id === this.selectedRowId);
-      const duplicateIndex =
-        sanitized.id === this.selectedRowId
-          ? -1
-          : nextRows.findIndex((row) => row.id === sanitized.id);
-      if (duplicateIndex >= 0) {
-        nextRows[duplicateIndex] = sanitized;
-        if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
-          nextRows.splice(selectedIndex, 1);
-        }
-      } else if (selectedIndex >= 0) {
-        nextRows[selectedIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
-      }
-      this.selectedRowId = sanitized.id;
+      nextRows = [...nextRows, sanitized];
     }
+    this.selectedRowId = sanitized.id;
     this.rows = nextRows;
     this.rowForm.reset({ ...sanitized });
+    this.persist();
+  }
+
+  addRow(): void {
+    const value = this.newRowFormValue;
+    const sanitized: VaccineCostRow = {
+      id: String(value.id ?? '').trim() || this.nextVaccineId(),
+      name: String(value.name ?? '').trim(),
+      cogsPatentPct: Number(value.cogsPatentPct || 0),
+      cogsPostPct: Number(value.cogsPostPct || 0),
+      marketingAnnualPct: Number(value.marketingAnnualPct || 0),
+      marketingLaunchUsd: Number(value.marketingLaunchUsd || 0),
+      indirectStaffUsd: Number(value.indirectStaffUsd || 0),
+      electricityUsd: Number(value.electricityUsd || 0),
+      depreciationUsd: Number(value.depreciationUsd || 0),
+      interestAmortizationUsd: Number(value.interestAmortizationUsd || 0),
+      royaltiesPct: Number(value.royaltiesPct || 0),
+      gnaTotalUsd: Number(value.gnaTotalUsd || 0),
+      patentOperatingCostPct: Number(value.patentOperatingCostPct || 0),
+      postOperatingCostPct: Number(value.postOperatingCostPct || 0),
+    };
+    const nextRows = [...this.rows, sanitized];
+    this.rows = nextRows;
+    this.selectedRowId = sanitized.id;
+    this.syncSelectedRow();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -485,6 +671,7 @@ export class BiotechProductVaccineCostFieldsetComponent implements OnInit {
     this.rows = this.rows.filter((row) => row.id !== this.selectedRowId);
     this.selectedRowId = this.rows[0]?.id ?? '';
     this.syncSelectedRow();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -521,35 +708,48 @@ export class BiotechProductVaccineCostFieldsetComponent implements OnInit {
 
   private persist(): void {
     this.biotechModelService.patchInput({
-      vaccineCostAssumptions: {
-        rows: this.rows.map((row) => ({ ...row })),
-      },
+      vaccine_costs: this.rows.map((row) => ({
+        ID_vaccine: row.id,
+        'Vaccine name': row.name,
+        'COGS patent % of sales': row.cogsPatentPct,
+        'COGS post % of sales': row.cogsPostPct,
+        'Marketing annual % of sales': row.marketingAnnualPct,
+        'Marketing launch cost (USD)': row.marketingLaunchUsd,
+        'Indirect staff cost (USD)': row.indirectStaffUsd,
+        'Electricity (USD)': row.electricityUsd,
+        'Depreciation (USD)': row.depreciationUsd,
+        'Interest & amortization (USD)': row.interestAmortizationUsd,
+        'Royalties cost % of sales': row.royaltiesPct,
+        'G&A total (USD)': row.gnaTotalUsd,
+        'Patent operating cost %': row.patentOperatingCostPct,
+        'Post operating cost %': row.postOperatingCostPct,
+      })),
     });
   }
 
   private syncFromModel(): void {
-    const stored =
-      this.biotechModelService.getInputSnapshot()?.vaccineCostAssumptions?.rows;
+    const stored = this.biotechModelService.getInputSnapshot()?.vaccine_costs;
     if (Array.isArray(stored) && stored.length) {
       this.rows = stored.map((row: any) => ({
-        id: String(row?.id ?? ''),
-        name: String(row?.name ?? ''),
-        cogsPatentPct: Number(row?.cogsPatentPct ?? 0),
-        cogsPostPct: Number(row?.cogsPostPct ?? 0),
-        marketingAnnualPct: Number(row?.marketingAnnualPct ?? 0),
-        marketingLaunchUsd: Number(row?.marketingLaunchUsd ?? 0),
-        indirectStaffUsd: Number(row?.indirectStaffUsd ?? 0),
-        electricityUsd: Number(row?.electricityUsd ?? 0),
-        depreciationUsd: Number(row?.depreciationUsd ?? 0),
-        interestAmortizationUsd: Number(row?.interestAmortizationUsd ?? 0),
-        royaltiesPct: Number(row?.royaltiesPct ?? 0),
-        gnaTotalUsd: Number(row?.gnaTotalUsd ?? 0),
-        patentOperatingCostPct: Number(row?.patentOperatingCostPct ?? 0),
-        postOperatingCostPct: Number(row?.postOperatingCostPct ?? 0),
+        id: String(row?.ID_vaccine ?? ''),
+        name: String(row?.['Vaccine name'] ?? ''),
+        cogsPatentPct: Number(row?.['COGS patent % of sales'] ?? 0),
+        cogsPostPct: Number(row?.['COGS post % of sales'] ?? 0),
+        marketingAnnualPct: Number(row?.['Marketing annual % of sales'] ?? 0),
+        marketingLaunchUsd: Number(row?.['Marketing launch cost (USD)'] ?? 0),
+        indirectStaffUsd: Number(row?.['Indirect staff cost (USD)'] ?? 0),
+        electricityUsd: Number(row?.['Electricity (USD)'] ?? 0),
+        depreciationUsd: Number(row?.['Depreciation (USD)'] ?? 0),
+        interestAmortizationUsd: Number(row?.['Interest & amortization (USD)'] ?? 0),
+        royaltiesPct: Number(row?.['Royalties cost % of sales'] ?? 0),
+        gnaTotalUsd: Number(row?.['G&A total (USD)'] ?? 0),
+        patentOperatingCostPct: Number(row?.['Patent operating cost %'] ?? 0),
+        postOperatingCostPct: Number(row?.['Post operating cost %'] ?? 0),
       }));
       this.selectedRowId = this.rows[0]?.id ?? '';
       this.syncSelectedRow();
     }
+    this.resetNewRow();
   }
 
   private nextVaccineId(): string {
@@ -561,6 +761,25 @@ export class BiotechProductVaccineCostFieldsetComponent implements OnInit {
       return Math.max(max, Number(match[1] || 0));
     }, 0);
     return `VAC-${String(maxId + 1).padStart(3, '0')}`;
+  }
+
+  private resetNewRow(): void {
+    this.newRowForm.reset({
+      id: this.nextVaccineId(),
+      name: 'New vaccine',
+      cogsPatentPct: 30,
+      cogsPostPct: 45,
+      marketingAnnualPct: 15,
+      marketingLaunchUsd: 1000000,
+      indirectStaffUsd: 500000,
+      electricityUsd: 100000,
+      depreciationUsd: 200000,
+      interestAmortizationUsd: 100000,
+      royaltiesPct: 3,
+      gnaTotalUsd: 1000000,
+      patentOperatingCostPct: 50,
+      postOperatingCostPct: 70,
+    });
   }
 }
 

@@ -47,7 +47,7 @@ interface IncrementHelper {
     >
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-12 gap-3 items-end">
-          <div class="col-span-12 lg:col-span-9 flex flex-col gap-2">
+          <div class="col-span-12 flex flex-col gap-2">
             <label class="text-xs font-semibold">Select row</label>
             <p-select
               [options]="rowOptions"
@@ -60,34 +60,13 @@ interface IncrementHelper {
               class="w-full"
             ></p-select>
           </div>
-          <div class="col-span-12 lg:col-span-3 flex">
-            <p-button
-              label="Remove row"
-              [outlined]="true"
-              severity="danger"
-              (onClick)="removeRow()"
-              [disabled]="rows.length <= 1"
-              class="w-full"
-              fluid
-            ></p-button>
-          </div>
         </div>
 
         <div class="grid grid-cols-12 gap-4">
           <div
-            class="col-span-12 lg:col-span-8 rounded border border-surface-700 p-3 flex flex-col gap-2"
+            class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2"
           >
-            <div class="flex items-center justify-between">
-              <div class="text-xs text-surface-600 font-semibold">
-                {{ isCreatingRow ? 'Add a new row' : 'Edit selected row' }}
-              </div>
-              <p-button
-                label="New row"
-                size="small"
-                [outlined]="true"
-                (onClick)="startNewRow()"
-              ></p-button>
-            </div>
+            <div class="text-xs text-surface-600 font-semibold">Edit selected row</div>
             <form [formGroup]="rowForm" class="flex flex-col gap-2">
               <div class="grid grid-cols-12 gap-3 items-end">
                 <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
@@ -151,7 +130,7 @@ interface IncrementHelper {
                   <p-inputnumber
                     [ngModel]="totalAddressableMarket(rowFormValue)"
                     [ngModelOptions]="{ standalone: true }"
-                    [disabled]="false"
+                    [disabled]="true"
                     [useGrouping]="true"
                     inputStyleClass="w-full"
                   />
@@ -159,7 +138,7 @@ interface IncrementHelper {
                   <p-inputnumber
                     [ngModel]="serviceableAvailableMarket(rowFormValue)"
                     [ngModelOptions]="{ standalone: true }"
-                    [disabled]="false"
+                    [disabled]="true"
                     [useGrouping]="true"
                     inputStyleClass="w-full"
                   />
@@ -167,23 +146,131 @@ interface IncrementHelper {
                   <p-inputnumber
                     [ngModel]="serviceableObtainableMarket(rowFormValue)"
                     [ngModelOptions]="{ standalone: true }"
-                    [disabled]="false"
+                    [disabled]="true"
                     [useGrouping]="true"
                     inputStyleClass="w-full"
                   />
                 </div>
               </div>
               <p-button
-                [label]="isCreatingRow ? 'Add row' : 'Save changes'"
+                label="Save changes"
                 size="small"
                 [outlined]="true"
-                (onClick)="saveRow()"
+                (onClick)="saveSelectedRow()"
+                fluid
+              ></p-button>
+            </form>
+          </div>
+
+          <div
+            class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2"
+          >
+            <div class="text-xs text-surface-600 font-semibold">Add a new row</div>
+            <form [formGroup]="newRowForm" class="flex flex-col gap-2">
+              <div class="grid grid-cols-12 gap-3 items-end">
+                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
+                  <label class="text-xs font-semibold">ID_vaccine</label>
+                  <input pInputText formControlName="id" class="w-full" />
+                  <label class="text-xs font-semibold">Vaccine name</label>
+                  <input pInputText formControlName="name" class="w-full" />
+                  <label class="text-xs font-semibold">Market size (# customers)</label>
+                  <p-inputnumber
+                    formControlName="marketSizeCustomers"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Average spend (USD/customer)</label>
+                  <p-inputnumber
+                    formControlName="avgSpendUsd"
+                    [showButtons]="true"
+                    [min]="0"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Serviceable Available Market (% TAM)</label>
+                  <p-inputnumber
+                    formControlName="samPctOfTam"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                </div>
+                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
+                  <label class="text-xs font-semibold">Serviceable Available Market (% Market size)</label>
+                  <p-inputnumber
+                    formControlName="samPctOfMarket"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Serviceable Obtainable Market (%)</label>
+                  <p-inputnumber
+                    formControlName="somPct"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Total Addressable Market Size (USD)</label>
+                  <p-inputnumber
+                    [ngModel]="totalAddressableMarket(newRowFormValue)"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="true"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Serviceable Available Market (USD)</label>
+                  <p-inputnumber
+                    [ngModel]="serviceableAvailableMarket(newRowFormValue)"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="true"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Serviceable Obtainable Market (USD)</label>
+                  <p-inputnumber
+                    [ngModel]="serviceableObtainableMarket(newRowFormValue)"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="true"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                </div>
+              </div>
+              <p-button
+                label="Add row"
+                size="small"
+                [outlined]="true"
+                (onClick)="addRow()"
                 fluid
               ></p-button>
             </form>
           </div>
 
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-3">
+            <p-button
+              label="Remove row"
+              [outlined]="true"
+              severity="danger"
+              (onClick)="removeRow()"
+              [disabled]="rows.length <= 1"
+              class="w-full"
+              fluid
+            ></p-button>
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
               <label class="text-xs font-semibold">Column</label>
@@ -226,7 +313,7 @@ interface IncrementHelper {
         </div>
 
         <div class="overflow-auto rounded">
-          <p-table [value]="rows" showGridlines class="text-sm">
+          <p-table [value]="rows" showGridlines class="text-sm" [size]="'small'">
             <ng-template #header>
               <tr>
                 <th>ID_vaccine</th>
@@ -257,6 +344,34 @@ interface IncrementHelper {
             </ng-template>
           </p-table>
         </div>
+
+        <div class="overflow-auto rounded">
+          <p-table
+            [value]="summaryRows"
+            showGridlines
+            class="text-sm"
+            [size]="'small'"
+          >
+            <ng-template #header>
+              <tr>
+                <th>ID_vaccine</th>
+                <th>Vaccine name</th>
+                <th>Total Addressable Market Size (USD)</th>
+                <th>Serviceable Available Market (USD)</th>
+                <th>Serviceable Obtainable Market (USD)</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.totalAddressable | number: '1.0-0' }}</td>
+                <td>{{ row.serviceableAvailable | number: '1.0-0' }}</td>
+                <td>{{ row.serviceableObtainable | number: '1.0-0' }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
       </div>
     </p-fieldset>
   `,
@@ -264,8 +379,8 @@ interface IncrementHelper {
 export class BiotechProductVaccineMarketFieldsetComponent implements OnInit {
   rows: VaccineMarketRow[] = [];
   selectedRowId = '';
-  isCreatingRow = false;
   rowForm: FormGroup;
+  newRowForm: FormGroup;
   helper: IncrementHelper = {
     column: 'marketSizeCustomers',
     incrementPerYear: 1,
@@ -285,6 +400,15 @@ export class BiotechProductVaccineMarketFieldsetComponent implements OnInit {
     private formBuilder: FormBuilder
   ) {
     this.rowForm = this.formBuilder.group({
+      id: [''],
+      name: [''],
+      marketSizeCustomers: [0],
+      avgSpendUsd: [0],
+      samPctOfTam: [0],
+      samPctOfMarket: [0],
+      somPct: [0],
+    });
+    this.newRowForm = this.formBuilder.group({
       id: [''],
       name: [''],
       marketSizeCustomers: [0],
@@ -318,6 +442,16 @@ export class BiotechProductVaccineMarketFieldsetComponent implements OnInit {
     return row.somPct;
   }
 
+  get summaryRows() {
+    return this.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      totalAddressable: this.totalAddressableMarket(row),
+      serviceableAvailable: this.serviceableAvailableMarket(row),
+      serviceableObtainable: this.serviceableObtainableMarket(row),
+    }));
+  }
+
   totalAddressableMarket(row: VaccineMarketRow): number {
     return (row.marketSizeCustomers || 0) * (row.avgSpendUsd || 0);
   }
@@ -334,29 +468,18 @@ export class BiotechProductVaccineMarketFieldsetComponent implements OnInit {
     return this.rowForm.getRawValue() as VaccineMarketRow;
   }
 
+  get newRowFormValue(): VaccineMarketRow {
+    return this.newRowForm.getRawValue() as VaccineMarketRow;
+  }
+
   syncSelectedRow(): void {
     const row = this.getSelectedRow();
     if (row) {
-      this.isCreatingRow = false;
       this.rowForm.reset({ ...row });
     }
   }
 
-  startNewRow(): void {
-    const nextId = this.nextVaccineId();
-    this.isCreatingRow = true;
-    this.rowForm.reset({
-      id: nextId,
-      name: 'New vaccine',
-      marketSizeCustomers: 1000000,
-      avgSpendUsd: 100,
-      samPctOfTam: 50,
-      samPctOfMarket: 40,
-      somPct: 20,
-    });
-  }
-
-  saveRow(): void {
+  saveSelectedRow(): void {
     const value = this.rowFormValue;
     const sanitized: VaccineMarketRow = {
       id: String(value.id ?? '').trim() || this.nextVaccineId(),
@@ -368,35 +491,43 @@ export class BiotechProductVaccineMarketFieldsetComponent implements OnInit {
       somPct: Number(value.somPct || 0),
     };
     let nextRows = [...this.rows];
-    if (this.isCreatingRow) {
-      const existingIndex = nextRows.findIndex((row) => row.id === sanitized.id);
-      if (existingIndex >= 0) {
-        nextRows[existingIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
+    const selectedIndex = nextRows.findIndex((row) => row.id === this.selectedRowId);
+    const duplicateIndex =
+      sanitized.id === this.selectedRowId
+        ? -1
+        : nextRows.findIndex((row) => row.id === sanitized.id);
+    if (duplicateIndex >= 0) {
+      nextRows[duplicateIndex] = sanitized;
+      if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
+        nextRows.splice(selectedIndex, 1);
       }
-      this.selectedRowId = sanitized.id;
-      this.isCreatingRow = false;
+    } else if (selectedIndex >= 0) {
+      nextRows[selectedIndex] = sanitized;
     } else {
-      const selectedIndex = nextRows.findIndex((row) => row.id === this.selectedRowId);
-      const duplicateIndex =
-        sanitized.id === this.selectedRowId
-          ? -1
-          : nextRows.findIndex((row) => row.id === sanitized.id);
-      if (duplicateIndex >= 0) {
-        nextRows[duplicateIndex] = sanitized;
-        if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
-          nextRows.splice(selectedIndex, 1);
-        }
-      } else if (selectedIndex >= 0) {
-        nextRows[selectedIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
-      }
-      this.selectedRowId = sanitized.id;
+      nextRows = [...nextRows, sanitized];
     }
+    this.selectedRowId = sanitized.id;
     this.rows = nextRows;
     this.rowForm.reset({ ...sanitized });
+    this.persist();
+  }
+
+  addRow(): void {
+    const value = this.newRowFormValue;
+    const sanitized: VaccineMarketRow = {
+      id: String(value.id ?? '').trim() || this.nextVaccineId(),
+      name: String(value.name ?? '').trim(),
+      marketSizeCustomers: Number(value.marketSizeCustomers || 0),
+      avgSpendUsd: Number(value.avgSpendUsd || 0),
+      samPctOfTam: Number(value.samPctOfTam || 0),
+      samPctOfMarket: Number(value.samPctOfMarket || 0),
+      somPct: Number(value.somPct || 0),
+    };
+    const nextRows = [...this.rows, sanitized];
+    this.rows = nextRows;
+    this.selectedRowId = sanitized.id;
+    this.syncSelectedRow();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -407,6 +538,7 @@ export class BiotechProductVaccineMarketFieldsetComponent implements OnInit {
     this.rows = this.rows.filter((row) => row.id !== this.selectedRowId);
     this.selectedRowId = this.rows[0]?.id ?? '';
     this.syncSelectedRow();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -452,27 +584,36 @@ export class BiotechProductVaccineMarketFieldsetComponent implements OnInit {
 
   private persist(): void {
     this.biotechModelService.patchInput({
-      vaccineMarketAssumptions: {
-        rows: this.rows.map((row) => ({ ...row })),
-      },
+      market_size_estimation: this.rows.map((row) => ({
+        ID_vaccine: row.id,
+        'Vaccine name': row.name,
+        'Market size (# customers)': row.marketSizeCustomers,
+        'Average spend (USD/customer)': row.avgSpendUsd,
+        'Serviceable Available Market (% TAM)': row.samPctOfTam,
+        'Serviceable Available Market (% Market size)': row.samPctOfMarket,
+        'Serviceable Obtainable Market (%)': row.somPct,
+      })),
     });
   }
 
   private syncFromModel(): void {
-    const stored = this.biotechModelService.getInputSnapshot()?.vaccineMarketAssumptions?.rows;
+    const stored = this.biotechModelService.getInputSnapshot()?.market_size_estimation;
     if (Array.isArray(stored) && stored.length) {
       this.rows = stored.map((row: any) => ({
-        id: String(row?.id ?? ''),
-        name: String(row?.name ?? ''),
-        marketSizeCustomers: Number(row?.marketSizeCustomers ?? 0),
-        avgSpendUsd: Number(row?.avgSpendUsd ?? 0),
-        samPctOfTam: Number(row?.samPctOfTam ?? 0),
-        samPctOfMarket: Number(row?.samPctOfMarket ?? 0),
-        somPct: Number(row?.somPct ?? 0),
+        id: String(row?.ID_vaccine ?? ''),
+        name: String(row?.['Vaccine name'] ?? ''),
+        marketSizeCustomers: Number(row?.['Market size (# customers)'] ?? 0),
+        avgSpendUsd: Number(row?.['Average spend (USD/customer)'] ?? 0),
+        samPctOfTam: Number(row?.['Serviceable Available Market (% TAM)'] ?? 0),
+        samPctOfMarket: Number(
+          row?.['Serviceable Available Market (% Market size)'] ?? 0
+        ),
+        somPct: Number(row?.['Serviceable Obtainable Market (%)'] ?? 0),
       }));
       this.selectedRowId = this.rows[0]?.id ?? '';
       this.syncSelectedRow();
     }
+    this.resetNewRow();
   }
 
   private nextVaccineId(): string {
@@ -485,5 +626,16 @@ export class BiotechProductVaccineMarketFieldsetComponent implements OnInit {
     }, 0);
     return `VAC-${String(maxId + 1).padStart(3, '0')}`;
   }
-}
 
+  private resetNewRow(): void {
+    this.newRowForm.reset({
+      id: this.nextVaccineId(),
+      name: 'New vaccine',
+      marketSizeCustomers: 1000000,
+      avgSpendUsd: 100,
+      samPctOfTam: 50,
+      samPctOfMarket: 40,
+      somPct: 20,
+    });
+  }
+}

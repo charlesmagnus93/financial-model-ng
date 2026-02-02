@@ -109,9 +109,11 @@ interface IncrementHelper {
             <p-button
               label="Remove row"
               size="small"
+              [severity]="'danger'"
               [outlined]="true"
               (onClick)="removeRow()"
               [disabled]="rows.length <= 1"
+              fluid
             ></p-button>
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
@@ -152,7 +154,7 @@ interface IncrementHelper {
         </div>
 
         <div class="overflow-auto rounded">
-          <p-table [value]="rows" showGridlines class="text-sm">
+          <p-table [value]="rows" showGridlines class="text-sm" [size]="'small'">
             <ng-template #header>
               <tr>
                 <th>Segment</th>
@@ -258,20 +260,19 @@ export class BiotechRelevantMarketSizesAssumptionsFieldsetComponent
 
   private persist(): void {
     this.biotechModelService.patchInput({
-      relevantMarketSizesAssumptions: {
-        rows: this.rows.map((row) => ({ ...row })),
-      },
+      market_sizes: this.rows.map((row) => ({
+        Segment: row.segment,
+        Value: row.value,
+      })),
     });
   }
 
   private syncFromModel(): void {
-    const stored =
-      this.biotechModelService.getInputSnapshot()
-        ?.relevantMarketSizesAssumptions?.rows;
+    const stored = this.biotechModelService.getInputSnapshot()?.market_sizes;
     if (Array.isArray(stored) && stored.length) {
       this.rows = stored.map((row: any) => ({
-        segment: String(row?.segment ?? ''),
-        value: Number(row?.value ?? 0),
+        segment: String(row?.Segment ?? ''),
+        value: Number(row?.Value ?? 0),
       }));
       this.selectedRowIndex = 0;
       this.syncSelectedRow();

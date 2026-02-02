@@ -58,15 +58,12 @@ export class BiotechSelectorsAssumptionsFieldsetComponent implements OnInit {
 
   updateSelectors(): void {
     this.biotechModelService.patchInput({
-      selectorsAssumptions: {
-        selected: [...this.selectedSelectors],
-      },
+      selectors: [...this.selectedSelectors],
     });
   }
 
   private syncFromModel(): void {
-    const stored = this.biotechModelService.getInputSnapshot()?.selectorsAssumptions
-      ?.selected;
+    const stored = this.biotechModelService.getInputSnapshot()?.selectors;
     if (Array.isArray(stored) && stored.length) {
       this.selectedSelectors = stored.map((value: any) => String(value));
     }

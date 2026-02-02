@@ -50,7 +50,7 @@ interface IncrementHelper {
     >
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-12 gap-3 items-end">
-          <div class="col-span-12 lg:col-span-9 flex flex-col gap-2">
+          <div class="col-span-12 flex flex-col gap-2">
             <label class="text-xs font-semibold">Select row</label>
             <p-select
               [options]="rowOptions"
@@ -63,32 +63,11 @@ interface IncrementHelper {
               class="w-full"
             ></p-select>
           </div>
-          <div class="col-span-12 lg:col-span-3 flex">
-            <p-button
-              label="Remove row"
-              [outlined]="true"
-              severity="danger"
-              (onClick)="removeRow()"
-              [disabled]="rows.length <= 1"
-              class="w-full"
-              fluid
-            ></p-button>
-          </div>
         </div>
 
         <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 lg:col-span-8  rounded border border-surface-700 p-3 flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <div class="text-xs text-surface-600 font-semibold">
-                {{ isCreatingRow ? 'Add a new row' : 'Edit selected row' }}
-              </div>
-              <p-button
-                label="New row"
-                size="small"
-                [outlined]="true"
-                (onClick)="startNewRow()"
-              ></p-button>
-            </div>
+          <div class="col-span-12 lg:col-span-4  rounded border border-surface-700 p-3 flex flex-col gap-2">
+            <div class="text-xs text-surface-600 font-semibold">Edit selected row</div>
             <form [formGroup]="rowForm" class="flex flex-col gap-2">
               <div class="grid grid-cols-12 gap-3 items-end">
                 <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
@@ -141,7 +120,7 @@ interface IncrementHelper {
                   <p-inputnumber
                     [ngModel]="patentRevenueTarget(rowFormValue)"
                     [ngModelOptions]="{ standalone: true }"
-                    [disabled]="false"
+                    [disabled]="true"
                     [useGrouping]="true"
                     inputStyleClass="w-full"
                   />
@@ -149,7 +128,7 @@ interface IncrementHelper {
                   <p-inputnumber
                     [ngModel]="postPatentCustomersPerYear(rowFormValue)"
                     [ngModelOptions]="{ standalone: true }"
-                    [disabled]="false"
+                    [disabled]="true"
                     [useGrouping]="true"
                     inputStyleClass="w-full"
                   />
@@ -157,7 +136,7 @@ interface IncrementHelper {
                   <p-inputnumber
                     [ngModel]="postPatentPricePerCustomer(rowFormValue)"
                     [ngModelOptions]="{ standalone: true }"
-                    [disabled]="false"
+                    [disabled]="true"
                     [minFractionDigits]="2"
                     [maxFractionDigits]="2"
                     inputStyleClass="w-full"
@@ -166,23 +145,127 @@ interface IncrementHelper {
                   <p-inputnumber
                     [ngModel]="postPatentRevenueTarget(rowFormValue)"
                     [ngModelOptions]="{ standalone: true }"
-                    [disabled]="false"
+                    [disabled]="true"
                     [useGrouping]="true"
                     inputStyleClass="w-full"
                   />
                 </div>
               </div>
               <p-button
-                [label]="isCreatingRow ? 'Add row' : 'Save changes'"
+                label="Save changes"
                 size="small"
                 [outlined]="true"
-                (onClick)="saveRow()"
+                (onClick)="saveSelectedRow()"
+                fluid
+              ></p-button>
+            </form>
+          </div>
+
+          <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
+            <div class="text-xs text-surface-600 font-semibold">Add a new row</div>
+            <form [formGroup]="newRowForm" class="flex flex-col gap-2">
+              <div class="grid grid-cols-12 gap-3 items-end">
+                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
+                  <label class="text-xs font-semibold">ID_vaccine</label>
+                  <input pInputText formControlName="id" class="w-full" />
+                  <label class="text-xs font-semibold">Vaccine name</label>
+                  <input pInputText formControlName="name" class="w-full" />
+                  <label class="text-xs font-semibold">Patent customers per year</label>
+                  <p-inputnumber
+                    formControlName="patentCustomersPerYear"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Patent price (USD/customer)</label>
+                  <p-inputnumber
+                    formControlName="patentPricePerCustomer"
+                    [showButtons]="true"
+                    [min]="0"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Post patent customer adj. %</label>
+                  <p-inputnumber
+                    formControlName="postPatentCustomerAdjPct"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                </div>
+                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
+                  <label class="text-xs font-semibold">Post patent price adj. %</label>
+                  <p-inputnumber
+                    formControlName="postPatentPriceAdjPct"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="100"
+                    [step]="1"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Patent revenue target (USD)</label>
+                  <p-inputnumber
+                    [ngModel]="patentRevenueTarget(newRowFormValue)"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="true"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Post patent customers per year</label>
+                  <p-inputnumber
+                    [ngModel]="postPatentCustomersPerYear(newRowFormValue)"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="true"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Post patent price (USD/customer)</label>
+                  <p-inputnumber
+                    [ngModel]="postPatentPricePerCustomer(newRowFormValue)"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="true"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">Post patent revenue target (USD)</label>
+                  <p-inputnumber
+                    [ngModel]="postPatentRevenueTarget(newRowFormValue)"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="true"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                </div>
+              </div>
+              <p-button
+                label="Add row"
+                size="small"
+                [outlined]="true"
+                (onClick)="addRow()"
                 fluid
               ></p-button>
             </form>
           </div>
 
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
+            <p-button
+              label="Remove row"
+              [outlined]="true"
+              severity="danger"
+              (onClick)="removeRow()"
+              [disabled]="rows.length <= 1"
+              class="w-full"
+              fluid
+            ></p-button>
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
               <label class="text-xs font-semibold">Column</label>
@@ -225,7 +308,7 @@ interface IncrementHelper {
         </div>
 
         <div class="overflow-auto rounded">
-          <p-table [value]="rows" showGridlines class="text-sm">
+          <p-table [value]="rows" showGridlines class="text-sm" [size]="'small'">
             <ng-template #header>
               <tr>
                 <th>ID_vaccine</th>
@@ -256,6 +339,27 @@ interface IncrementHelper {
             </ng-template>
           </p-table>
         </div>
+
+        <div class="overflow-auto rounded">
+          <p-table [value]="summaryRows" showGridlines class="text-sm" [size]="'small'">
+            <ng-template #header>
+              <tr>
+                <th>ID_vaccine</th>
+                <th>Vaccine name</th>
+                <th>Patent revenue target (USD)</th>
+                <th>Post patent revenue target (USD)</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.name }}</td>
+                <td>{{ row.patentRevenue | number: '1.0-0' }}</td>
+                <td>{{ row.postPatentRevenue | number: '1.0-0' }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
       </div>
     </p-fieldset>
   `,
@@ -263,8 +367,8 @@ interface IncrementHelper {
 export class BiotechProductVaccineRevenueFieldsetComponent implements OnInit {
   rows: VaccineRevenueRow[] = [];
   selectedRowId = '';
-  isCreatingRow = false;
   rowForm: FormGroup;
+  newRowForm: FormGroup;
   helper: IncrementHelper = {
     column: 'patentCustomersPerYear',
     incrementPerYear: 1,
@@ -283,6 +387,14 @@ export class BiotechProductVaccineRevenueFieldsetComponent implements OnInit {
     private formBuilder: FormBuilder
   ) {
     this.rowForm = this.formBuilder.group({
+      id: [''],
+      name: [''],
+      patentCustomersPerYear: [0],
+      patentPricePerCustomer: [0],
+      postPatentCustomerAdjPct: [0],
+      postPatentPriceAdjPct: [0],
+    });
+    this.newRowForm = this.formBuilder.group({
       id: [''],
       name: [''],
       patentCustomersPerYear: [0],
@@ -324,6 +436,19 @@ export class BiotechProductVaccineRevenueFieldsetComponent implements OnInit {
     return this.rowForm.getRawValue() as VaccineRevenueRow;
   }
 
+  get newRowFormValue(): VaccineRevenueRow {
+    return this.newRowForm.getRawValue() as VaccineRevenueRow;
+  }
+
+  get summaryRows() {
+    return this.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      patentRevenue: this.patentRevenueTarget(row),
+      postPatentRevenue: this.postPatentRevenueTarget(row),
+    }));
+  }
+
   patentRevenueTarget(row: VaccineRevenueRow): number {
     return (row.patentCustomersPerYear || 0) * (row.patentPricePerCustomer || 0);
   }
@@ -343,25 +468,11 @@ export class BiotechProductVaccineRevenueFieldsetComponent implements OnInit {
   syncSelectedRow(): void {
     const row = this.getSelectedRow();
     if (row) {
-      this.isCreatingRow = false;
       this.rowForm.reset({ ...row });
     }
   }
 
-  startNewRow(): void {
-    const nextId = this.nextVaccineId();
-    this.isCreatingRow = true;
-    this.rowForm.reset({
-      id: nextId,
-      name: 'New vaccine',
-      patentCustomersPerYear: 1000000,
-      patentPricePerCustomer: 50,
-      postPatentCustomerAdjPct: 80,
-      postPatentPriceAdjPct: 85,
-    });
-  }
-
-  saveRow(): void {
+  saveSelectedRow(): void {
     const value = this.rowFormValue;
     const sanitized: VaccineRevenueRow = {
       id: String(value.id ?? '').trim() || this.nextVaccineId(),
@@ -372,35 +483,42 @@ export class BiotechProductVaccineRevenueFieldsetComponent implements OnInit {
       postPatentPriceAdjPct: Number(value.postPatentPriceAdjPct || 0),
     };
     let nextRows = [...this.rows];
-    if (this.isCreatingRow) {
-      const existingIndex = nextRows.findIndex((row) => row.id === sanitized.id);
-      if (existingIndex >= 0) {
-        nextRows[existingIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
+    const selectedIndex = nextRows.findIndex((row) => row.id === this.selectedRowId);
+    const duplicateIndex =
+      sanitized.id === this.selectedRowId
+        ? -1
+        : nextRows.findIndex((row) => row.id === sanitized.id);
+    if (duplicateIndex >= 0) {
+      nextRows[duplicateIndex] = sanitized;
+      if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
+        nextRows.splice(selectedIndex, 1);
       }
-      this.selectedRowId = sanitized.id;
-      this.isCreatingRow = false;
+    } else if (selectedIndex >= 0) {
+      nextRows[selectedIndex] = sanitized;
     } else {
-      const selectedIndex = nextRows.findIndex((row) => row.id === this.selectedRowId);
-      const duplicateIndex =
-        sanitized.id === this.selectedRowId
-          ? -1
-          : nextRows.findIndex((row) => row.id === sanitized.id);
-      if (duplicateIndex >= 0) {
-        nextRows[duplicateIndex] = sanitized;
-        if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
-          nextRows.splice(selectedIndex, 1);
-        }
-      } else if (selectedIndex >= 0) {
-        nextRows[selectedIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
-      }
-      this.selectedRowId = sanitized.id;
+      nextRows = [...nextRows, sanitized];
     }
+    this.selectedRowId = sanitized.id;
     this.rows = nextRows;
     this.rowForm.reset({ ...sanitized });
+    this.persist();
+  }
+
+  addRow(): void {
+    const value = this.newRowFormValue;
+    const sanitized: VaccineRevenueRow = {
+      id: String(value.id ?? '').trim() || this.nextVaccineId(),
+      name: String(value.name ?? '').trim(),
+      patentCustomersPerYear: Number(value.patentCustomersPerYear || 0),
+      patentPricePerCustomer: Number(value.patentPricePerCustomer || 0),
+      postPatentCustomerAdjPct: Number(value.postPatentCustomerAdjPct || 0),
+      postPatentPriceAdjPct: Number(value.postPatentPriceAdjPct || 0),
+    };
+    const nextRows = [...this.rows, sanitized];
+    this.rows = nextRows;
+    this.selectedRowId = sanitized.id;
+    this.syncSelectedRow();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -411,6 +529,7 @@ export class BiotechProductVaccineRevenueFieldsetComponent implements OnInit {
     this.rows = this.rows.filter((row) => row.id !== this.selectedRowId);
     this.selectedRowId = this.rows[0]?.id ?? '';
     this.syncSelectedRow();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -454,27 +573,32 @@ export class BiotechProductVaccineRevenueFieldsetComponent implements OnInit {
 
   private persist(): void {
     this.biotechModelService.patchInput({
-      vaccineRevenueAssumptions: {
-        rows: this.rows.map((row) => ({ ...row })),
-      },
+      vaccine_revenue: this.rows.map((row) => ({
+        ID_vaccine: row.id,
+        'Vaccine name': row.name,
+        'Patent customers per year': row.patentCustomersPerYear,
+        'Patent price (USD/customer)': row.patentPricePerCustomer,
+        'Post patent customer adj. %': row.postPatentCustomerAdjPct,
+        'Post patent price adj. %': row.postPatentPriceAdjPct,
+      })),
     });
   }
 
   private syncFromModel(): void {
-    const stored =
-      this.biotechModelService.getInputSnapshot()?.vaccineRevenueAssumptions?.rows;
+    const stored = this.biotechModelService.getInputSnapshot()?.vaccine_revenue;
     if (Array.isArray(stored) && stored.length) {
       this.rows = stored.map((row: any) => ({
-        id: String(row?.id ?? ''),
-        name: String(row?.name ?? ''),
-        patentCustomersPerYear: Number(row?.patentCustomersPerYear ?? 0),
-        patentPricePerCustomer: Number(row?.patentPricePerCustomer ?? 0),
-        postPatentCustomerAdjPct: Number(row?.postPatentCustomerAdjPct ?? 0),
-        postPatentPriceAdjPct: Number(row?.postPatentPriceAdjPct ?? 0),
+        id: String(row?.ID_vaccine ?? ''),
+        name: String(row?.['Vaccine name'] ?? ''),
+        patentCustomersPerYear: Number(row?.['Patent customers per year'] ?? 0),
+        patentPricePerCustomer: Number(row?.['Patent price (USD/customer)'] ?? 0),
+        postPatentCustomerAdjPct: Number(row?.['Post patent customer adj. %'] ?? 0),
+        postPatentPriceAdjPct: Number(row?.['Post patent price adj. %'] ?? 0),
       }));
       this.selectedRowId = this.rows[0]?.id ?? '';
       this.syncSelectedRow();
     }
+    this.resetNewRow();
   }
 
   private nextVaccineId(): string {
@@ -486,6 +610,17 @@ export class BiotechProductVaccineRevenueFieldsetComponent implements OnInit {
       return Math.max(max, Number(match[1] || 0));
     }, 0);
     return `VAC-${String(maxId + 1).padStart(3, '0')}`;
+  }
+
+  private resetNewRow(): void {
+    this.newRowForm.reset({
+      id: this.nextVaccineId(),
+      name: 'New vaccine',
+      patentCustomersPerYear: 1000000,
+      patentPricePerCustomer: 50,
+      postPatentCustomerAdjPct: 80,
+      postPatentPriceAdjPct: 85,
+    });
   }
 }
 

@@ -30,14 +30,14 @@ import { BiotechModelService } from '../../services/biotech-model.service';
             (ngModelChange)="updateAssumptions()"
             [min]="0"
             [max]="0.3"
-            [step]="0.1"
+            [step]="0.01"
           ></p-slider>
           <p-inputnumber
             [(ngModel)]="assumptions.discountRate"
             (ngModelChange)="updateAssumptions()"
             [min]="0"
             [max]="0.3"
-            [step]="0.1"
+            [step]="0.01"
             [minFractionDigits]="2"
             [maxFractionDigits]="2"
             inputStyleClass="w-full"
@@ -66,7 +66,7 @@ import { BiotechModelService } from '../../services/biotech-model.service';
             inputStyleClass="w-full"
           />
         </div>
-        <div class="col-span-12 lg:col-span-4 flex flex-col gap-3">
+        <div class="col-span-12 lg:col-span-4 flex flex-col gap-3 p-4 lg:p-0">
           <label class="text-xs font-semibold">Additional risk premium</label>
           <p-inputnumber
             [(ngModel)]="assumptions.additionalRiskPremium"
@@ -99,16 +99,37 @@ export class BiotechRiskAdjustedDcfAssumptionsFieldsetComponent
   }
 
   updateAssumptions(): void {
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const currentConfig = snapshot?.model_config ?? {};
+    const currentRisk = snapshot?.risk_adjusted_dcf ?? {};
     this.biotechModelService.patchInput({
-      riskAdjustedDcfAssumptions: { ...this.assumptions },
+      model_config: {
+        ...currentConfig,
+        discount_rate: Number(this.assumptions.discountRate ?? 0),
+        ev_ebitda_multiple: Number(this.assumptions.terminalMultiple ?? 0),
+      },
+      risk_adjusted_dcf: {
+        ...currentRisk,
+        discount_rate: Number(this.assumptions.discountRate ?? 0),
+        ev_ebitda_multiple: Number(this.assumptions.terminalMultiple ?? 0),
+        risk_buffer: Number(this.assumptions.additionalRiskPremium ?? 0),
+      },
     });
   }
 
   private syncFromModel(): void {
-    const stored =
-      this.biotechModelService.getInputSnapshot()?.riskAdjustedDcfAssumptions;
-    if (stored) {
-      this.assumptions = { ...this.assumptions, ...stored };
-    }
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const storedRisk = snapshot?.risk_adjusted_dcf ?? {};
+    const storedConfig = snapshot?.model_config ?? {};
+    this.assumptions = {
+      ...this.assumptions,
+      discountRate: Number(
+        storedRisk.discount_rate ?? storedConfig.discount_rate ?? 0
+      ),
+      terminalMultiple: Number(
+        storedRisk.ev_ebitda_multiple ?? storedConfig.ev_ebitda_multiple ?? 0
+      ),
+      additionalRiskPremium: Number(storedRisk.risk_buffer ?? 0),
+    };
   }
 }

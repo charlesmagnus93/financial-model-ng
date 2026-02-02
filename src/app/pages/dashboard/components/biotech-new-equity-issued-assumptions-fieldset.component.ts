@@ -43,16 +43,13 @@ export class BiotechNewEquityIssuedAssumptionsFieldsetComponent
 
   updatePlannedNewEquity(): void {
     this.biotechModelService.patchInput({
-      newEquityIssuedAssumptions: {
-        plannedNewEquity: this.plannedNewEquity,
-      },
+      planned_new_equity: Number(this.plannedNewEquity ?? 0),
     });
   }
 
   private syncFromModel(): void {
     const stored =
-      this.biotechModelService.getInputSnapshot()
-        ?.newEquityIssuedAssumptions?.plannedNewEquity;
+      this.biotechModelService.getInputSnapshot()?.planned_new_equity;
     if (stored !== undefined && stored !== null) {
       this.plannedNewEquity = Number(stored);
     }

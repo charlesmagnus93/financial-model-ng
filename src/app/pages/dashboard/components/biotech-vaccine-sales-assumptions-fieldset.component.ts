@@ -40,7 +40,7 @@ interface IncrementHelper {
     <p-fieldset legend="Vaccine sales" [toggleable]="true" class="w-full">
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-12 gap-3 items-end">
-          <div class="col-span-12 lg:col-span-9 flex flex-col gap-2">
+          <div class="col-span-12 flex flex-col gap-2">
             <label class="text-xs font-semibold">Select row</label>
             <p-select
               [options]="rowOptions"
@@ -53,77 +53,120 @@ interface IncrementHelper {
               class="w-full"
             ></p-select>
           </div>
-          <div class="col-span-12 lg:col-span-3 flex">
+        </div>
+
+        <div class="grid grid-cols-12 gap-4">
+          <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
+            <div class="text-xs text-surface-600 font-semibold">Edit selected row</div>
+            <form [formGroup]="rowForm" class="flex flex-col gap-2">
+              <label class="text-xs font-semibold">Year</label>
+              <p-inputnumber
+                formControlName="year"
+                [showButtons]="true"
+                [useGrouping]="false"
+                inputStyleClass="w-full"
+              />
+              <label class="text-xs font-semibold">Doses (M)</label>
+              <p-inputnumber
+                formControlName="dosesMillions"
+                [showButtons]="true"
+                [min]="0"
+                [step]="0.1"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                inputStyleClass="w-full"
+              />
+              <label class="text-xs font-semibold">Price per dose</label>
+              <p-inputnumber
+                formControlName="pricePerDose"
+                [showButtons]="true"
+                [min]="0"
+                [step]="0.5"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                inputStyleClass="w-full"
+              />
+              <label class="text-xs font-semibold">Comments</label>
+              <input pInputText formControlName="comments" class="w-full" />
+              <label class="text-xs font-semibold">Implied revenue</label>
+              <p-inputnumber
+                [ngModel]="selectedImpliedRevenue"
+                [ngModelOptions]="{ standalone: true }"
+                [disabled]="true"
+                [useGrouping]="false"
+                inputStyleClass="w-full"
+              />
+              <p-button
+                label="Save changes"
+                size="small"
+                [outlined]="true"
+                (onClick)="saveSelectedRow()"
+                fluid
+              ></p-button>
+            </form>
+          </div>
+
+          <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
+            <div class="text-xs text-surface-600 font-semibold">Add a new row</div>
+            <form [formGroup]="newRowForm" class="flex flex-col gap-2">
+              <label class="text-xs font-semibold">Year</label>
+              <p-inputnumber
+                formControlName="year"
+                [showButtons]="true"
+                [useGrouping]="false"
+                inputStyleClass="w-full"
+              />
+              <label class="text-xs font-semibold">Doses (M)</label>
+              <p-inputnumber
+                formControlName="dosesMillions"
+                [showButtons]="true"
+                [min]="0"
+                [step]="0.1"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                inputStyleClass="w-full"
+              />
+              <label class="text-xs font-semibold">Price per dose</label>
+              <p-inputnumber
+                formControlName="pricePerDose"
+                [showButtons]="true"
+                [min]="0"
+                [step]="0.5"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                inputStyleClass="w-full"
+              />
+              <label class="text-xs font-semibold">Comments</label>
+              <input pInputText formControlName="comments" class="w-full" />
+              <label class="text-xs font-semibold">Implied revenue</label>
+              <p-inputnumber
+                [ngModel]="newRowImpliedRevenue"
+                [ngModelOptions]="{ standalone: true }"
+                [disabled]="true"
+                [useGrouping]="false"
+                inputStyleClass="w-full"
+              />
+              <p-button
+                label="Add row"
+                size="small"
+                [outlined]="true"
+                (onClick)="addNewRow()"
+                fluid
+              ></p-button>
+            </form>
+          </div>
+
+          <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
             <p-button
               label="Remove row"
               [outlined]="true"
+              size="small"
               severity="danger"
               (onClick)="removeSelectedRow()"
               [disabled]="rows.length <= 1"
               class="w-full"
               fluid
             ></p-button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <div class="text-xs text-surface-600 font-semibold">
-                {{ isCreatingRow ? 'Add a new row' : 'Edit selected row' }}
-              </div>
-              <p-button
-                label="New row"
-                size="small"
-                [outlined]="true"
-                (onClick)="startNewRow()"
-              ></p-button>
-            </div>
-            <form [formGroup]="rowForm" class="flex flex-col gap-2">
-            <label class="text-xs font-semibold">Year</label>
-            <p-inputnumber
-              formControlName="year"
-              [showButtons]="true"
-              [useGrouping]="false"
-              inputStyleClass="w-full"
-            />
-            <label class="text-xs font-semibold">Doses (M)</label>
-            <p-inputnumber
-              formControlName="dosesMillions"
-              [showButtons]="true"
-              [min]="0"
-              [step]="0.1"
-              [minFractionDigits]="2"
-              [maxFractionDigits]="2"
-              inputStyleClass="w-full"
-            />
-            <label class="text-xs font-semibold">Price per dose</label>
-            <p-inputnumber
-              formControlName="pricePerDose"
-              [showButtons]="true"
-              [min]="0"
-              [step]="0.5"
-              [minFractionDigits]="2"
-              [maxFractionDigits]="2"
-              inputStyleClass="w-full"
-            />
-            <label class="text-xs font-semibold">Comments</label>
-            <input
-              pInputText
-              formControlName="comments"
-              class="w-full"
-            />
-            <p-button
-              [label]="isCreatingRow ? 'Add row' : 'Save changes'"
-              size="small"
-              [outlined]="true"
-              (onClick)="saveRow()"
-              fluid
-            ></p-button>
-            </form>
-          </div>
-
-          <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
               <label class="text-xs font-semibold">Column</label>
@@ -166,7 +209,7 @@ interface IncrementHelper {
         </div>
 
         <div class="overflow-auto rounded">
-          <p-table [value]="rows" showGridlines class="text-sm">
+          <p-table [value]="rows" showGridlines [scrollable]="true" scrollHeight="200px" class="text-sm" [size]="'small'">
             <ng-template #header>
               <tr>
                 <th>Year</th>
@@ -190,7 +233,7 @@ interface IncrementHelper {
 
         <div class="text-xs text-surface-600">{{ salesHorizonLabel }}</div>
         <div class="text-2xl font-semibold">
-          {{ fiveYearRevenue | number: '1.0-0' }}
+          {{ totalRevenue | number: '1.0-0' }}
         </div>
       </div>
     </p-fieldset>
@@ -199,8 +242,8 @@ interface IncrementHelper {
 export class BiotechVaccineSalesAssumptionsFieldsetComponent implements OnInit {
   rows: VaccineSalesRow[] = [];
   selectedRowId = 0;
-  isCreatingRow = false;
   rowForm: FormGroup;
+  newRowForm: FormGroup;
   helper: IncrementHelper = {
     column: 'year',
     incrementPerYear: 1,
@@ -218,6 +261,12 @@ export class BiotechVaccineSalesAssumptionsFieldsetComponent implements OnInit {
     private formBuilder: FormBuilder
   ) {
     this.rowForm = this.formBuilder.group({
+      year: [0],
+      dosesMillions: [0],
+      pricePerDose: [0],
+      comments: [''],
+    });
+    this.newRowForm = this.formBuilder.group({
       year: [0],
       dosesMillions: [0],
       pricePerDose: [0],
@@ -241,6 +290,11 @@ export class BiotechVaccineSalesAssumptionsFieldsetComponent implements OnInit {
     return this.impliedRevenue(value);
   }
 
+  get newRowImpliedRevenue(): number {
+    const value = this.newRowForm.getRawValue() as VaccineSalesRow;
+    return this.impliedRevenue(value);
+  }
+
   get currentHelperValue(): number {
     const row = this.getSelectedRow();
     if (!row) {
@@ -251,8 +305,8 @@ export class BiotechVaccineSalesAssumptionsFieldsetComponent implements OnInit {
     return row.pricePerDose;
   }
 
-  get fiveYearRevenue(): number {
-    return this.rows.slice(0, 5).reduce((sum, row) => sum + this.impliedRevenue(row), 0);
+  get totalRevenue(): number {
+    return this.rows.reduce((sum, row) => sum + this.impliedRevenue(row), 0);
   }
 
   get salesHorizonLabel(): string {
@@ -274,6 +328,7 @@ export class BiotechVaccineSalesAssumptionsFieldsetComponent implements OnInit {
     this.rows = this.rows.filter((row) => row.year !== this.selectedRowId);
     this.selectedRowId = this.rows[0]?.year ?? 0;
     this.onSelectedRowChange();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -312,23 +367,11 @@ export class BiotechVaccineSalesAssumptionsFieldsetComponent implements OnInit {
   onSelectedRowChange(): void {
     const row = this.getSelectedRow();
     if (row) {
-      this.isCreatingRow = false;
       this.rowForm.reset({ ...row });
     }
   }
 
-  startNewRow(): void {
-    const lastYear = this.rows[this.rows.length - 1]?.year ?? new Date().getFullYear();
-    this.isCreatingRow = true;
-    this.rowForm.reset({
-      year: lastYear + 1,
-      dosesMillions: 0,
-      pricePerDose: 0,
-      comments: '',
-    });
-  }
-
-  saveRow(): void {
+  saveSelectedRow(): void {
     const value = this.rowForm.getRawValue() as VaccineSalesRow;
     const sanitized: VaccineSalesRow = {
       year: Number(value.year || 0),
@@ -337,35 +380,46 @@ export class BiotechVaccineSalesAssumptionsFieldsetComponent implements OnInit {
       comments: value.comments ?? '',
     };
     let nextRows = [...this.rows];
-    if (this.isCreatingRow) {
-      const existingIndex = nextRows.findIndex((row) => row.year === sanitized.year);
-      if (existingIndex >= 0) {
-        nextRows[existingIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
+    const selectedIndex = nextRows.findIndex((row) => row.year === this.selectedRowId);
+    const duplicateIndex =
+      sanitized.year === this.selectedRowId
+        ? -1
+        : nextRows.findIndex((row) => row.year === sanitized.year);
+    if (duplicateIndex >= 0) {
+      nextRows[duplicateIndex] = sanitized;
+      if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
+        nextRows.splice(selectedIndex, 1);
       }
-      this.selectedRowId = sanitized.year;
-      this.isCreatingRow = false;
+    } else if (selectedIndex >= 0) {
+      nextRows[selectedIndex] = sanitized;
     } else {
-      const selectedIndex = nextRows.findIndex((row) => row.year === this.selectedRowId);
-      const duplicateIndex =
-        sanitized.year === this.selectedRowId
-          ? -1
-          : nextRows.findIndex((row) => row.year === sanitized.year);
-      if (duplicateIndex >= 0) {
-        nextRows[duplicateIndex] = sanitized;
-        if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
-          nextRows.splice(selectedIndex, 1);
-        }
-      } else if (selectedIndex >= 0) {
-        nextRows[selectedIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
-      }
-      this.selectedRowId = sanitized.year;
+      nextRows = [...nextRows, sanitized];
     }
+    this.selectedRowId = sanitized.year;
     this.rows = nextRows;
     this.rowForm.reset({ ...sanitized });
+    this.persist();
+  }
+
+  addNewRow(): void {
+    const value = this.newRowForm.getRawValue() as VaccineSalesRow;
+    const sanitized: VaccineSalesRow = {
+      year: Number(value.year || 0),
+      dosesMillions: Number(value.dosesMillions || 0),
+      pricePerDose: Number(value.pricePerDose || 0),
+      comments: value.comments ?? '',
+    };
+    let nextRows = [...this.rows];
+    const existingIndex = nextRows.findIndex((row) => row.year === sanitized.year);
+    if (existingIndex >= 0) {
+      nextRows[existingIndex] = sanitized;
+    } else {
+      nextRows = [...nextRows, sanitized];
+    }
+    this.rows = nextRows;
+    this.selectedRowId = sanitized.year;
+    this.onSelectedRowChange();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -375,24 +429,39 @@ export class BiotechVaccineSalesAssumptionsFieldsetComponent implements OnInit {
 
   private persist(): void {
     this.biotechModelService.patchInput({
-      vaccineSalesAssumptions: {
-        rows: this.rows.map((row) => ({ ...row })),
-      },
+      vaccine_sales: this.rows.map((row) => ({
+        Year: row.year,
+        'Doses (M)': row.dosesMillions,
+        'Price per dose': row.pricePerDose,
+        Comments: row.comments,
+      })),
     });
   }
 
   private syncFromModel(): void {
-    const stored = this.biotechModelService.getInputSnapshot()?.vaccineSalesAssumptions?.rows;
+    const stored = this.biotechModelService.getInputSnapshot()?.vaccine_sales;
     if (Array.isArray(stored) && stored.length) {
       this.rows = stored.map((row: any) => ({
-        year: Number(row?.year ?? 0),
-        dosesMillions: Number(row?.dosesMillions ?? 0),
-        pricePerDose: Number(row?.pricePerDose ?? 0),
-        comments: String(row?.comments ?? ''),
+        year: Number(row?.Year ?? 0),
+        dosesMillions: Number(row?.['Doses (M)'] ?? 0),
+        pricePerDose: Number(row?.['Price per dose'] ?? 0),
+        comments: String(row?.Comments ?? ''),
       }));
       this.selectedRowId = this.rows[0]?.year ?? 0;
       this.onSelectedRowChange();
     }
+    this.resetNewRow();
+  }
+
+  private resetNewRow(): void {
+    const lastYear =
+      this.rows[this.rows.length - 1]?.year ?? new Date().getFullYear();
+    this.newRowForm.reset({
+      year: lastYear + 1,
+      dosesMillions: 0,
+      pricePerDose: 0,
+      comments: '',
+    });
   }
 }
 

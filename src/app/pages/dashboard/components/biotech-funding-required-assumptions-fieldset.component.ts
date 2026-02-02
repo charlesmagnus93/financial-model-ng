@@ -43,16 +43,12 @@ export class BiotechFundingRequiredAssumptionsFieldsetComponent
 
   updateFundingRequired(): void {
     this.biotechModelService.patchInput({
-      fundingRequiredAssumptions: {
-        totalFundingRequired: this.totalFundingRequired,
-      },
+      funding_required: Number(this.totalFundingRequired ?? 0),
     });
   }
 
   private syncFromModel(): void {
-    const stored =
-      this.biotechModelService.getInputSnapshot()
-        ?.fundingRequiredAssumptions?.totalFundingRequired;
+    const stored = this.biotechModelService.getInputSnapshot()?.funding_required;
     if (stored !== undefined && stored !== null) {
       this.totalFundingRequired = Number(stored);
     }

@@ -2,8 +2,10 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { FieldsetModule } from 'primeng/fieldset';
+import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
+import { SliderModule } from 'primeng/slider';
 import { Subject, takeUntil } from 'rxjs';
 import { BiotechModelService } from '../../services/biotech-model.service';
 
@@ -13,9 +15,11 @@ import { BiotechModelService } from '../../services/biotech-model.service';
   imports: [
     CommonModule,
     FieldsetModule,
+    CheckboxModule,
     InputNumberModule,
     InputTextModule,
     ReactiveFormsModule,
+    SliderModule,
   ],
   template: `
     <p-fieldset legend="General assumptions" [toggleable]="true" class="w-full">
@@ -31,6 +35,13 @@ import { BiotechModelService } from '../../services/biotech-model.service';
         </div>
         <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
           <label class="text-sm font-semibold">Tax rate</label>
+          <p-slider
+            formControlName="taxRate"
+            [min]="0"
+            [max]="1"
+            [step]="0.01"
+            class="mt-2"
+          ></p-slider>
           <p-inputnumber
             formControlName="taxRate"
             [min]="0"
@@ -65,6 +76,13 @@ import { BiotechModelService } from '../../services/biotech-model.service';
         </div>
         <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
           <label class="text-sm font-semibold">Working capital (% sales)</label>
+          <p-slider
+            formControlName="workingCapitalPct"
+            [min]="0"
+            [max]="1"
+            [step]="0.01"
+            class="mt-2"
+          ></p-slider>
           <p-inputnumber
             formControlName="workingCapitalPct"
             [min]="0"
@@ -82,6 +100,12 @@ import { BiotechModelService } from '../../services/biotech-model.service';
         <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
           <label class="text-sm font-semibold">Currency</label>
           <input pInputText formControlName="currency" class="w-full" />
+        </div>
+        <div class="col-span-12 md:col-span-8 flex items-center gap-2">
+          <p-checkbox formControlName="autoSyncVaccineSales" binary></p-checkbox>
+          <label class="text-sm font-semibold">
+            Rebuild Vaccine Sales table when assumptions change
+          </label>
         </div>
       </form>
       <p class="mt-3 text-xs text-surface-400">
@@ -106,6 +130,7 @@ export class BiotechGeneralAssumptionsFieldsetComponent implements OnInit, OnDes
       inflationAssumption: [0],
       reportingFxPair: [''],
       currency: [''],
+      autoSyncVaccineSales: [false],
     });
   }
 
@@ -126,25 +151,43 @@ export class BiotechGeneralAssumptionsFieldsetComponent implements OnInit, OnDes
 
   updateGeneralAssumptions(): void {
     const value = this.generalForm.getRawValue();
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const currentConfig = snapshot?.model_config ?? {};
+    const currentGeneral = snapshot?.general_assumptions ?? {};
     this.biotechModelService.patchInput({
-      generalAssumptions: { ...value },
+      model_config: {
+        ...currentConfig,
+        first_year: Number(value.firstForecastYear ?? 0),
+        n_years: Number(value.numberOfYears ?? 0),
+        tax_rate: Number(value.taxRate ?? 0),
+        working_capital_pct_sales: Number(value.workingCapitalPct ?? 0),
+        inflation_rate: Number(value.inflationAssumption ?? 0),
+        currency: String(value.currency ?? ''),
+      },
+      general_assumptions: {
+        ...currentGeneral,
+        inflation: Number(value.inflationAssumption ?? 0),
+        base_fx: String(value.reportingFxPair ?? ''),
+        auto_sync_vaccine_sales: Boolean(value.autoSyncVaccineSales),
+      },
     });
   }
 
   private syncGeneralAssumptions(): void {
-    const stored = this.biotechModelService.getInputSnapshot()?.model_config;
-    if (!stored) {
-      return;
-    }
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const storedConfig = snapshot?.model_config ?? {};
+    const storedGeneral = snapshot?.general_assumptions ?? {};
     this.generalForm.patchValue(
       {
-        firstForecastYear: stored.first_year ?? 0,
-        numberOfYears: stored.n_years?? 0,
-        taxRate: stored.taxRate ?? 0,
-        workingCapitalPct: stored.working_capital_pct_sales ?? 0,
-        inflationAssumption: stored.inflationAssumption ?? 0.02,
-        reportingFxPair: stored.reportingFxPair ?? 'USD/EUR',
-        currency: stored.currency ?? '',
+        firstForecastYear: storedConfig.first_year ?? 0,
+        numberOfYears: storedConfig.n_years ?? 0,
+        taxRate: storedConfig.tax_rate ?? 0,
+        workingCapitalPct: storedConfig.working_capital_pct_sales ?? 0,
+        inflationAssumption:
+          storedGeneral.inflation ?? storedConfig.inflation_rate ?? 0.02,
+        reportingFxPair: storedGeneral.base_fx ?? 'USD/EUR',
+        currency: storedConfig.currency ?? '',
+        autoSyncVaccineSales: storedGeneral.auto_sync_vaccine_sales ?? false,
       },
       { emitEvent: false }
     );

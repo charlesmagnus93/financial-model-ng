@@ -48,6 +48,7 @@ import { BiotechModelService } from '../../services/biotech-model.service';
                 <p-button
                   label="Remove Row"
                   size="small"
+                  [severity]="'danger'"
                   [outlined]="true"
                   (onClick)="removeSalesRampRow()"
                   [disabled]="!salesRampEditEnabled || salesRampSchedule.length <= 1"
@@ -55,7 +56,7 @@ import { BiotechModelService } from '../../services/biotech-model.service';
               </div>
             </div>
             <div class="overflow-auto rounded">
-              <p-table [value]="salesRampSchedule" showGridlines class="text-sm">
+              <p-table [value]="salesRampSchedule" showGridlines class="text-sm" [size]="'small'">
                 <ng-template #header>
                   <tr>
                     <th>Year offset</th>
@@ -219,11 +220,11 @@ export class BiotechForecastAssumptionsFieldsetComponent implements OnInit {
     const rampFactors = this.salesRampSchedule.map((row) =>
       Number(row?.rampFactor ?? 0)
     );
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const currentConfig = snapshot?.model_config ?? {};
     this.biotechModelService.patchInput({
-      forecastAssumptions: {
-        salesRampSchedule: this.salesRampSchedule.map((row) => ({ ...row })),
-      },
       model_config: {
+        ...currentConfig,
         sales_ramp_factors: rampFactors,
       },
     });
@@ -232,8 +233,8 @@ export class BiotechForecastAssumptionsFieldsetComponent implements OnInit {
   private syncForecastAssumptions(): void {
     const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
     const schedule =
-      snapshot?.forecastAssumptions?.salesRampSchedule ??
-      snapshot?.model_config?.sales_ramp_factors;
+      snapshot?.model_config?.sales_ramp_factors ??
+      snapshot?.forecastAssumptions?.salesRampSchedule;
 
     if (Array.isArray(schedule) && schedule.length) {
       this.salesRampSchedule = schedule.map((row: any, index: number) => {
