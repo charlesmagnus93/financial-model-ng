@@ -111,7 +111,7 @@ import { Linkedin, Twitter, Youtube, Mail, LucideAngularModule } from 'lucide-an
             <div class="border-t border-gray-800 pt-8">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <p class="text-gray-400">
-                &copy; 2025 NumQuants. All rights reserved.
+                &copy; 2026 NumQuants. All rights reserved.
                 </p>
                 <p class="text-gray-400">
                 Empowering pharmaceutical innovation through intelligent financial modeling

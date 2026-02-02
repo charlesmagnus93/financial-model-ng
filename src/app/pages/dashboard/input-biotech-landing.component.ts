@@ -6,7 +6,10 @@ import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { PharmaModelService } from '../services/pharma-model.service';
-import { BiotechModelService } from '../services/biotech-model.service';
+import {
+  BiotechModelService,
+  ValidationIssue,
+} from '../services/biotech-model.service';
 import { BiotechGeneralAssumptionsComponent } from './components/biotech-general-assumptions.component';
 import { BiotechProductAssumptionsComponent } from './components/biotech-product-assumptions.component';
 
@@ -83,6 +86,20 @@ import { BiotechProductAssumptionsComponent } from './components/biotech-product
           <p-tabpanels>
             @for (section of sections; track section.key) {
             <p-tabpanel [value]="section.key">
+              @if (sectionErrors(section.key).length) {
+                <div
+                  class="mb-4 rounded border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-300"
+                >
+                  <div class="font-semibold">Required fields</div>
+                  <div class="mt-2 flex flex-col gap-1">
+                    @for (error of sectionErrors(section.key); track error.path) {
+                      <div>
+                        {{ formatFieldPath(error.path) }}: {{ error.message }}
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
               @switch (section.key) { @case ('assumptions') {
               <biotech-general-assumptions></biotech-general-assumptions>
               } @case ('product') {
@@ -177,6 +194,10 @@ export class InputBiotechLandingComponent implements OnInit {
   showSubmitConfirm = false;
   showSubmitError = false;
   submitErrorMessage = '';
+  private fieldSectionMap: Record<string, string> = {
+    model_config: 'assumptions',
+    products: 'product',
+  };
 
   constructor(
     private router: Router,
@@ -184,8 +205,7 @@ export class InputBiotechLandingComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.biotechModelService.clearInput();
-    this.formVisible = true;
+    this.resetForm();
   }
 
   get currentSectionIndex(): number {
@@ -252,6 +272,7 @@ export class InputBiotechLandingComponent implements OnInit {
         this.submitErrorMessage =
           err?.message || 'Unable to submit data. Please try again.';
         this.showSubmitError = true;
+        this.focusFirstErrorSection();
         this.isSubmitting = false;
       },
     });
@@ -279,6 +300,7 @@ export class InputBiotechLandingComponent implements OnInit {
   }
 
   private resetForm(): void {
+    this.biotechModelService.clearValidationErrors();
     this.biotechModelService.clearInput();
     this.refreshForms();
   }
@@ -291,6 +313,42 @@ export class InputBiotechLandingComponent implements OnInit {
         onComplete();
       }
     }, 0);
+  }
+
+  sectionErrors(sectionKey: string): ValidationIssue[] {
+    return this.biotechModelService
+      .validationErrors()
+      .filter((error) => this.resolveSection(error.path) === sectionKey);
+  }
+
+  formatFieldPath(path: string): string {
+    return path
+      .split('.')
+      .filter(Boolean)
+      .map((segment) => segment.replace(/_/g, ' '))
+      .join(' > ');
+  }
+
+  private focusFirstErrorSection(): void {
+    const errors = this.biotechModelService.validationErrors();
+    for (const error of errors) {
+      const section = this.resolveSection(error.path);
+      if (section) {
+        this.activeTab = section;
+        return;
+      }
+    }
+  }
+
+  private resolveSection(path: string): string | null {
+    if (!path) {
+      return null;
+    }
+    if (path.startsWith('products') || path.startsWith('product')) {
+      return 'product';
+    }
+    const topLevel = path.split('.')[0];
+    return this.fieldSectionMap[topLevel] ?? 'assumptions';
   }
 
 }

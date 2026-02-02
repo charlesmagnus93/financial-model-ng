@@ -129,7 +129,12 @@ import { User } from '../models/user.model';
           This will permanently deactivate your account and remove access. This action cannot be undone.
         </div>
         <div class="flex justify-end gap-2">
-          <p-button label="Cancel" outlined="true" (onClick)="closeDeleteConfirm()"></p-button>
+          <p-button 
+            label="Cancel"
+            severity="secondary"
+            outlined="true"
+            (onClick)="closeDeleteConfirm()"
+          ></p-button>
           <p-button
             label="Yes, deactivate"
             severity="danger"

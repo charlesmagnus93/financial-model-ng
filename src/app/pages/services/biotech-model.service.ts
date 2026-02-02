@@ -11,10 +11,13 @@ import {
   throwError,
 } from 'rxjs';
 import { ApiService } from './api.service';
-import biotechDefaults from '../../../assets/biotech_input.json';
-
 const INPUT_STORAGE_KEY = 'biotech_model_input';
 const OUTPUT_STORAGE_KEY = 'biotech_model_output';
+
+export interface ValidationIssue {
+  path: string;
+  message: string;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -22,6 +25,7 @@ const OUTPUT_STORAGE_KEY = 'biotech_model_output';
 export class BiotechModelService {
   private inputSubject = new BehaviorSubject<any>({});
   private outputSubject = new BehaviorSubject<any>(null);
+  validationErrors = signal<ValidationIssue[]>([]);
   subscriptionStatus = signal<'checking' | 'active' | 'inactive' | 'error'>(
     'checking'
   );
@@ -74,6 +78,10 @@ export class BiotechModelService {
     this.setInput({});
   }
 
+  clearValidationErrors(): void {
+    this.validationErrors.set([]);
+  }
+
   patchInput(patch: Record<string, unknown>): void {
     const current = this.getInputSnapshot();
     const next = { ...current, ...patch };
@@ -86,9 +94,19 @@ export class BiotechModelService {
   }
 
   runBiotechModel(): Observable<any> {
-    const payload = { inputs: this.buildRunPayload() };
+    // const payload = { inputs: this.buildRunPayload() };
+    const payload = { inputs: this.getInputSnapshot() };
     // console.log('Running Biotech Model with payload:', payload);
+    this.validationErrors.set([]);
     return this.api.post('/inputs/biotech/validate', payload).pipe(
+      catchError((error) => {
+        const issues = this.extractValidationIssues(error);
+        if (issues.length) {
+          this.validationErrors.set(issues);
+        }
+        const message = this.formatValidationError(error, issues);
+        return throwError(() => new Error(message));
+      }),
       switchMap((validation: { valid: boolean; message: string }) => {
         if (!validation?.valid) {
           return throwError(
@@ -97,7 +115,10 @@ export class BiotechModelService {
         }
         return this.api
           .post('/model/biotech/run', payload)
-          .pipe(tap((response) => this.setOutput(response)));
+          .pipe(
+            tap((response) => this.setOutput(response)),
+            tap(() => this.validationErrors.set([]))
+          );
       })
     );
   }
@@ -173,11 +194,70 @@ export class BiotechModelService {
     }
   }
 
+  private formatValidationError(
+    error: any,
+    issues: ValidationIssue[] = []
+  ): string {
+    if (issues.length) {
+      const details = issues
+        .slice(0, 3)
+        .map((issue) => issue.path)
+        .filter(Boolean)
+        .join(', ');
+      const suffix = issues.length > 3 ? '...' : '';
+      return details
+        ? `Validation failed: ${details}${suffix}`
+        : issues[0]?.message || 'Inputs failed validation.';
+    }
+    const body = error?.error;
+    if (body) {
+      if (typeof body === 'string') {
+        return body;
+      }
+      if (typeof body?.message === 'string') {
+        return body.message;
+      }
+      try {
+        return JSON.stringify(body);
+      } catch {
+        return 'Inputs failed validation.';
+      }
+    }
+    return error?.message || 'Inputs failed validation.';
+  }
+
+  private extractValidationIssues(error: any): ValidationIssue[] {
+    const body = error?.error ?? error;
+    const issues = Array.isArray(body)
+      ? body
+      : Array.isArray(body?.detail)
+        ? body.detail
+        : [];
+    if (!Array.isArray(issues)) {
+      return [];
+    }
+    return issues
+      .map((issue) => {
+        const loc = Array.isArray(issue?.loc) ? issue.loc : [];
+        const path = loc
+          .slice(2)
+          .filter((segment: any) => typeof segment === 'string')
+          .join('.');
+        const message =
+          typeof issue?.msg === 'string'
+            ? issue.msg
+            : typeof issue?.message === 'string'
+              ? issue.message
+              : 'Validation error';
+        return { path, message };
+      })
+      .filter((issue) => issue.path || issue.message);
+  }
+
   private buildRunPayload(): any {
-    const defaults = (biotechDefaults as any) ?? {};
     const snapshot = this.getInputSnapshot() ?? {};
-    const baseConfig = (defaults.model_config as Record<string, unknown>) ?? {};
-    const baseProducts = Array.isArray(defaults.products) ? defaults.products : [];
+    const baseConfig = (snapshot.model_config as Record<string, unknown>) ?? {};
+    const baseProducts = Array.isArray(snapshot.products) ? snapshot.products : [];
 
     const modelConfig = {
       ...baseConfig,
@@ -186,13 +266,10 @@ export class BiotechModelService {
       ...this.mapForecastAssumptions(snapshot.forecastAssumptions),
     };
 
-    const productsSource = Array.isArray(snapshot.products) && snapshot.products.length
-      ? snapshot.products
-      : baseProducts;
-
+    const productsSource = baseProducts;
     const maps = this.buildAssumptionMaps(snapshot);
     const products = productsSource.map((product: any, index: number) =>
-      this.buildProductPayload(product, index, maps, baseProducts[index])
+      this.buildProductPayload(product, index, maps)
     );
 
     return {
@@ -266,10 +343,9 @@ export class BiotechModelService {
   private buildProductPayload(
     product: any,
     index: number,
-    maps: Record<string, Map<string, any>>,
-    fallback: any
+    maps: Record<string, Map<string, any>>
   ): any {
-    const base = { ...(fallback ?? {}), ...(product ?? {}) };
+    const base = { ...(product ?? {}) };
     const id = String(base?.id ?? '').trim() || this.formatId(index + 1);
     const name = String(base?.name ?? '').trim();
     const key = id || name;

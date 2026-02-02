@@ -7,7 +7,13 @@
     "discount_rate": 0.1,
     "ev_ebitda_multiple": 8.0,
     "working_capital_pct_sales": 0.08,
-    "sales_ramp_factors": [0.2, 0.6, 1.0, 1.0, 1.0]
+    "sales_ramp_factors": [
+      0.2,
+      0.6,
+      1.0,
+      1.0,
+      1.0
+    ]
   },
   "products": [
     {
@@ -60,5 +66,401 @@
       "rd_amort_years": 10,
       "capex_dep_years": 10
     }
-  ]
+  ],
+  "vaccine_sales": [
+    {
+      "Year": 2024,
+      "Doses (M)": 5.0,
+      "Price per dose": 25.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2025,
+      "Doses (M)": 7.0,
+      "Price per dose": 26.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2026,
+      "Doses (M)": 10.0,
+      "Price per dose": 27.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2027,
+      "Doses (M)": 12.0,
+      "Price per dose": 27.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2028,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2029,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2030,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2031,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2032,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2033,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2034,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2035,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2036,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2037,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2038,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2039,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2040,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2041,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2042,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2043,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2044,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2045,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2046,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2047,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    },
+    {
+      "Year": 2048,
+      "Doses (M)": 12.0,
+      "Price per dose": 28.0,
+      "Comments": ""
+    }
+  ],
+  "general_assumptions": {
+    "inflation": 0.02,
+    "base_fx": "USD/EUR",
+    "auto_sync_vaccine_sales": true
+  },
+  "uses": [
+    {
+      "Item": "Clinical trials",
+      "Amount": 150000000
+    },
+    {
+      "Item": "Manufacturing scale-up",
+      "Amount": 90000000
+    }
+  ],
+  "sources": [
+    {
+      "Item": "Existing cash",
+      "Amount": 40000000
+    },
+    {
+      "Item": "New equity",
+      "Amount": 200000000
+    }
+  ],
+  "funding_required": 250000000.0,
+  "planned_new_equity": 200000000.0,
+  "funding_assumptions": {
+    "auto_funding_required": true
+  },
+  "shareholders": [
+    {
+      "Shareholder": "Founders",
+      "Ownership %": 0.35,
+      "Investment": 25000000
+    },
+    {
+      "Shareholder": "Series A fund",
+      "Ownership %": 0.4,
+      "Investment": 80000000
+    }
+  ],
+  "market_sizes": [
+    {
+      "Segment": "Global vaccine market",
+      "Value": 80000000000
+    },
+    {
+      "Segment": "Target indication",
+      "Value": 12000000000
+    }
+  ],
+  "selectors": [
+    "Base case"
+  ],
+  "risk_adjusted_dcf": {
+    "discount_rate": 0.1,
+    "ev_ebitda_multiple": 8.0,
+    "risk_buffer": 0.0
+  },
+  "vaccine_development": [
+    {
+      "ID_vaccine": "VAC-001",
+      "Vaccine name": "AgSeed-101",
+      "Stage": "Phase II",
+      "Success Probability %": 35.0,
+      "Consolidation": true,
+      "First year forecast": 2026,
+      "Time to market": 4,
+      "Market entry year": 2030,
+      "Patent duration years": 15,
+      "End patent year": 2044
+    },
+    {
+      "ID_vaccine": "VAC-002",
+      "Vaccine name": "BioYield-Plus",
+      "Stage": "Phase III",
+      "Success Probability %": 55.0,
+      "Consolidation": true,
+      "First year forecast": 2025,
+      "Time to market": 2,
+      "Market entry year": 2027,
+      "Patent duration years": 17,
+      "End patent year": 2043
+    }
+  ],
+  "market_size_estimation": [
+    {
+      "ID_vaccine": "VAC-001",
+      "Vaccine name": "AgSeed-101",
+      "Market size (# customers)": 5000000,
+      "Average spend (USD/customer)": 120,
+      "Serviceable Available Market (% TAM)": 60.0,
+      "Serviceable Available Market (% Market size)": 45.0,
+      "Serviceable Obtainable Market (%)": 25.0
+    },
+    {
+      "ID_vaccine": "VAC-002",
+      "Vaccine name": "BioYield-Plus",
+      "Market size (# customers)": 8000000,
+      "Average spend (USD/customer)": 150,
+      "Serviceable Available Market (% TAM)": 55.0,
+      "Serviceable Available Market (% Market size)": 35.0,
+      "Serviceable Obtainable Market (%)": 18.0
+    }
+  ],
+  "vaccine_revenue": [
+    {
+      "ID_vaccine": "VAC-001",
+      "Vaccine name": "AgSeed-101",
+      "Patent customers per year": 3000000,
+      "Patent price (USD/customer)": 50,
+      "Post patent customer adj. %": 80.0,
+      "Post patent price adj. %": 85.0
+    },
+    {
+      "ID_vaccine": "VAC-002",
+      "Vaccine name": "BioYield-Plus",
+      "Patent customers per year": 4200000,
+      "Patent price (USD/customer)": 65,
+      "Post patent customer adj. %": 75.0,
+      "Post patent price adj. %": 80.0
+    }
+  ],
+  "vaccine_costs": [
+    {
+      "ID_vaccine": "VAC-001",
+      "Vaccine name": "AgSeed-101",
+      "COGS patent % of sales": 32.0,
+      "COGS post % of sales": 48.0,
+      "Marketing annual % of sales": 18.0,
+      "Marketing launch cost (USD)": 25000000,
+      "Indirect staff cost (USD)": 8500000,
+      "Electricity (USD)": 1800000,
+      "Depreciation (USD)": 3200000,
+      "Interest & amortization (USD)": 2000000,
+      "Royalties cost % of sales": 4.0
+    },
+    {
+      "ID_vaccine": "VAC-002",
+      "Vaccine name": "BioYield-Plus",
+      "COGS patent % of sales": 28.0,
+      "COGS post % of sales": 45.0,
+      "Marketing annual % of sales": 16.0,
+      "Marketing launch cost (USD)": 30000000,
+      "Indirect staff cost (USD)": 6750000,
+      "Electricity (USD)": 1400000,
+      "Depreciation (USD)": 2750000,
+      "Interest & amortization (USD)": 1500000,
+      "Royalties cost % of sales": 3.5
+    }
+  ],
+  "vaccine_rd": [
+    {
+      "ID_vaccine": "VAC-001",
+      "Vaccine name": "AgSeed-101",
+      "Cost accounting (capitalisation)": "50% capitalised",
+      "Pre-GTM spent to date (USD)": 120000000,
+      "Pre-GTM remaining (USD)": 60000000,
+      "Post-GTM annual cost (USD/year)": 12000000
+    },
+    {
+      "ID_vaccine": "VAC-002",
+      "Vaccine name": "BioYield-Plus",
+      "Cost accounting (capitalisation)": "40% capitalised",
+      "Pre-GTM spent to date (USD)": 80000000,
+      "Pre-GTM remaining (USD)": 40000000,
+      "Post-GTM annual cost (USD/year)": 9500000
+    }
+  ],
+  "vaccine_capex": [
+    {
+      "ID_vaccine": "VAC-001",
+      "Vaccine name": "AgSeed-101",
+      "Pre-GTM capex spent (USD)": 55000000,
+      "Pre-GTM capex remaining (USD)": 25000000,
+      "Post-GTM yearly capex (USD)": 6500000
+    },
+    {
+      "ID_vaccine": "VAC-002",
+      "Vaccine name": "BioYield-Plus",
+      "Pre-GTM capex spent (USD)": 35000000,
+      "Pre-GTM capex remaining (USD)": 15000000,
+      "Post-GTM yearly capex (USD)": 4000000
+    }
+  ],
+  "vaccine_royalties": [
+    {
+      "ID_vaccine": "VAC-001",
+      "Vaccine name": "AgSeed-101",
+      "Monetization model": "Product Sale",
+      "Royalty rate (%)": 5.0
+    },
+    {
+      "ID_vaccine": "VAC-002",
+      "Vaccine name": "BioYield-Plus",
+      "Monetization model": "Licensing",
+      "Royalty rate (%)": 6.5
+    }
+  ],
+  "vaccine_market_share": [
+    {
+      "ID_vaccine": "VAC-001",
+      "Vaccine name": "AgSeed-101",
+      "Relevant market type": "Global row crops",
+      "Relevant market size (USD)": 4500000000,
+      "Revenue target - patent %": 12.0,
+      "Revenue target - post %": 8.0,
+      "Market share patent %": 6.0,
+      "Market share post %": 4.0,
+      "Market growth %": 5.0,
+      "Sales growth %": 8.0
+    },
+    {
+      "ID_vaccine": "VAC-002",
+      "Vaccine name": "BioYield-Plus",
+      "Relevant market type": "Specialty crops",
+      "Relevant market size (USD)": 3200000000,
+      "Revenue target - patent %": 15.0,
+      "Revenue target - post %": 10.0,
+      "Market share patent %": 7.5,
+      "Market share post %": 5.0,
+      "Market growth %": 4.0,
+      "Sales growth %": 6.0
+    }
+  ],
+  "snapshot_inputs": {
+    "currency": "USD",
+    "npv": null,
+    "irr": null,
+    "dscr_min": null,
+    "payback_years": null,
+    "capex_total": null,
+    "opex_annual": null,
+    "revenue_annual": null,
+    "beginning_cash": 0.0,
+    "equity_issuance": 0.0,
+    "debt_draw": 0.0,
+    "debt_repay": 0.0,
+    "interest_paid": 0.0,
+    "scenarios": [],
+    "sensitivities": [],
+    "assumptions": {}
+  }
 }

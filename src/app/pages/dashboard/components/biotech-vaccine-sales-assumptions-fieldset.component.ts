@@ -188,7 +188,7 @@ interface IncrementHelper {
           </p-table>
         </div>
 
-        <div class="text-xs text-surface-600">Five-year vaccine sales</div>
+        <div class="text-xs text-surface-600">{{ salesHorizonLabel }}</div>
         <div class="text-2xl font-semibold">
           {{ fiveYearRevenue | number: '1.0-0' }}
         </div>
@@ -253,6 +253,14 @@ export class BiotechVaccineSalesAssumptionsFieldsetComponent implements OnInit {
 
   get fiveYearRevenue(): number {
     return this.rows.slice(0, 5).reduce((sum, row) => sum + this.impliedRevenue(row), 0);
+  }
+
+  get salesHorizonLabel(): string {
+    const count = this.rows.length;
+    if (count <= 0) {
+      return 'Vaccine sales';
+    }
+    return `${count}-year vaccine sales`;
   }
 
   impliedRevenue(row: VaccineSalesRow): number {

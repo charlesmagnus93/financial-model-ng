@@ -1,7 +1,5 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { PharmaModelService } from '../../services/pharma-model.service';
-import { BiotechModelService } from '../../services/biotech-model.service';
 import { BiotechForecastAssumptionsFieldsetComponent } from './biotech-forecast-assumptions-fieldset.component';
 import { BiotechGeneralAssumptionsFieldsetComponent } from './biotech-general-assumptions-fieldset.component';
 import { BiotechVaccineSalesAssumptionsFieldsetComponent } from "./biotech-vaccine-sales-assumptions-fieldset.component";
@@ -30,11 +28,6 @@ import { BiotechSelectorsAssumptionsFieldsetComponent } from "./biotech-selector
     BiotechSelectorsAssumptionsFieldsetComponent
   ],
   template: `
-    <!-- @if (!hasInputData()) {
-      <div class="mb-4 rounded border border-surface-700 bg-surface-900/60 p-3 text-xs text-surface-300">
-        Forms are empty. Click Use Defaults to load data.
-      </div>
-    } -->
     <biotech-general-assumptions-fieldset></biotech-general-assumptions-fieldset>
     <biotech-forecast-assumptions-fieldset></biotech-forecast-assumptions-fieldset>
     <biotech-vaccine-sales-assumptions-fieldset></biotech-vaccine-sales-assumptions-fieldset>
@@ -48,10 +41,5 @@ import { BiotechSelectorsAssumptionsFieldsetComponent } from "./biotech-selector
   `,
 })
 export class BiotechGeneralAssumptionsComponent {
-  constructor(private biotechModelService: BiotechModelService) {}
-
-  hasInputData(): boolean {
-    const snapshot = this.biotechModelService.getInputSnapshot();
-    return snapshot && Object.keys(snapshot).length > 0;
-  }
+  constructor() {}
 }
