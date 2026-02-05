@@ -4,6 +4,7 @@ import { TableModule } from 'primeng/table';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
 import { PharmaModelService } from '../../services/pharma-model.service';
+import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format';
 
 interface WorstRow {
   year: number;
@@ -94,7 +95,7 @@ export class WorstCaseForecastingWidget implements OnInit {
         title: { display: true, text: 'Value', color: '#cbd5e1' },
         ticks: {
           color: '#cbd5e1',
-          callback: (v) => this.formatNumber(Number(v)),
+          callback: (v) => formatNumberCompact(Number(v)),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
       },
@@ -165,10 +166,7 @@ export class WorstCaseForecastingWidget implements OnInit {
   }
 
   private formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 
   private asNumberArray(values: unknown): number[] {

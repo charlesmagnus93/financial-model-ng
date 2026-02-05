@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { PharmaModelService } from '../../services/pharma-model.service';
+import { formatNumberEnglish } from '@/utils/number-format';
 
 interface MetricRow {
   metric: string;
@@ -150,18 +151,7 @@ export class InvestmentMetricsWidget implements OnInit {
 
   formatNumber(value: number, currency = false): string {
     if (Number.isNaN(value)) return 'nan';
-    const abs = Math.abs(value);
-    let formatted =
-      abs >= 1_000_000
-        ? `${(abs / 1_000_000).toFixed(2)}M`
-        : abs >= 1_000
-          ? `${(abs / 1_000).toFixed(2)}k`
-          : abs.toFixed(2);
-    if (currency) {
-      formatted = `${value < 0 ? '-' : ''}$${formatted}`;
-    } else if (value < 0) {
-      formatted = `-${formatted}`;
-    }
-    return formatted;
+    const formatted = formatNumberEnglish(value);
+    return currency ? `${value < 0 ? '-' : ''}$${formatNumberEnglish(Math.abs(value))}` : formatted;
   }
 }

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
 import { PharmaModelService } from '../../services/pharma-model.service';
+import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format';
 
 interface CashFlowRow {
   year: number;
@@ -128,7 +129,7 @@ export class CashFlowAnalyticalTrendsWidget implements OnInit {
       y: {
         ticks: {
           color: '#cbd5e1',
-          callback: (v) => this.formatNumber(Number(v)),
+          callback: (v) => formatNumberCompact(Number(v)),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
       },
@@ -160,7 +161,7 @@ export class CashFlowAnalyticalTrendsWidget implements OnInit {
       y: {
         ticks: {
           color: '#cbd5e1',
-          callback: (v) => this.formatNumber(Number(v)),
+          callback: (v) => formatNumberCompact(Number(v)),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
       },
@@ -301,16 +302,7 @@ export class CashFlowAnalyticalTrendsWidget implements OnInit {
   }
 
   private formatNumber(value: number): string {
-    const sign = value < 0 ? '-' : '';
-    const abs = Math.abs(value);
-    const formatted =
-      abs >= 1_000_000
-        ? `${(abs / 1_000_000).toFixed(3)}`
-        : abs >= 1_000
-          ? `${(abs / 1_000).toFixed(3)}`
-          : abs.toFixed(3);
-    const suffix = abs >= 1_000_000 ? 'M' : abs >= 1_000 ? 'k' : '';
-    return `${sign}${formatted}${suffix}`;
+    return formatNumberEnglish(value);
   }
 
   private asNumberArray(values: unknown): number[] {

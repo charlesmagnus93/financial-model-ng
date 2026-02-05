@@ -5,7 +5,7 @@ import { TableModule } from 'primeng/table';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SliderModule } from 'primeng/slider';
 import { BiotechModelService } from '../../services/biotech-model.service';
-import biotechOutput from '../../../../../biotech_output.json';
+import { formatNumberEnglish } from '@/utils/number-format';
 
 interface VcMetricRow {
   metric: string;
@@ -124,7 +124,7 @@ export class BiotechVcMethodHelperComponent implements OnInit {
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
+    const output = this.biotechModelService.getOutputSnapshot() ?? {};
     const baseRnpv = Number(output?.rnpv ?? 0);
     const consolidated = output?.consolidated ?? {};
     const years = (consolidated.index as number[]) ?? [];
@@ -159,10 +159,7 @@ export class BiotechVcMethodHelperComponent implements OnInit {
   }
 
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 
   private asNumberArray(values: unknown): number[] {
@@ -170,12 +167,4 @@ export class BiotechVcMethodHelperComponent implements OnInit {
     return values.map((v) => Number(v ?? 0));
   }
 
-  private normalizeOutput(rawOutput: unknown): any {
-    const fallback = biotechOutput as any;
-    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
-    return {
-      ...fallback,
-      ...output,
-    };
-  }
 }

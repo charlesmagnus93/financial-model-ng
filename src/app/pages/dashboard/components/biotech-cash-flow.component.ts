@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { BiotechModelService } from '../../services/biotech-model.service';
-import biotechOutput from '../../../../../biotech_output.json';
+import { formatNumberEnglish } from '@/utils/number-format';
 
 interface CashFlowRow {
   year: number;
@@ -104,7 +104,7 @@ export class BiotechCashFlowComponent implements OnInit {
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
+    const output = this.biotechModelService.getOutputSnapshot() ?? {};
     const consolidated = (output as any)?.consolidated ?? {};
     const years = (consolidated.index as number[]) ?? [];
     const data = consolidated.data ?? {};
@@ -175,10 +175,7 @@ export class BiotechCashFlowComponent implements OnInit {
   }
 
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 
   private asNumberArray(values: unknown): number[] {
@@ -186,72 +183,4 @@ export class BiotechCashFlowComponent implements OnInit {
     return values.map((v) => Number(v ?? 0));
   }
 
-  private normalizeOutput(rawOutput: unknown): any {
-    const fallback = biotechOutput as any;
-    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
-    const consolidated = this.normalizeConsolidated(
-      output.consolidated ?? {},
-      fallback.consolidated ?? {}
-    );
-    return {
-      ...fallback,
-      ...output,
-      consolidated,
-    };
-  }
-
-  private normalizeConsolidated(source: any, fallback: any): any {
-    const index = this.asNumberArray(source?.index ?? fallback?.index ?? []);
-    const data = this.normalizeConsolidatedData(
-      source?.data ?? {},
-      fallback?.data ?? {},
-      index.length
-    );
-    return {
-      ...fallback,
-      ...source,
-      index,
-      data,
-    };
-  }
-
-  private normalizeConsolidatedData(
-    source: any,
-    fallback: any,
-    yearsLength: number
-  ): any {
-    const aliases: Record<string, string[]> = {
-      ebit: ['ebit', 'EBIT'],
-      tax: ['tax', 'Tax', 'cash_taxes_paid'],
-      da: ['da', 'depreciation', 'depreciation_amortization', 'D&A'],
-      delta_wc: ['delta_wc', 'deltaWc', 'working_capital_change'],
-      receivables_change: ['receivables_change', 'receivablesChange'],
-      inventory_change: ['inventory_change', 'inventoryChange'],
-      payables_change: ['payables_change', 'payablesChange'],
-      capex_cash: ['capex_cash', 'capexCash', 'capital_expenditure'],
-      rd_cap_add: ['rd_cap_add', 'rdCapAdd', 'rd_capitalization'],
-      equity_issuance: ['equity_issuance', 'equityIssuance'],
-      debt_drawdowns: ['debt_drawdowns', 'debtDrawdowns'],
-      debt_repayments: ['debt_repayments', 'debtRepayments'],
-      interest_paid: ['interest_paid', 'interestPaid'],
-    };
-
-    const keys = Object.keys(aliases);
-    const result: Record<string, number[]> = {};
-    keys.forEach((key) => {
-      const candidates = aliases[key] ?? [key];
-      const match = candidates.find((candidate) => Array.isArray(source?.[candidate]));
-      const values = match ? source[match] : fallback?.[key];
-      result[key] = this.normalizeSeries(values, yearsLength);
-    });
-
-    return result;
-  }
-
-  private normalizeSeries(values: unknown, yearsLength: number): number[] {
-    const series = this.asNumberArray(values);
-    if (!yearsLength) return series;
-    if (series.length >= yearsLength) return series.slice(0, yearsLength);
-    return [...series, ...Array.from({ length: yearsLength - series.length }, () => 0)];
-  }
 }

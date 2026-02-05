@@ -6,6 +6,7 @@ import { SliderModule } from 'primeng/slider';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ButtonModule } from 'primeng/button';
 import { BiotechModelService } from '../../services/biotech-model.service';
+import { formatNumberEnglish } from '@/utils/number-format';
 
 @Component({
   standalone: true,
@@ -137,10 +138,7 @@ export class BiotechWhatIfGoalSeekComponent implements OnInit {
   }
 
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
-    return value.toFixed(2);
+    return formatNumberEnglish(value);
   }
 
   formatWithGrouping(value: number): string {

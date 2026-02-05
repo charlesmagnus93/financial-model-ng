@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FieldsetModule } from 'primeng/fieldset';
 import { TableModule } from 'primeng/table';
 import { BiotechModelService } from '../../services/biotech-model.service';
-import biotechOutput from '../../../../../biotech_output.json';
+import { formatNumberEnglish } from '@/utils/number-format';
 
 interface RegressionRow {
   target: string;
@@ -104,7 +104,7 @@ export class BiotechRegressionClassificationComponent implements OnInit {
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
+    const output = this.biotechModelService.getOutputSnapshot() ?? {};
     const consolidated = (output as any)?.consolidated ?? {};
     const data = consolidated.data ?? {};
     const revenue = this.asNumberArray(data['revenue']);
@@ -204,23 +204,11 @@ export class BiotechRegressionClassificationComponent implements OnInit {
     return values.map((v) => Number(v ?? 0));
   }
 
-  private normalizeOutput(rawOutput: unknown): any {
-    const fallback = biotechOutput as any;
-    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
-    return {
-      ...fallback,
-      ...output,
-    };
-  }
-
   formatPercent(value: number): string {
     return `${(value * 100).toFixed(1)}%`;
   }
 
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(0)}`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(0)}`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 }

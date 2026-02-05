@@ -5,7 +5,7 @@ import { TableModule } from 'primeng/table';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
 import { BiotechModelService } from '../../services/biotech-model.service';
-import biotechOutput from '../../../../../biotech_output.json';
+import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format';
 
 interface ClusterRow {
   product: string;
@@ -86,7 +86,7 @@ export class BiotechComparativeMlValuationComponent implements OnInit {
       y: {
         ticks: {
           color: '#cbd5e1',
-          callback: (v) => this.formatNumber(Number(v)),
+          callback: (v) => formatNumberCompact(Number(v)),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
       },
@@ -100,7 +100,7 @@ export class BiotechComparativeMlValuationComponent implements OnInit {
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
+    const output = this.biotechModelService.getOutputSnapshot() ?? {};
     const perProduct = output?.per_product ?? {};
     const consolidated = (output as any)?.consolidated ?? {};
     const years = (consolidated.index as number[]) ?? [];
@@ -152,19 +152,7 @@ export class BiotechComparativeMlValuationComponent implements OnInit {
     return values.map((v) => Number(v ?? 0));
   }
 
-  private normalizeOutput(rawOutput: unknown): any {
-    const fallback = biotechOutput as any;
-    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
-    return {
-      ...fallback,
-      ...output,
-    };
-  }
-
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 }

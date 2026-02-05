@@ -14,6 +14,7 @@ import { FluidModule } from 'primeng/fluid';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
 import { PharmaModelService } from '../../services/pharma-model.service';
+import { formatNumberEnglish } from '@/utils/number-format';
 
 interface Option {
   label: string;
@@ -353,10 +354,7 @@ export class MonteCarloSimulationWidget implements OnDestroy {
   }
 
   private formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 
   private asNumberArray(values: unknown): number[] {

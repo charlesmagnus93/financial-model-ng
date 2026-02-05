@@ -5,7 +5,7 @@ import { FieldsetModule } from 'primeng/fieldset';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
 import { BiotechModelService } from '../../services/biotech-model.service';
-import biotechOutput from '../../../../../biotech_output.json';
+import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format';
 
 interface SegmentationRow {
   product: string;
@@ -102,7 +102,7 @@ export class BiotechTrendSeasonalityComponent implements OnInit {
       y: {
         ticks: {
           color: '#cbd5e1',
-          callback: (v) => this.formatNumber(Number(v)),
+          callback: (v) => formatNumberCompact(Number(v)),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
       },
@@ -145,7 +145,7 @@ export class BiotechTrendSeasonalityComponent implements OnInit {
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
+    const output = this.biotechModelService.getOutputSnapshot() ?? {};
     const consolidated = (output as any)?.consolidated ?? {};
     const years = (consolidated.index as number[]) ?? [];
     const consolidatedRevenue = this.asNumberArray(consolidated.data?.['revenue']);
@@ -262,50 +262,7 @@ export class BiotechTrendSeasonalityComponent implements OnInit {
   }
 
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 
-  private normalizeOutput(rawOutput: unknown): any {
-    const fallback = biotechOutput as any;
-    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
-    const consolidated = this.normalizeConsolidated(
-      output.consolidated ?? {},
-      fallback.consolidated ?? {}
-    );
-    return {
-      ...fallback,
-      ...output,
-      consolidated,
-    };
-  }
-
-  private normalizeConsolidated(source: any, fallback: any): any {
-    const index = this.asNumberArray(source?.index ?? fallback?.index ?? []);
-    const data = this.normalizeConsolidatedData(source?.data ?? {}, fallback?.data ?? {});
-    return {
-      ...fallback,
-      ...source,
-      index,
-      data,
-    };
-  }
-
-  private normalizeConsolidatedData(source: any, fallback: any): any {
-    const aliases: Record<string, string[]> = {
-      revenue: ['revenue', 'Revenue'],
-    };
-
-    const result: Record<string, number[]> = {};
-    Object.keys(fallback ?? {}).forEach((key) => {
-      const keys = aliases[key] ?? [key];
-      const match = keys.find((candidate) => Array.isArray(source?.[candidate]));
-      const values = match ? source[match] : fallback?.[key];
-      result[key] = this.asNumberArray(values);
-    });
-
-    return result;
-  }
 }

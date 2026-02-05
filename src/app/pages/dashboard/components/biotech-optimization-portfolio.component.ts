@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { FieldsetModule } from 'primeng/fieldset';
 import { BiotechModelService } from '../../services/biotech-model.service';
-import biotechOutput from '../../../../../biotech_output.json';
+import { formatNumberEnglish } from '@/utils/number-format';
 
 interface PortfolioRow {
   product: string;
@@ -73,7 +73,7 @@ export class BiotechOptimizationPortfolioComponent implements OnInit {
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
+    const output = this.biotechModelService.getOutputSnapshot() ?? {};
     this.realOptionValue = Math.max(0, Number(output?.rnpv ?? 0));
     const consolidated = (output as any)?.consolidated ?? {};
     const consolidatedData = consolidated.data ?? {};
@@ -139,10 +139,7 @@ export class BiotechOptimizationPortfolioComponent implements OnInit {
   }
 
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 
   private asNumberArray(values: unknown): number[] {
@@ -150,12 +147,4 @@ export class BiotechOptimizationPortfolioComponent implements OnInit {
     return values.map((v) => Number(v ?? 0));
   }
 
-  private normalizeOutput(rawOutput: unknown): any {
-    const fallback = biotechOutput as any;
-    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
-    return {
-      ...fallback,
-      ...output,
-    };
-  }
 }

@@ -10,6 +10,7 @@ import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { BiotechModelService } from '../../services/biotech-model.service';
+import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format';
 
 @Component({
   standalone: true,
@@ -181,8 +182,11 @@ import { BiotechModelService } from '../../services/biotech-model.service';
           <div class="flex flex-col gap-2">
             <div class="text-xs text-surface-400 font-semibold">Scenario rNPV</div>
             <div class="text-2xl font-semibold">{{ formatNumber(scenarioRnpv) }}</div>
-            <div class="flex items-center gap-2 text-xs text-emerald-300">
-              <span class="rounded-full bg-emerald-500/15 px-2 py-0.5">
+            <div class="flex items-center gap-2 text-xs">
+              <span
+                class="rounded-full px-2 py-0.5"
+                [ngClass]="getDeltaBadgeClass(scenarioRnpvDelta)"
+              >
                 {{ formatDelta(scenarioRnpvDelta) }}
               </span>
             </div>
@@ -190,8 +194,11 @@ import { BiotechModelService } from '../../services/biotech-model.service';
           <div class="flex flex-col gap-2">
             <div class="text-xs text-surface-400 font-semibold">Scenario EBITDA</div>
             <div class="text-2xl font-semibold">{{ formatNumber(scenarioEbitdaTotal) }}</div>
-            <div class="flex items-center gap-2 text-xs text-emerald-300">
-              <span class="rounded-full bg-emerald-500/15 px-2 py-0.5">
+            <div class="flex items-center gap-2 text-xs">
+              <span
+                class="rounded-full px-2 py-0.5"
+                [ngClass]="getDeltaBadgeClass(scenarioEbitdaDelta)"
+              >
                 {{ formatDelta(scenarioEbitdaDelta) }}
               </span>
             </div>
@@ -199,8 +206,11 @@ import { BiotechModelService } from '../../services/biotech-model.service';
           <div class="flex flex-col gap-2">
             <div class="text-xs text-surface-400 font-semibold">Revenue delta</div>
             <div class="text-2xl font-semibold">{{ formatNumber(scenarioRevenueDelta) }}</div>
-            <div class="flex items-center gap-2 text-xs text-emerald-300">
-              <span class="rounded-full bg-emerald-500/15 px-2 py-0.5">
+            <div class="flex items-center gap-2 text-xs">
+              <span
+                class="rounded-full px-2 py-0.5"
+                [ngClass]="getDeltaBadgeClass(scenarioRevenueDelta)"
+              >
                 {{ formatDelta(scenarioRevenueDelta) }}
               </span>
             </div>
@@ -208,8 +218,11 @@ import { BiotechModelService } from '../../services/biotech-model.service';
           <div class="flex flex-col gap-2">
             <div class="text-xs text-surface-400 font-semibold">FCFF delta</div>
             <div class="text-2xl font-semibold">{{ formatNumber(scenarioFcffDelta) }}</div>
-            <div class="flex items-center gap-2 text-xs text-emerald-300">
-              <span class="rounded-full bg-emerald-500/15 px-2 py-0.5">
+            <div class="flex items-center gap-2 text-xs">
+              <span
+                class="rounded-full px-2 py-0.5"
+                [ngClass]="getDeltaBadgeClass(scenarioFcffDelta)"
+              >
                 {{ formatDelta(scenarioFcffDelta) }}
               </span>
             </div>
@@ -495,7 +508,7 @@ export class BiotechDashboardComponent implements OnInit {
       y: {
         ticks: {
           color: '#cbd5e1',
-          callback: (v) => this.formatNumber(Number(v)),
+          callback: (v) => formatNumberCompact(Number(v)),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
       },
@@ -529,7 +542,7 @@ export class BiotechDashboardComponent implements OnInit {
       y: {
         ticks: {
           color: '#cbd5e1',
-          callback: (v) => this.formatNumber(Number(v)),
+          callback: (v) => formatNumberCompact(Number(v)),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
       },
@@ -562,7 +575,7 @@ export class BiotechDashboardComponent implements OnInit {
       y: {
         ticks: {
           color: '#cbd5e1',
-          callback: (v) => this.formatNumber(Number(v)),
+          callback: (v) => formatNumberCompact(Number(v)),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
       },
@@ -671,16 +684,20 @@ export class BiotechDashboardComponent implements OnInit {
     return `${sign}${this.formatNumber(Math.abs(value))}`;
   }
 
+  getDeltaBadgeClass(value: number): Record<string, boolean> {
+    return value < 0
+      ? { 'bg-red-500/15': true, 'text-red-300': true }
+      : { 'bg-emerald-500/15': true, 'text-emerald-300': true };
+  }
+
   formatDeltaValue(value: number): string {
     const sign = value >= 0 ? '+' : '-';
-    return `${sign}${this.formatNumber(Math.abs(value))}`;
+    // return `${sign}${this.formatNumber(Math.abs(value))}`;
+    return `${sign}${Math.abs(value)}`;
   }
 
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 
   private asNumberArray(values: unknown): number[] {

@@ -15,6 +15,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
 import { PharmaModelService } from '../../services/pharma-model.service';
+import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format';
 
 interface BreakEvenRow {
   product: string;
@@ -471,15 +472,7 @@ export class BreakEvenPaybackInputsWidget implements OnInit {
   }
 
   formatNumber(value: number): string {
-    const sign = value < 0 ? '-' : '';
-    const abs = Math.abs(value);
-    const formatted =
-      abs >= 1_000_000
-        ? `${(abs / 1_000_000).toFixed(2)}M`
-        : abs >= 1_000
-          ? `${(abs / 1_000).toFixed(2)}k`
-          : abs.toFixed(2);
-    return `${sign}${formatted}`;
+    return formatNumberEnglish(value);
   }
 
   formatPercent(value: number): string {
@@ -528,7 +521,7 @@ export class BreakEvenPaybackInputsWidget implements OnInit {
         title: { display: true, text: 'Break-even Units', color: '#cbd5e1' },
         ticks: {
           color: '#cbd5e1',
-          callback: (v) => this.formatNumber(Number(v)),
+          callback: (v) => formatNumberCompact(Number(v)),
         },
         grid: { color: 'rgba(255,255,255,0.05)' },
       },

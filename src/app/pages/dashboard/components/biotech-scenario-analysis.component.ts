@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { SliderModule } from 'primeng/slider';
 import { BiotechModelService } from '../../services/biotech-model.service';
+import { formatNumberEnglish } from '@/utils/number-format';
 
 interface ScenarioRow {
   scenario: string;
@@ -151,10 +152,7 @@ export class BiotechScenarioAnalysisComponent implements OnInit {
   }
 
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
-    return value.toFixed(0);
+    return formatNumberEnglish(value);
   }
 
   private asNumberArray(values: unknown): number[] {

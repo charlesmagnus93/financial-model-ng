@@ -7,6 +7,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TableModule } from 'primeng/table';
 import { FieldsetModule } from 'primeng/fieldset';
+import { formatNumberEnglish } from '@/utils/number-format';
 
 @Component({
   standalone: true,
@@ -258,9 +259,6 @@ export class AiInsightsComponent {
   currencyOptions = [{ label: 'USD', value: 'USD' }];
 
   formatNumber(value: number): string {
-    const abs = Math.abs(value);
-    if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(2)}M`;
-    if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(2)}k`;
-    return value.toFixed(2);
+    return formatNumberEnglish(value);
   }
 }
