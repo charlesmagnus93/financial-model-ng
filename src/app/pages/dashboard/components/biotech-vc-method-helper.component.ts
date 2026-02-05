@@ -5,6 +5,7 @@ import { TableModule } from 'primeng/table';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SliderModule } from 'primeng/slider';
 import { BiotechModelService } from '../../services/biotech-model.service';
+import biotechOutput from '../../../../../biotech_output.json';
 
 interface VcMetricRow {
   metric: string;
@@ -123,7 +124,7 @@ export class BiotechVcMethodHelperComponent implements OnInit {
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.biotechModelService.getOutputSnapshot();
+    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
     const baseRnpv = Number(output?.rnpv ?? 0);
     const consolidated = output?.consolidated ?? {};
     const years = (consolidated.index as number[]) ?? [];
@@ -133,11 +134,15 @@ export class BiotechVcMethodHelperComponent implements OnInit {
     const exitEbitda = ebitda[exitIndex] ?? 0;
     const exitEnterpriseValue = exitEbitda * this.exitMultiple;
     const investorExitValue = exitEnterpriseValue * this.investorOwnership;
-    const investorPvRequired = investorExitValue / Math.pow(1 + this.targetIrr, 5);
+    const yearsToExit = Math.max(1, this.exitYear - (years[0] ?? this.exitYear));
+    const investorPvRequired =
+      investorExitValue / Math.pow(1 + this.targetIrr, yearsToExit);
     const impliedPostMoney = investorPvRequired / this.investorOwnership;
     const impliedPreMoney = impliedPostMoney - this.newMoney;
     const investorIrrIfPayNewMoney =
-      investorExitValue > 0 ? Math.pow(investorExitValue / this.newMoney, 1 / 5) - 1 : 0;
+      investorExitValue > 0
+        ? Math.pow(investorExitValue / Math.max(1, this.newMoney), 1 / yearsToExit) - 1
+        : 0;
 
     this.rows = [
       { metric: 'exit_enterprise_value', value: this.formatNumber(exitEnterpriseValue) },
@@ -146,7 +151,6 @@ export class BiotechVcMethodHelperComponent implements OnInit {
       { metric: 'implied_post_money', value: this.formatNumber(impliedPostMoney) },
       { metric: 'implied_pre_money', value: this.formatNumber(impliedPreMoney) },
       { metric: 'investor_irr_if_pay_new_money', value: this.formatPercent(investorIrrIfPayNewMoney) },
-      { metric: 'base_rnpv', value: this.formatNumber(baseRnpv) },
     ];
   }
 
@@ -164,5 +168,14 @@ export class BiotechVcMethodHelperComponent implements OnInit {
   private asNumberArray(values: unknown): number[] {
     if (!Array.isArray(values)) return [];
     return values.map((v) => Number(v ?? 0));
+  }
+
+  private normalizeOutput(rawOutput: unknown): any {
+    const fallback = biotechOutput as any;
+    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
+    return {
+      ...fallback,
+      ...output,
+    };
   }
 }

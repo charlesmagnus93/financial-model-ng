@@ -85,7 +85,7 @@ interface IncrementHelper {
     >
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-12 gap-3 items-end">
-          <div class="col-span-12 flex flex-col gap-2">
+          <div class="col-span-12 lg:col-span-6 flex flex-col gap-2">
             <label class="text-xs font-semibold">Select row</label>
             <p-select
               [options]="rowOptions"
@@ -98,24 +98,27 @@ interface IncrementHelper {
               class="w-full"
             ></p-select>
           </div>
+          <div class="col-span-12 lg:col-span-6 gap-2">
+            <p-button
+              label="Remove row"
+              [outlined]="true"
+              severity="danger"
+              (onClick)="removeRow()"
+              [disabled]="rows.length <= 1"
+              class="w-full"
+              fluid
+            ></p-button>
+          </div>
         </div>
 
-        <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 lg:col-span-8 rounded border border-surface-700 p-3 flex flex-col">
-            <div class="flex items-center justify-between">
-              <div class="text-xs text-surface-600 font-semibold">
-                {{ isCreatingRow ? 'Add a new row' : 'Edit selected row' }}
-              </div>
-              <p-button
-                label="New row"
-                size="small"
-                [outlined]="true"
-                (onClick)="startNewRow()"
-              ></p-button>
-            </div>
+        <div class="grid grid-cols-12 gap-2">
+          <div class="col-span-12 lg:col-span-5 rounded border border-surface-700 p-3 flex flex-col gap-2">
+            <div class="text-xs text-surface-600 font-semibold">Edit selected row</div>
             <form [formGroup]="rowForm" class="flex flex-col gap-2">
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-2 items-start">
                 <div class="flex flex-col gap-2">
+                  <label class="text-xs font-semibold">ID_vaccine</label>
+                  <input pInputText formControlName="id" class="w-full" />
                   <label class="text-xs font-semibold">name</label>
                   <input pInputText formControlName="name" class="w-full" />
                   <label class="text-xs font-semibold">stage</label>
@@ -336,33 +339,254 @@ interface IncrementHelper {
                   />
                 </div>
               </div>
-              <div class="grid grid-cols-12 gap-3">
-                <div class="col-span-12 lg:col-span-6">
-                  <p-button
-                    [label]="isCreatingRow ? 'Add row' : 'Save changes'"
-                    size="small"
-                    [outlined]="true"
-                    (onClick)="saveRow()"
-                    fluid
-                  ></p-button>
-                </div>
-                <div class="col-span-12 lg:col-span-6">
-                  <p-button
-                    label="Remove row"
-                    [outlined]="true"
-                    size="small"
-                    severity="danger"
-                    (onClick)="removeRow()"
-                    [disabled]="rows.length <= 1"
-                    class="w-full"
-                    fluid
-                  ></p-button>
-                </div>
-              </div>
+              <p-button
+                label="Save changes"
+                size="small"
+                [outlined]="true"
+                (onClick)="saveSelectedRow()"
+                fluid
+              ></p-button>
             </form>
           </div>
 
-          <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
+          <div class="col-span-12 lg:col-span-5 rounded border border-surface-700 p-3 flex flex-col gap-2">
+            <div class="text-xs text-surface-600 font-semibold">Add a new row</div>
+            <form [formGroup]="newRowForm" class="flex flex-col gap-2">
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-2 items-start">
+                <div class="flex flex-col gap-2">
+                  <label class="text-xs font-semibold">ID_vaccine</label>
+                  <input pInputText formControlName="id" class="w-full" />
+                  <label class="text-xs font-semibold">name</label>
+                  <input pInputText formControlName="name" class="w-full" />
+                  <label class="text-xs font-semibold">stage</label>
+                  <p-select
+                    [options]="stageOptions"
+                    formControlName="stage"
+                    optionLabel="label"
+                    optionValue="value"
+                    class="w-full"
+                  ></p-select>
+                  <label class="text-xs font-semibold">success_prob</label>
+                  <p-inputnumber
+                    formControlName="success_prob"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.01"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <div class="flex items-center gap-2 pt-1">
+                    <p-checkbox formControlName="include_in_consolidation" [binary]="true"></p-checkbox>
+                    <span class="text-xs font-semibold">include_in_consolidation</span>
+                  </div>
+                  <label class="text-xs font-semibold">time_to_market</label>
+                  <p-inputnumber
+                    formControlName="time_to_market"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="false"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">patent_years</label>
+                  <p-inputnumber
+                    formControlName="patent_years"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="false"
+                    inputStyleClass="w-full"
+                  />
+                  <div class="flex items-center gap-2 pt-1">
+                    <p-checkbox formControlName="preexisting_market" [binary]="true"></p-checkbox>
+                    <span class="text-xs font-semibold">preexisting_market</span>
+                  </div>
+                  <label class="text-xs font-semibold">patent_revenue_target</label>
+                  <p-inputnumber
+                    formControlName="patent_revenue_target"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">post_patent_revenue_target</label>
+                  <p-inputnumber
+                    formControlName="post_patent_revenue_target"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">market_growth_patent</label>
+                  <p-inputnumber
+                    formControlName="market_growth_patent"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.01"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">market_growth_post</label>
+                  <p-inputnumber
+                    formControlName="market_growth_post"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.01"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">cogs_patent</label>
+                  <p-inputnumber
+                    formControlName="cogs_patent"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.01"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">cogs_post</label>
+                  <p-inputnumber
+                    formControlName="cogs_post"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.01"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                </div>
+                <div class="flex flex-col gap-2">
+                  <label class="text-xs font-semibold">sales_marketing_pct</label>
+                  <p-inputnumber
+                    formControlName="sales_marketing_pct"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.01"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">gna_pct</label>
+                  <p-inputnumber
+                    formControlName="gna_pct"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.01"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">rd_remaining_pre_launch</label>
+                  <p-inputnumber
+                    formControlName="rd_remaining_pre_launch"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">rd_annual_post_launch</label>
+                  <p-inputnumber
+                    formControlName="rd_annual_post_launch"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">capex_remaining_pre_launch</label>
+                  <p-inputnumber
+                    formControlName="capex_remaining_pre_launch"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">capex_annual_post_launch</label>
+                  <p-inputnumber
+                    formControlName="capex_annual_post_launch"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="true"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">royalty_pct</label>
+                  <p-inputnumber
+                    formControlName="royalty_pct"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.01"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">rd_capitalization_ratio</label>
+                  <p-inputnumber
+                    formControlName="rd_capitalization_ratio"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [max]="1"
+                    [step]="0.01"
+                    [minFractionDigits]="2"
+                    [maxFractionDigits]="2"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">rd_amort_years</label>
+                  <p-inputnumber
+                    formControlName="rd_amort_years"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="false"
+                    inputStyleClass="w-full"
+                  />
+                  <label class="text-xs font-semibold">capex_dep_years</label>
+                  <p-inputnumber
+                    formControlName="capex_dep_years"
+                    styleClass="w-full"
+                    [showButtons]="true"
+                    [min]="0"
+                    [useGrouping]="false"
+                    inputStyleClass="w-full"
+                  />
+                </div>
+              </div>
+              <p-button
+                label="Add row"
+                size="small"
+                [outlined]="true"
+                (onClick)="addRow()"
+                fluid
+              ></p-button>
+            </form>
+          </div>
+
+          <div class="col-span-12 lg:col-span-2 flex flex-col gap-2">
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
               <label class="text-xs font-semibold">Column</label>
@@ -403,8 +627,7 @@ interface IncrementHelper {
             </div>
           </div>
         </div>
-
-        <div class="grid grid-cols-12 gap-4">
+        <div class="grid grid-cols-12 gap-2">
           <div class="col-span-12 flex flex-col gap-2">
             <div class="overflow-x-auto rounded max-w-full">
               <p-table [value]="rows" [scrollable]="true" showGridlines class="text-sm w-full" [size]="'small'">
@@ -483,8 +706,8 @@ interface IncrementHelper {
 export class BiotechProductVaccinesFieldsetComponent implements OnInit {
   rows: VaccineProductRow[] = [];
   selectedRowId = '';
-  isCreatingRow = false;
   rowForm: FormGroup;
+  newRowForm: FormGroup;
   helper: IncrementHelper = {
     column: 'success_prob',
     incrementPerYear: 0.01,
@@ -553,6 +776,32 @@ export class BiotechProductVaccinesFieldsetComponent implements OnInit {
       rd_amort_years: [0],
       capex_dep_years: [0],
     });
+    this.newRowForm = this.formBuilder.group({
+      id: [''],
+      name: [''],
+      stage: [''],
+      success_prob: [0],
+      include_in_consolidation: [false],
+      time_to_market: [0],
+      patent_years: [0],
+      preexisting_market: [false],
+      patent_revenue_target: [0],
+      post_patent_revenue_target: [0],
+      market_growth_patent: [0],
+      market_growth_post: [0],
+      cogs_patent: [0],
+      cogs_post: [0],
+      sales_marketing_pct: [0],
+      gna_pct: [0],
+      royalty_pct: [0],
+      rd_remaining_pre_launch: [0],
+      rd_annual_post_launch: [0],
+      capex_remaining_pre_launch: [0],
+      capex_annual_post_launch: [0],
+      rd_capitalization_ratio: [0],
+      rd_amort_years: [0],
+      capex_dep_years: [0],
+    });
   }
 
   ngOnInit(): void {
@@ -578,77 +827,49 @@ export class BiotechProductVaccinesFieldsetComponent implements OnInit {
     return this.rowForm.getRawValue() as VaccineProductRow;
   }
 
+  get newRowFormValue(): VaccineProductRow {
+    return this.newRowForm.getRawValue() as VaccineProductRow;
+  }
+
   syncSelectedRow(): void {
     const row = this.getSelectedRow();
     if (row) {
-      this.isCreatingRow = false;
       this.rowForm.reset({ ...row });
     }
   }
 
-  startNewRow(): void {
-    this.isCreatingRow = true;
-    this.selectedRowId = '';
-    this.rowForm.reset({
-      id: this.nextProductId(),
-      name: 'New vaccine',
-      stage: this.stageOptions[0]?.value ?? 'Discovery',
-      success_prob: 0.3,
-      include_in_consolidation: true,
-      time_to_market: 3,
-      patent_years: 15,
-      preexisting_market: false,
-      patent_revenue_target: 120000000,
-      post_patent_revenue_target: 60000000,
-      market_growth_patent: 0.04,
-      market_growth_post: 0,
-      cogs_patent: 0.32,
-      cogs_post: 0.5,
-      sales_marketing_pct: 0.18,
-      gna_pct: 0.12,
-      royalty_pct: 0,
-      rd_remaining_pre_launch: 180000000,
-      rd_annual_post_launch: 12000000,
-      capex_remaining_pre_launch: 55000000,
-      capex_annual_post_launch: 6500000,
-      rd_capitalization_ratio: 0.5,
-      rd_amort_years: 10,
-      capex_dep_years: 10,
-    });
-  }
-
-  saveRow(): void {
+  saveSelectedRow(): void {
     const value = this.rowFormValue;
     const sanitized = this.sanitizeRow(value, this.nextProductId());
     let nextRows = [...this.rows];
-    if (this.isCreatingRow) {
-      const existingIndex = nextRows.findIndex((row) => row.id === sanitized.id);
-      if (existingIndex >= 0) {
-        nextRows[existingIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
+    const selectedIndex = nextRows.findIndex((row) => row.id === this.selectedRowId);
+    const duplicateIndex =
+      sanitized.id === this.selectedRowId
+        ? -1
+        : nextRows.findIndex((row) => row.id === sanitized.id);
+    if (duplicateIndex >= 0) {
+      nextRows[duplicateIndex] = sanitized;
+      if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
+        nextRows.splice(selectedIndex, 1);
       }
-      this.isCreatingRow = false;
+    } else if (selectedIndex >= 0) {
+      nextRows[selectedIndex] = sanitized;
     } else {
-      const selectedIndex = nextRows.findIndex((row) => row.id === this.selectedRowId);
-      const duplicateIndex =
-        sanitized.id === this.selectedRowId
-          ? -1
-          : nextRows.findIndex((row) => row.id === sanitized.id);
-      if (duplicateIndex >= 0) {
-        nextRows[duplicateIndex] = sanitized;
-        if (selectedIndex >= 0 && selectedIndex !== duplicateIndex) {
-          nextRows.splice(selectedIndex, 1);
-        }
-      } else if (selectedIndex >= 0) {
-        nextRows[selectedIndex] = sanitized;
-      } else {
-        nextRows = [...nextRows, sanitized];
-      }
+      nextRows = [...nextRows, sanitized];
     }
     this.rows = nextRows;
     this.selectedRowId = sanitized.id;
     this.rowForm.reset({ ...sanitized });
+    this.persist();
+  }
+
+  addRow(): void {
+    const value = this.newRowFormValue;
+    const sanitized = this.sanitizeRow(value, this.nextProductId());
+    this.rows = [...this.rows, sanitized];
+    this.selectedRowId = sanitized.id;
+    this.syncSelectedRow();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -659,6 +880,7 @@ export class BiotechProductVaccinesFieldsetComponent implements OnInit {
     this.rows = this.rows.filter((row) => row.id !== this.selectedRowId);
     this.selectedRowId = this.rows[0]?.id ?? '';
     this.syncSelectedRow();
+    this.resetNewRow();
     this.persist();
   }
 
@@ -760,6 +982,7 @@ export class BiotechProductVaccinesFieldsetComponent implements OnInit {
       this.selectedRowId = this.rows[0]?.id ?? '';
       this.syncSelectedRow();
     }
+    this.resetNewRow();
   }
 
   private nextProductId(): string {
@@ -771,5 +994,34 @@ export class BiotechProductVaccinesFieldsetComponent implements OnInit {
       return Math.max(max, Number(match[1] || 0));
     }, 0);
     return `PROD-${String(maxId + 1).padStart(3, '0')}`;
+  }
+
+  private resetNewRow(): void {
+    this.newRowForm.reset({
+      id: this.nextProductId(),
+      name: 'New vaccine',
+      stage: this.stageOptions[0]?.value ?? 'Discovery',
+      success_prob: 0.3,
+      include_in_consolidation: true,
+      time_to_market: 3,
+      patent_years: 15,
+      preexisting_market: false,
+      patent_revenue_target: 120000000,
+      post_patent_revenue_target: 60000000,
+      market_growth_patent: 0.04,
+      market_growth_post: 0,
+      cogs_patent: 0.32,
+      cogs_post: 0.5,
+      sales_marketing_pct: 0.18,
+      gna_pct: 0.12,
+      royalty_pct: 0,
+      rd_remaining_pre_launch: 180000000,
+      rd_annual_post_launch: 12000000,
+      capex_remaining_pre_launch: 55000000,
+      capex_annual_post_launch: 6500000,
+      rd_capitalization_ratio: 0.5,
+      rd_amort_years: 10,
+      capex_dep_years: 10,
+    });
   }
 }

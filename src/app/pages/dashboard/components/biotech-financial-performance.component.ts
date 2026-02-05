@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { BiotechModelService } from '../../services/biotech-model.service';
+import biotechOutput from '../../../../../biotech_output.json';
 
 interface PerformanceRow {
   year: number;
@@ -76,7 +77,7 @@ export class BiotechFinancialPerformanceComponent implements OnInit {
   constructor(private biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.biotechModelService.getOutputSnapshot() ?? {};
+    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
     const consolidated = (output as any)?.consolidated ?? {};
     const years = (consolidated.index as number[]) ?? [];
     const data = consolidated.data ?? {};
@@ -117,5 +118,55 @@ export class BiotechFinancialPerformanceComponent implements OnInit {
   private asNumberArray(values: unknown): number[] {
     if (!Array.isArray(values)) return [];
     return values.map((v) => Number(v ?? 0));
+  }
+
+  private normalizeOutput(rawOutput: unknown): any {
+    const fallback = biotechOutput as any;
+    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
+    const consolidated = this.normalizeConsolidated(
+      output.consolidated ?? {},
+      fallback.consolidated ?? {}
+    );
+    return {
+      ...fallback,
+      ...output,
+      consolidated,
+    };
+  }
+
+  private normalizeConsolidated(source: any, fallback: any): any {
+    const index = this.asNumberArray(source?.index ?? fallback?.index ?? []);
+    const data = this.normalizeConsolidatedData(source?.data ?? {}, fallback?.data ?? {});
+    return {
+      ...fallback,
+      ...source,
+      index,
+      data,
+    };
+  }
+
+  private normalizeConsolidatedData(source: any, fallback: any): any {
+    const aliases: Record<string, string[]> = {
+      revenue: ['revenue', 'Revenue'],
+      cogs: ['cogs', 'COGS'],
+      sales_marketing: ['sales_marketing', 'salesMarketing', 'Sales & Marketing'],
+      gna: ['gna', 'G&A', 'GNA'],
+      royalty: ['royalty', 'Royalty'],
+      rd_expense_pnl: ['rd_expense_pnl', 'rdExpense', 'R&D expense', 'rd_expense'],
+      ebitda: ['ebitda', 'EBITDA'],
+      ebit: ['ebit', 'EBIT'],
+      tax: ['tax', 'Tax'],
+      nopat: ['nopat', 'NOPAT'],
+    };
+
+    const result: Record<string, number[]> = {};
+    Object.keys(fallback ?? {}).forEach((key) => {
+      const keys = aliases[key] ?? [key];
+      const match = keys.find((candidate) => Array.isArray(source?.[candidate]));
+      const values = match ? source[match] : fallback?.[key];
+      result[key] = this.asNumberArray(values);
+    });
+
+    return result;
   }
 }

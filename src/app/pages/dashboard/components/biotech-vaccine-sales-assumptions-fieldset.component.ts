@@ -40,18 +40,29 @@ interface IncrementHelper {
     <p-fieldset legend="Vaccine sales" [toggleable]="true" class="w-full">
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-12 gap-3 items-end">
-          <div class="col-span-12 flex flex-col gap-2">
+          <div class="col-span-12 lg:col-span-6 flex flex-col gap-2">
             <label class="text-xs font-semibold">Select row</label>
             <p-select
-              [options]="rowOptions"
-              [(ngModel)]="selectedRowId"
-              (ngModelChange)="onSelectedRowChange()"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select year"
-              [showClear]="false"
-              class="w-full"
+            [options]="rowOptions"
+            [(ngModel)]="selectedRowId"
+            (ngModelChange)="onSelectedRowChange()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select year"
+            [showClear]="false"
+            class="w-full"
             ></p-select>
+          </div>
+          <div class="col-span-12 lg:col-span-6 flex flex-col gap-2">
+            <p-button
+              label="Remove row"
+              [outlined]="true"
+              severity="danger"
+              (onClick)="removeSelectedRow()"
+              [disabled]="rows.length <= 1"
+              class="w-full"
+              fluid
+            ></p-button>
           </div>
         </div>
 
@@ -157,16 +168,6 @@ interface IncrementHelper {
           </div>
 
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
-            <p-button
-              label="Remove row"
-              [outlined]="true"
-              size="small"
-              severity="danger"
-              (onClick)="removeSelectedRow()"
-              [disabled]="rows.length <= 1"
-              class="w-full"
-              fluid
-            ></p-button>
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
               <label class="text-xs font-semibold">Column</label>

@@ -66,18 +66,29 @@ interface IncrementHelper {
     >
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-12 gap-3 items-end">
-          <div class="col-span-12 flex flex-col gap-2">
+          <div class="col-span-12 lg:col-span-6 flex flex-col gap-2">
             <label class="text-xs font-semibold">Select row</label>
             <p-select
-              [options]="rowOptions"
-              [(ngModel)]="selectedRowId"
-              (ngModelChange)="syncSelectedRow()"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select vaccine"
-              [showClear]="false"
-              class="w-full"
+            [options]="rowOptions"
+            [(ngModel)]="selectedRowId"
+            (ngModelChange)="syncSelectedRow()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select vaccine"
+            [showClear]="false"
+            class="w-full"
             ></p-select>
+          </div>
+          <div class="col-span-12 lg:col-span-6 flex flex-col gap-2">
+            <p-button
+              label="Remove row"
+              [outlined]="true"
+              severity="danger"
+              (onClick)="removeRow()"
+              [disabled]="rows.length <= 1"
+              class="w-full"
+              fluid
+            ></p-button>
           </div>
         </div>
 
@@ -358,15 +369,6 @@ interface IncrementHelper {
           </div>
 
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
-            <p-button
-              label="Remove row"
-              [outlined]="true"
-              severity="danger"
-              (onClick)="removeRow()"
-              [disabled]="rows.length <= 1"
-              class="w-full"
-              fluid
-            ></p-button>
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
               <label class="text-xs font-semibold">Column</label>
@@ -450,11 +452,11 @@ interface IncrementHelper {
         </div>
 
         <div class="overflow-auto rounded">
-          <p-table [value]="summaryRows" showGridlines class="text-sm" [size]="'small'">
+          <p-table [value]="summaryRows" showGridlines class="text-xs" [size]="'small'">
             <ng-template #header>
               <tr>
-                <th>ID_vaccine</th>
-                <th>Vaccine name</th>
+                <th style="min-width:130px">ID_vaccine</th>
+                <th style="min-width:130px">Vaccine name</th>
                 <th>COGS patent % of sales</th>
                 <th>COGS post % of sales</th>
                 <th>Marketing annual % of sales</th>

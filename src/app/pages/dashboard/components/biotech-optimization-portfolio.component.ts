@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TableModule } from 'primeng/table';
 import { FieldsetModule } from 'primeng/fieldset';
 import { BiotechModelService } from '../../services/biotech-model.service';
+import biotechOutput from '../../../../../biotech_output.json';
 
 interface PortfolioRow {
   product: string;
@@ -39,25 +40,27 @@ interface PortfolioRow {
           >
             <ng-template pTemplate="header">
               <tr>
+                <th>#</th>
                 <th>Product</th>
                 <th>Mean</th>
                 <th>Std</th>
                 <th>Suggested weight</th>
               </tr>
             </ng-template>
-            <ng-template pTemplate="body" let-row>
+            <ng-template pTemplate="body" let-row let-i="rowIndex">
               <tr>
-                <td>{{ row.product }}</td>
-                <td>{{ formatNumber(row.mean) }}</td>
-                <td>{{ formatNumber(row.std) }}</td>
-                <td>{{ formatPercent(row.weight) }}</td>
+                <td>{{ i }}</td>
+                <td class="font-semibold">{{ row.product }}</td>
+                <td class="text-right">{{ formatNumber(row.mean) }}</td>
+                <td class="text-right">{{ formatNumber(row.std) }}</td>
+                <td class="text-right">{{ formatPercent(row.weight) }}</td>
               </tr>
             </ng-template>
           </p-table>
         </div>
 
-        <div class="text-sm text-surface-500">
-          Provide R&amp;D cash flows and install SciPy to compute real options.
+        <div class="text-sm text-surface-200 font-semibold">
+          Real option (deferral) value estimate: {{ formatNumber(realOptionValue) }}
         </div>
       </div>
     </p-fieldset>
@@ -65,11 +68,15 @@ interface PortfolioRow {
 })
 export class BiotechOptimizationPortfolioComponent implements OnInit {
   rows: PortfolioRow[] = [];
+  realOptionValue = 0;
 
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.biotechModelService.getOutputSnapshot();
+    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
+    this.realOptionValue = Math.max(0, Number(output?.rnpv ?? 0));
+    const consolidated = (output as any)?.consolidated ?? {};
+    const consolidatedData = consolidated.data ?? {};
     const perProduct = output?.per_product ?? {};
     const products = Object.keys(perProduct);
 
@@ -85,13 +92,31 @@ export class BiotechOptimizationPortfolioComponent implements OnInit {
       };
     });
 
+    const totalMean = aggregates.reduce((sum, row) => sum + row.mean, 0);
     const totalFcff = aggregates.reduce((sum, row) => sum + row.fcffTotal, 0);
+    const impliedMean =
+      this.mean(this.asNumberArray(consolidatedData['revenue'])) - totalMean;
+    const impliedFcff =
+      this.asNumberArray(consolidatedData['fcff']).reduce((sum, v) => sum + (v ?? 0), 0) -
+      totalFcff;
+
+    aggregates.push({
+      product: 'Vaccine Sales (Implied)',
+      mean: impliedMean,
+      std: 0,
+      fcffTotal: impliedFcff,
+    });
+
+    const totalFcffWithImplied = aggregates.reduce(
+      (sum, row) => sum + row.fcffTotal,
+      0
+    );
 
     this.rows = aggregates.map((row) => ({
       product: row.product,
       mean: row.mean,
       std: row.std,
-      weight: totalFcff ? row.fcffTotal / totalFcff : 0,
+      weight: totalFcffWithImplied ? row.fcffTotal / totalFcffWithImplied : 0,
     }));
   }
 
@@ -123,5 +148,14 @@ export class BiotechOptimizationPortfolioComponent implements OnInit {
   private asNumberArray(values: unknown): number[] {
     if (!Array.isArray(values)) return [];
     return values.map((v) => Number(v ?? 0));
+  }
+
+  private normalizeOutput(rawOutput: unknown): any {
+    const fallback = biotechOutput as any;
+    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
+    return {
+      ...fallback,
+      ...output,
+    };
   }
 }

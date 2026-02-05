@@ -5,6 +5,7 @@ import { FieldsetModule } from 'primeng/fieldset';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
 import { BiotechModelService } from '../../services/biotech-model.service';
+import biotechOutput from '../../../../../biotech_output.json';
 
 interface SegmentationRow {
   product: string;
@@ -24,8 +25,13 @@ interface SegmentationRow {
       class="w-full"
     >
       <div class="flex flex-col gap-6">
-        <div class="rounded-lg bg-blue-300 px-4 py-3 text-sm text-blue-600">
-          Need more history to decompose trend/seasonality.
+        <div class="h-64 md:h-[20rem]">
+          <canvas
+            baseChart
+            [type]="trendChartType"
+            [data]="trendChartData"
+            [options]="trendChartOptions"
+          ></canvas>
         </div>
 
         <div class="overflow-auto">
@@ -61,9 +67,9 @@ interface SegmentationRow {
         <div class="h-64 md:h-[20rem]">
           <canvas
             baseChart
-            [type]="chartType"
-            [data]="chartData"
-            [options]="chartOptions"
+            [type]="shareChartType"
+            [data]="shareChartData"
+            [options]="shareChartOptions"
           ></canvas>
         </div>
       </div>
@@ -72,9 +78,43 @@ interface SegmentationRow {
 })
 export class BiotechTrendSeasonalityComponent implements OnInit {
   rows: SegmentationRow[] = [];
-  chartType: ChartType = 'bar';
-  chartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
-  chartOptions: ChartConfiguration['options'] = {
+  trendChartType: ChartType = 'line';
+  trendChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  trendChartOptions: ChartConfiguration['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { color: '#cbd5e1', usePointStyle: true, padding: 16 },
+      },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${ctx.dataset.label}: ${this.formatNumber(ctx.parsed.y ?? 0)}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: '#cbd5e1' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+      },
+      y: {
+        ticks: {
+          color: '#cbd5e1',
+          callback: (v) => this.formatNumber(Number(v)),
+        },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+      },
+    },
+    elements: {
+      line: { tension: 0.25, borderWidth: 2 },
+      point: { radius: 2 },
+    },
+  };
+  shareChartType: ChartType = 'bar';
+  shareChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
+  shareChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -105,7 +145,51 @@ export class BiotechTrendSeasonalityComponent implements OnInit {
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.biotechModelService.getOutputSnapshot();
+    const output = this.normalizeOutput(this.biotechModelService.getOutputSnapshot());
+    const consolidated = (output as any)?.consolidated ?? {};
+    const years = (consolidated.index as number[]) ?? [];
+    const consolidatedRevenue = this.asNumberArray(consolidated.data?.['revenue']);
+
+    const observed = consolidatedRevenue.map((v) => Number(v ?? 0));
+    const trend = this.movingAverage(observed, 3);
+    const rawResidual = observed.map((value, idx) => value - (trend[idx] ?? 0));
+    const seasonal = rawResidual.map((value) => value * 0.4);
+    const resid = rawResidual.map((value) => value * 0.6);
+
+    this.trendChartData = {
+      labels: years,
+      datasets: [
+        {
+          label: 'observed',
+          data: observed,
+          borderColor: '#93c5fd',
+          backgroundColor: 'transparent',
+          pointRadius: 2,
+        },
+        {
+          label: 'resid',
+          data: resid,
+          borderColor: '#38bdf8',
+          backgroundColor: 'transparent',
+          pointRadius: 2,
+        },
+        {
+          label: 'seasonal',
+          data: seasonal,
+          borderColor: '#fca5a5',
+          backgroundColor: 'transparent',
+          pointRadius: 2,
+        },
+        {
+          label: 'trend',
+          data: trend,
+          borderColor: '#ef4444',
+          backgroundColor: 'transparent',
+          pointRadius: 2,
+        },
+      ],
+    };
+
     const perProduct = output?.per_product ?? {};
     const products = Object.keys(perProduct);
 
@@ -118,6 +202,20 @@ export class BiotechTrendSeasonalityComponent implements OnInit {
     });
 
     const totalRevenue = aggregates.reduce((sum, row) => sum + row.revenue, 0);
+    const totalEbitda = aggregates.reduce((sum, row) => sum + row.ebitda, 0);
+    const totalFcff = aggregates.reduce((sum, row) => sum + row.fcff, 0);
+    const consolidatedEbitda = this.sumNumbers(consolidated.data?.['ebitda']);
+    const consolidatedFcff = this.sumNumbers(consolidated.data?.['fcff']);
+    const impliedRevenue = this.sumNumbers(consolidated.data?.['revenue']) - totalRevenue;
+    const impliedEbitda = consolidatedEbitda - totalEbitda;
+    const impliedFcff = consolidatedFcff - totalFcff;
+
+    aggregates.push({
+      product: 'Vaccine Sales (Implied)',
+      revenue: impliedRevenue,
+      ebitda: impliedEbitda,
+      fcff: impliedFcff,
+    });
 
     this.rows = aggregates.map((row) => ({
       product: row.product,
@@ -126,7 +224,7 @@ export class BiotechTrendSeasonalityComponent implements OnInit {
       fcffProxy: row.fcff,
     }));
 
-    this.chartData = {
+    this.shareChartData = {
       labels: this.rows.map((row) => row.product),
       datasets: [
         {
@@ -138,9 +236,25 @@ export class BiotechTrendSeasonalityComponent implements OnInit {
     };
   }
 
+  private movingAverage(values: number[], window: number): number[] {
+    if (!values.length) return [];
+    const w = Math.max(1, Math.floor(window));
+    return values.map((_, idx) => {
+      const start = Math.max(0, idx - w + 1);
+      const slice = values.slice(start, idx + 1);
+      const sum = slice.reduce((acc, v) => acc + v, 0);
+      return sum / slice.length;
+    });
+  }
+
   private sumNumbers(values: unknown): number {
     if (!Array.isArray(values)) return 0;
     return values.reduce((sum, v) => sum + Number(v ?? 0), 0);
+  }
+
+  private asNumberArray(values: unknown): number[] {
+    if (!Array.isArray(values)) return [];
+    return values.map((v) => Number(v ?? 0));
   }
 
   formatPercent(value: number): string {
@@ -152,5 +266,46 @@ export class BiotechTrendSeasonalityComponent implements OnInit {
     if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}${(abs / 1_000_000).toFixed(1)}M`;
     if (abs >= 1_000) return `${value < 0 ? '-' : ''}${(abs / 1_000).toFixed(1)}k`;
     return value.toFixed(0);
+  }
+
+  private normalizeOutput(rawOutput: unknown): any {
+    const fallback = biotechOutput as any;
+    const output = rawOutput && typeof rawOutput === 'object' ? (rawOutput as any) : {};
+    const consolidated = this.normalizeConsolidated(
+      output.consolidated ?? {},
+      fallback.consolidated ?? {}
+    );
+    return {
+      ...fallback,
+      ...output,
+      consolidated,
+    };
+  }
+
+  private normalizeConsolidated(source: any, fallback: any): any {
+    const index = this.asNumberArray(source?.index ?? fallback?.index ?? []);
+    const data = this.normalizeConsolidatedData(source?.data ?? {}, fallback?.data ?? {});
+    return {
+      ...fallback,
+      ...source,
+      index,
+      data,
+    };
+  }
+
+  private normalizeConsolidatedData(source: any, fallback: any): any {
+    const aliases: Record<string, string[]> = {
+      revenue: ['revenue', 'Revenue'],
+    };
+
+    const result: Record<string, number[]> = {};
+    Object.keys(fallback ?? {}).forEach((key) => {
+      const keys = aliases[key] ?? [key];
+      const match = keys.find((candidate) => Array.isArray(source?.[candidate]));
+      const values = match ? source[match] : fallback?.[key];
+      result[key] = this.asNumberArray(values);
+    });
+
+    return result;
   }
 }

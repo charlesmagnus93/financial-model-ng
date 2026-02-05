@@ -64,6 +64,7 @@ interface StressRow {
           <p-table
             [value]="stressRows"
             showGridlines
+            [size]="'small'"
             responsiveLayout="scroll"
             class="text-sm"
             [tableStyle]="{ 'min-width': '900px' }"

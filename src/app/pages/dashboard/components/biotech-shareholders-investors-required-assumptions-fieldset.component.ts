@@ -1,6 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  FormsModule,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { FieldsetModule } from 'primeng/fieldset';
@@ -28,6 +35,7 @@ interface IncrementHelper {
   imports: [
     CommonModule,
     FormsModule,
+    ReactiveFormsModule,
     ButtonModule,
     SelectModule,
     FieldsetModule,
@@ -37,59 +45,68 @@ interface IncrementHelper {
   ],
   template: `
     <p-fieldset legend="Shareholders / Investors" [toggleable]="true" class="w-full">
-      <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-2">
-          <label class="text-xs font-semibold">Select row</label>
-          <p-select
-            [options]="rowOptions"
-            [(ngModel)]="selectedRowIndex"
-            (ngModelChange)="syncSelectedRow()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select shareholder"
-            [showClear]="false"
-            class="w-full"
-          ></p-select>
+      <form class="flex flex-col gap-4" [formGroup]="form">
+        <div class="grid grid-cols-12 gap-3 items-end">
+          <div class="col-span-12 lg:col-span-6 flex flex-col gap-2">
+            <label class="text-xs font-semibold">Select row</label>
+            <p-select
+              [options]="rowOptions"
+              [formControl]="selectedRowControl"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select shareholder"
+              [showClear]="false"
+              class="w-full"
+            ></p-select>
+          </div>
+
+          <div class="col-span-12 lg:col-span-6 flex flex-col gap-2">
+            <p-button
+              label="Remove row"
+              severity="danger"
+              class="w-full"
+              [outlined]="true"
+              (onClick)="removeRow()"
+              [disabled]="rowsArray.length <= 1"
+              fluid
+            ></p-button>
+          </div>
         </div>
 
         <div class="grid grid-cols-12 gap-4">
           <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
             <div class="text-xs text-surface-600 font-semibold">Edit selected row</div>
-            <label class="text-xs font-semibold">Shareholder</label>
-            <input
-              pInputText
-              [(ngModel)]="selectedRow.name"
-              (ngModelChange)="saveSelectedRow()"
-              class="w-full"
-            />
-            <label class="text-xs font-semibold">Ownership %</label>
-            <p-inputnumber
-              [(ngModel)]="selectedRow.ownershipPct"
-              (ngModelChange)="saveSelectedRow()"
-              [showButtons]="true"
-              [min]="0"
-              [max]="1"
-              [step]="0.01"
-              [minFractionDigits]="2"
-              [maxFractionDigits]="4"
-              inputStyleClass="w-full"
-            />
-            <label class="text-xs font-semibold">Investment</label>
-            <p-inputnumber
-              [(ngModel)]="selectedRow.investment"
-              (ngModelChange)="saveSelectedRow()"
-              [showButtons]="true"
-              [min]="0"
-              inputStyleClass="w-full"
-            />
-            <label class="text-xs font-semibold">Equity value (rNPV)</label>
-            <p-inputnumber
-              [(ngModel)]="selectedRow.equityValue"
-              (ngModelChange)="saveSelectedRow()"
-              [showButtons]="true"
-              [min]="0"
-              inputStyleClass="w-full"
-            />
+            <ng-container *ngIf="selectedRowForm as rowForm">
+              <div [formGroup]="rowForm" class="flex flex-col gap-2">
+                <label class="text-xs font-semibold">Shareholder</label>
+                <input pInputText formControlName="name" class="w-full" />
+                <label class="text-xs font-semibold">Ownership %</label>
+                <p-inputnumber
+                  formControlName="ownershipPct"
+                  [showButtons]="true"
+                  [min]="0"
+                  [max]="1"
+                  [step]="0.01"
+                  [minFractionDigits]="2"
+                  [maxFractionDigits]="4"
+                  inputStyleClass="w-full"
+                />
+                <label class="text-xs font-semibold">Investment</label>
+                <p-inputnumber
+                  formControlName="investment"
+                  [showButtons]="true"
+                  [min]="0"
+                  inputStyleClass="w-full"
+                />
+                <label class="text-xs font-semibold">Equity value (rNPV)</label>
+                <p-inputnumber
+                  formControlName="equityValue"
+                  [showButtons]="true"
+                  [min]="0"
+                  inputStyleClass="w-full"
+                />
+              </div>
+            </ng-container>
             <p-button
               label="Save changes"
               size="small"
@@ -101,37 +118,35 @@ interface IncrementHelper {
 
           <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
             <div class="text-xs text-surface-600 font-semibold">Add a new row</div>
-            <label class="text-xs font-semibold">Shareholder</label>
-            <input
-              pInputText
-              [(ngModel)]="newRow.name"
-              class="w-full"
-            />
-            <label class="text-xs font-semibold">Ownership %</label>
-            <p-inputnumber
-              [(ngModel)]="newRow.ownershipPct"
-              [showButtons]="true"
-              [min]="0"
-              [max]="1"
-              [step]="0.01"
-              [minFractionDigits]="2"
-              [maxFractionDigits]="4"
-              inputStyleClass="w-full"
-            />
-            <label class="text-xs font-semibold">Investment</label>
-            <p-inputnumber
-              [(ngModel)]="newRow.investment"
-              [showButtons]="true"
-              [min]="0"
-              inputStyleClass="w-full"
-            />
-            <label class="text-xs font-semibold">Equity value (rNPV)</label>
-            <p-inputnumber
-              [(ngModel)]="newRow.equityValue"
-              [showButtons]="true"
-              [min]="0"
-              inputStyleClass="w-full"
-            />
+            <div [formGroup]="newRowForm" class="flex flex-col gap-2">
+              <label class="text-xs font-semibold">Shareholder</label>
+              <input pInputText formControlName="name" class="w-full" />
+              <label class="text-xs font-semibold">Ownership %</label>
+              <p-inputnumber
+                formControlName="ownershipPct"
+                [showButtons]="true"
+                [min]="0"
+                [max]="1"
+                [step]="0.01"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="4"
+                inputStyleClass="w-full"
+              />
+              <label class="text-xs font-semibold">Investment</label>
+              <p-inputnumber
+                formControlName="investment"
+                [showButtons]="true"
+                [min]="0"
+                inputStyleClass="w-full"
+              />
+              <label class="text-xs font-semibold">Equity value (rNPV)</label>
+              <p-inputnumber
+                formControlName="equityValue"
+                [showButtons]="true"
+                [min]="0"
+                inputStyleClass="w-full"
+              />
+            </div>
             <p-button
               label="Add row"
               size="small"
@@ -142,29 +157,19 @@ interface IncrementHelper {
           </div>
 
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-3">
-            <p-button
-              label="Remove row"
-              size="small"
-              severity="danger"
-              class="w-full"
-              [outlined]="true"
-              (onClick)="removeRow()"
-              [disabled]="rows.length <= 1"
-              fluid
-            ></p-button>
-            <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
+            <div class="rounded border border-surface-700 p-3 flex flex-col gap-2" [formGroup]="helperForm">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
               <label class="text-xs font-semibold">Column</label>
               <p-select
                 [options]="helperColumnOptions"
-                [(ngModel)]="helper.column"
+                formControlName="column"
                 optionLabel="label"
                 optionValue="value"
                 class="w-full"
               ></p-select>
               <label class="text-xs font-semibold">Increment per year</label>
               <p-inputnumber
-                [(ngModel)]="helper.incrementPerYear"
+                formControlName="incrementPerYear"
                 [showButtons]="true"
                 [step]="0.01"
                 [minFractionDigits]="2"
@@ -173,7 +178,7 @@ interface IncrementHelper {
               />
               <label class="text-xs font-semibold">Years to apply</label>
               <p-inputnumber
-                [(ngModel)]="helper.yearsToApply"
+                formControlName="yearsToApply"
                 [showButtons]="true"
                 [min]="1"
                 [useGrouping]="false"
@@ -194,7 +199,7 @@ interface IncrementHelper {
         </div>
 
         <div class="overflow-auto rounded">
-          <p-table [value]="rows" showGridlines class="text-sm" [size]="'small'">
+          <p-table [value]="rowsArray.value" showGridlines class="text-sm" [size]="'small'">
             <ng-template #header>
               <tr>
                 <th>Shareholder</th>
@@ -218,124 +223,154 @@ interface IncrementHelper {
         <div class="text-2xl font-semibold">
           {{ totalOwnership | percent: '1.0-0' }}
         </div>
-      </div>
+      </form>
     </p-fieldset>
   `,
 })
 export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
   implements OnInit
 {
-  rows: ShareholderRow[] = [];
-  selectedRowIndex = 0;
-  selectedRow: ShareholderRow = {
-    name: '',
-    ownershipPct: 0,
-    investment: 0,
-    equityValue: 0,
-  };
-  newRow: ShareholderRow = {
-    name: '',
-    ownershipPct: 0,
-    investment: 0,
-    equityValue: 0,
-  };
-  helper: IncrementHelper = {
-    column: 'ownershipPct',
-    incrementPerYear: 0.01,
-    yearsToApply: 1,
-  };
+  form: FormGroup;
+  selectedRowControl: FormControl<number | null>;
 
   helperColumnOptions = [
     { label: 'Ownership %', value: 'ownershipPct' },
     { label: 'Investment', value: 'investment' },
   ];
 
-  constructor(private biotechModelService: BiotechModelService) {}
+  constructor(
+    private biotechModelService: BiotechModelService,
+    private formBuilder: FormBuilder,
+  ) {
+    this.selectedRowControl = this.formBuilder.control(0);
+    this.form = this.formBuilder.group({
+      rows: this.formBuilder.array<FormGroup>([]),
+      newRow: this.formBuilder.group({
+        name: '',
+        ownershipPct: 0,
+        investment: 0,
+        equityValue: 0,
+      }),
+      helper: this.formBuilder.group({
+        column: 'ownershipPct',
+        incrementPerYear: 0.01,
+        yearsToApply: 1,
+      }),
+    });
+  }
 
   ngOnInit(): void {
     this.syncFromModel();
   }
 
+  get rowsArray(): FormArray {
+    return this.form.get('rows') as FormArray;
+  }
+
+  get newRowForm(): FormGroup {
+    return this.form.get('newRow') as FormGroup;
+  }
+
+  get helperForm(): FormGroup {
+    return this.form.get('helper') as FormGroup;
+  }
+
+  get selectedRowIndex(): number {
+    return this.selectedRowControl.value ?? 0;
+  }
+
+  set selectedRowIndex(value: number) {
+    this.selectedRowControl.setValue(value);
+  }
+
+  get selectedRowForm(): FormGroup | null {
+    return (this.rowsArray.at(this.selectedRowIndex) as FormGroup) ?? null;
+  }
+
+  get totalOwnership(): number {
+    const rows = this.rowsArray.value as ShareholderRow[];
+    return rows.reduce((sum, row) => sum + (row.ownershipPct || 0), 0);
+  }
+
+  get helperCurrentValue(): number {
+    const row = this.selectedRowForm?.value as ShareholderRow | undefined;
+    if (!row) {
+      return 0;
+    }
+    const helper = this.helperForm.value as IncrementHelper;
+    return helper.column === 'ownershipPct' ? row.ownershipPct : row.investment;
+  }
+
   get rowOptions() {
-    return this.rows.map((row, index) => ({
-      label: row.name,
+    return this.rowsArray.controls.map((row, index) => ({
+      label: row.value.name,
       value: index,
     }));
   }
 
-  get totalOwnership(): number {
-    return this.rows.reduce((sum, row) => sum + (row.ownershipPct || 0), 0);
-  }
-
-  get helperCurrentValue(): number {
-    const row = this.rows[this.selectedRowIndex];
-    if (!row) {
-      return 0;
-    }
-    return this.helper.column === 'ownershipPct'
-      ? row.ownershipPct
-      : row.investment;
-  }
-
-  syncSelectedRow(): void {
-    const row = this.rows[this.selectedRowIndex];
-    if (row) {
-      this.selectedRow = { ...row };
-    }
-  }
-
   saveSelectedRow(): void {
-    const row = this.rows[this.selectedRowIndex];
-    if (!row) {
+    if (!this.selectedRowForm) {
       return;
     }
-    row.name = this.selectedRow.name;
-    row.ownershipPct = this.selectedRow.ownershipPct;
-    row.investment = this.selectedRow.investment;
-    row.equityValue = this.selectedRow.equityValue;
     this.persist();
   }
 
   addRow(): void {
-    this.rows = [...this.rows, { ...this.newRow }];
-    this.selectedRowIndex = this.rows.length - 1;
-    this.syncSelectedRow();
+    const newRow = this.newRowForm.value as ShareholderRow;
+    this.rowsArray.push(this.createRowForm(newRow));
+    this.selectedRowIndex = this.rowsArray.length - 1;
+    this.newRowForm.reset({
+      name: '',
+      ownershipPct: 0,
+      investment: 0,
+      equityValue: 0,
+    });
     this.persist();
   }
 
   removeRow(): void {
-    if (this.rows.length <= 1) {
+    if (this.rowsArray.length <= 1) {
       return;
     }
-    this.rows = this.rows.filter((_, index) => index !== this.selectedRowIndex);
+    this.rowsArray.removeAt(this.selectedRowIndex);
     this.selectedRowIndex = 0;
-    this.syncSelectedRow();
     this.persist();
   }
 
   applyIncrement(): void {
-    const increment = Number(this.helper.incrementPerYear || 0);
-    const years = Math.max(1, Math.floor(this.helper.yearsToApply || 0));
+    const helper = this.helperForm.value as IncrementHelper;
+    const increment = Number(helper.incrementPerYear || 0);
+    const years = Math.max(1, Math.floor(helper.yearsToApply || 0));
     for (let i = 0; i < years; i += 1) {
       const idx = this.selectedRowIndex + i;
-      if (!this.rows[idx]) {
+      const row = this.rowsArray.at(idx) as FormGroup | undefined;
+      if (!row) {
         break;
       }
-      const row = { ...this.rows[idx] };
-      if (this.helper.column === 'ownershipPct') {
-        row.ownershipPct = Number(row.ownershipPct || 0) + increment;
+      if (helper.column === 'ownershipPct') {
+        const current = Number(row.value.ownershipPct || 0);
+        row.patchValue({ ownershipPct: current + increment }, { emitEvent: false });
       } else {
-        row.investment = Number(row.investment || 0) + increment;
+        const current = Number(row.value.investment || 0);
+        row.patchValue({ investment: current + increment }, { emitEvent: false });
       }
-      this.rows[idx] = row;
     }
-    this.syncSelectedRow();
     this.persist();
   }
 
+  private createRowForm(row: ShareholderRow): FormGroup {
+    return this.formBuilder.group({
+      name: row.name,
+      ownershipPct: row.ownershipPct,
+      investment: row.investment,
+      equityValue: row.equityValue,
+    });
+  }
+
   private persist(): void {
+    const rows = this.rowsArray.value as ShareholderRow[];
     this.biotechModelService.patchInput({
-      shareholders: this.rows.map((row) => ({
+      shareholders: rows.map((row) => ({
         Shareholder: row.name,
         'Ownership %': row.ownershipPct,
         Investment: row.investment,
@@ -347,15 +382,18 @@ export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
   private syncFromModel(): void {
     const stored = this.biotechModelService.getInputSnapshot()?.shareholders;
     if (Array.isArray(stored) && stored.length) {
-      this.rows = stored.map((row: any) => ({
-        name: String(row?.Shareholder ?? ''),
-        ownershipPct: Number(row?.['Ownership %'] ?? 0),
-        investment: Number(row?.Investment ?? 0),
-        equityValue: Number(row?.['Equity value (rNPV)'] ?? 0),
-      }));
+      this.rowsArray.clear();
+      stored.forEach((row: any) => {
+        this.rowsArray.push(
+          this.createRowForm({
+            name: String(row?.Shareholder ?? ''),
+            ownershipPct: Number(row?.['Ownership %'] ?? 0),
+            investment: Number(row?.Investment ?? 0),
+            equityValue: Number(row?.['Equity value (rNPV)'] ?? 0),
+          }),
+        );
+      });
       this.selectedRowIndex = 0;
-      this.syncSelectedRow();
     }
   }
 }
-
