@@ -4,7 +4,6 @@ import { TabsModule } from 'primeng/tabs';
 import { BiotechFinancialStatementsComponent } from './biotech-financial-statements.component';
 import { BiotechDashboardComponent } from './components/biotech-dashboard.component';
 import { BiotechAdvancedFinancialAnalyticsComponent } from './components/biotech-advanced-financial-analytics.component';
-import { BiotechScenarioAnalysisComponent } from './components/biotech-scenario-analysis.component';
 import { BiotechVcMethodHelperComponent } from './components/biotech-vc-method-helper.component';
 import { RagAssistantComponent } from './components/app-rag-assistant.component';
 import { PharmaModelService } from '../services/pharma-model.service';
@@ -24,7 +23,6 @@ interface ResultsSection {
     BiotechFinancialStatementsComponent,
     BiotechDashboardComponent,
     BiotechAdvancedFinancialAnalyticsComponent,
-    BiotechScenarioAnalysisComponent,
     BiotechVcMethodHelperComponent,
     RagAssistantComponent,
   ],

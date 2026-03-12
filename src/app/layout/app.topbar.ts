@@ -1,18 +1,18 @@
-import { Component, computed, inject, OnInit, Signal, signal } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
+import { Component, computed, inject, OnDestroy, OnInit, Signal, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { StyleClassModule } from 'primeng/styleclass';
 import { ChipModule } from 'primeng/chip';
 import { ButtonModule } from 'primeng/button';
 import { PopoverModule } from 'primeng/popover';
 import { DividerModule } from 'primeng/divider';
-import { finalize } from 'rxjs';
+import { finalize, filter, Subscription } from 'rxjs';
 import { LayoutService } from './service/layout.service';
 import { AuthService } from '../pages/services/auth.service';
-import { User } from '../models/user.model';
 import { ApiService } from '../pages/services/api.service';
 import { PharmaModelService } from '../pages/services/pharma-model.service';
 import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
+import { BiotechModelService } from '../pages/services/biotech-model.service';
 
 @Component({
     selector: 'app-topbar',
@@ -166,7 +166,7 @@ import { AVAILABLE_MODELS } from '../pages/dashboard/model-options';
         </div>
     </div>`
 })
-export class AppTopbar implements OnInit {
+export class AppTopbar implements OnInit, OnDestroy {
 
     private authService = inject(AuthService);
     user = this.authService.user;
@@ -184,21 +184,29 @@ export class AppTopbar implements OnInit {
 
     subscriptionStatus: Signal<'active' | 'inactive' | 'checking' | 'error'>;
     subscriptionMessage: Signal<string | null>;
+    private routeChangeSubscription?: Subscription;
 
     constructor(
         public layoutService: LayoutService,
         private apiService: ApiService,
-        public pharmaModelService: PharmaModelService,
+        private pharmaModelService: PharmaModelService,
+        private biotechModelService: BiotechModelService,
         private router: Router
     ) {
         this.subscriptionStatus = this.pharmaModelService.subscriptionStatus;
         this.subscriptionMessage = this.pharmaModelService.subscriptionMessage;
-        this.currentModel.set(localStorage.getItem('selected_model'));
-        this.checkSubscriptionStatus();
+        this.syncCurrentModel();
     }
 
     ngOnInit(): void {
         this.user = this.authService.user;
+        this.routeChangeSubscription = this.router.events
+            .pipe(filter((event) => event instanceof NavigationEnd))
+            .subscribe(() => this.syncCurrentModel());
+    }
+
+    ngOnDestroy(): void {
+        this.routeChangeSubscription?.unsubscribe();
     }
 
     toggleDarkMode() {
@@ -208,7 +216,11 @@ export class AppTopbar implements OnInit {
     image: string | null = null;
 
     checkSubscriptionStatus(): void {
-        this.pharmaModelService.checkSubscriptionStatus(this.user()?.email);
+        const email = this.user()?.email;
+        if (!email) {
+            return;
+        }
+        this.pharmaModelService.checkSubscriptionStatus(email);
     }
 
     startSubscription(): void {
@@ -238,13 +250,14 @@ export class AppTopbar implements OnInit {
     }
 
     exportReport(): void {
+        this.syncCurrentModel();
         if (!this.isExportAvailable() || this.isExporting() || !this.isModelSetupComplete()) {
             return;
         }
         this.isExporting.set(true);
         const format = this.exportFormat();
         const modelCode = this.currentModel() || 'pharma';
-        this.pharmaModelService
+        this.getActiveModelService()
             .exportModelReport(modelCode, format)
             .pipe(finalize(() => this.isExporting.set(false)))
             .subscribe({
@@ -316,6 +329,16 @@ export class AppTopbar implements OnInit {
             return 'model-report';
         }
         return `${match.code.replace('-model', '')}-report`;
+    }
+
+    private syncCurrentModel(): void {
+        this.currentModel.set(localStorage.getItem('selected_model'));
+    }
+
+    private getActiveModelService(): PharmaModelService | BiotechModelService {
+        return this.currentModel() === 'biotech'
+            ? this.biotechModelService
+            : this.pharmaModelService;
     }
 
 }

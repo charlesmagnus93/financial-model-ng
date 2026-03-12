@@ -309,7 +309,7 @@ export class InputPharmaLandingComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.resetForm();
+    this.initializeForm();
   }
 
   get currentSectionIndex(): number {
@@ -403,9 +403,8 @@ export class InputPharmaLandingComponent implements OnInit {
     });
   }
 
-  private resetForm(): void {
+  private initializeForm(): void {
     this.pharmaModelService.clearValidationErrors();
-    this.pharmaModelService.clearInput();
     this.refreshForms();
   }
 

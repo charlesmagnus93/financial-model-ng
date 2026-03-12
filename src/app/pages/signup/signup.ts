@@ -183,7 +183,6 @@ export class Signup {
     ) {}
 
     onSubmit() {
-        // console.log('Submitting sign-up form', this.signupForm.value);
         if (this.signupForm.valid) {
             this.isLoading = true;
             this.errorMessage = '';
@@ -191,9 +190,8 @@ export class Signup {
             const { email, password, username } = this.signupForm.value;
 
             this.authService.signup(email!, password!, username!).subscribe({
-                next: (response) => {
+                next: () => {
                     this.isLoading = false;
-                    // console.log('Sign up successful:', response.user);
                     // Redirect to dashboard on successful login
                     this.router.navigate(['/dashboard']);
                 },
@@ -204,7 +202,7 @@ export class Signup {
                 }
             });
         } else {
-            console.log('Form is invalid');
+            this.signupForm.markAllAsTouched();
         }
     }
 
@@ -212,9 +210,8 @@ export class Signup {
         this.isLoading = true;
         this.errorMessage = '';
         this.googleAuthService.signInWithGoogle().subscribe({
-            next: (response) => {
+            next: () => {
                 this.isLoading = false;
-                console.log('Google sign up successful:', response);
                 // Redirect to dashboard on successful login
                 this.router.navigate(['/dashboard']);
             },

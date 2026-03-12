@@ -182,9 +182,8 @@ export class Signin implements OnInit {
             }
 
             this.authService.signin(email!, password!, rememberMe!).subscribe({
-                next: (response) => {
+                next: () => {
                     this.isLoading = false;
-                    // console.log('Sign in successful:', response.user);
                     // Redirect to dashboard on successful login
                     this.router.navigate(['/dashboard']);
                 },
@@ -195,7 +194,7 @@ export class Signin implements OnInit {
                 }
             });
         } else {
-            console.log('Form is invalid');
+            this.signinForm.markAllAsTouched();
         }
     }
 
@@ -204,9 +203,8 @@ export class Signin implements OnInit {
         this.errorMessage = '';
 
         this.googleAuthService.signInWithGoogle().subscribe({
-            next: (response) => {
+            next: () => {
                 this.isLoading = false;
-                console.log('Google sign in successful:', response);
                 // Redirect to dashboard on successful login
                 this.router.navigate(['/dashboard']);
             },

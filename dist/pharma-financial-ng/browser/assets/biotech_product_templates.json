@@ -1,0 +1,77 @@
+{
+  "Phase II oncology asset": [
+    {
+      "name": "Onco-Phase2",
+      "stage": "Phase II",
+      "success_prob": 0.35,
+      "include_in_consolidation": true,
+      "time_to_market": 4,
+      "patent_years": 12,
+      "patent_revenue_target": 250000000,
+      "post_patent_revenue_target": 120000000,
+      "market_growth_patent": 0.03,
+      "market_growth_post": -0.02,
+      "cogs_patent": 0.28,
+      "cogs_post": 0.5,
+      "labor_pct": 0.12,
+      "overhead_pct": 0.08,
+      "material_pct": 0.1,
+      "sales_marketing_pct": 0.18,
+      "gna_pct": 0.12,
+      "rd_remaining_pre_launch": 220000000,
+      "rd_annual_post_launch": 15000000,
+      "capex_remaining_pre_launch": 70000000,
+      "capex_annual_post_launch": 7500000
+    }
+  ],
+  "Pre-clinical platform": [
+    {
+      "name": "Platform-Preclinical",
+      "stage": "Preclinical",
+      "success_prob": 0.2,
+      "include_in_consolidation": true,
+      "time_to_market": 6,
+      "patent_years": 15,
+      "patent_revenue_target": 150000000,
+      "post_patent_revenue_target": 80000000,
+      "market_growth_patent": 0.04,
+      "market_growth_post": 0.0,
+      "cogs_patent": 0.3,
+      "cogs_post": 0.55,
+      "labor_pct": 0.14,
+      "overhead_pct": 0.1,
+      "material_pct": 0.12,
+      "sales_marketing_pct": 0.16,
+      "gna_pct": 0.12,
+      "rd_remaining_pre_launch": 280000000,
+      "rd_annual_post_launch": 10000000,
+      "capex_remaining_pre_launch": 40000000,
+      "capex_annual_post_launch": 5000000
+    }
+  ],
+  "Commercial asset": [
+    {
+      "name": "Commercial-Asset",
+      "stage": "Commercial",
+      "success_prob": 1.0,
+      "include_in_consolidation": true,
+      "time_to_market": 0,
+      "patent_years": 8,
+      "patent_revenue_target": 300000000,
+      "post_patent_revenue_target": 140000000,
+      "market_growth_patent": 0.02,
+      "market_growth_post": -0.03,
+      "cogs_patent": 0.25,
+      "cogs_post": 0.45,
+      "labor_pct": 0.1,
+      "overhead_pct": 0.08,
+      "material_pct": 0.08,
+      "sales_marketing_pct": 0.14,
+      "gna_pct": 0.1,
+      "rd_remaining_pre_launch": 0.0,
+      "rd_annual_post_launch": 8000000,
+      "capex_remaining_pre_launch": 0.0,
+      "capex_annual_post_launch": 6000000
+    }
+  ]
+}

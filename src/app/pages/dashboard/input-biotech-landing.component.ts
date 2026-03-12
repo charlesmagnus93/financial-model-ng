@@ -205,7 +205,7 @@ export class InputBiotechLandingComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.resetForm();
+    this.initializeForm();
   }
 
   get currentSectionIndex(): number {
@@ -299,9 +299,8 @@ export class InputBiotechLandingComponent implements OnInit {
     });
   }
 
-  private resetForm(): void {
+  private initializeForm(): void {
     this.biotechModelService.clearValidationErrors();
-    this.biotechModelService.clearInput();
     this.refreshForms();
   }
 

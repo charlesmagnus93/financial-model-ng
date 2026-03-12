@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { AVAILABLE_MODELS, ModelOption } from './model-options';
 import { PharmaModelService } from '../services/pharma-model.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -132,10 +133,16 @@ export class Dashboard implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute, 
     private router: Router,
-    private pharmaModelService: PharmaModelService
+    private pharmaModelService: PharmaModelService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    const email = this.authService.user()?.email;
+    if (email) {
+      this.pharmaModelService.checkSubscriptionStatus(email);
+    }
+
     this.queryParamSub = this.route.queryParamMap.subscribe((params) => {
       const section = params.get('section');
       const trxref = params.get('trxref');
@@ -146,7 +153,6 @@ export class Dashboard implements OnInit, OnDestroy {
 
       const refValue = reference || trxref;
       if (refValue) {
-        console.log('Reference param:', refValue);
         this.pharmaModelService.verifySubscription(refValue).subscribe({
           next: (response) => {
             if (response?.is_active) {

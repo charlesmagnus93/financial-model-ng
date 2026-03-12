@@ -1,0 +1,1 @@
+var o=[{id:"pharma-model",code:"pharma",name:"Pharmaceutical Model",description:"Input assumptions, forecasts, and dashboards for pharma.",route:"/dashboard/pharma-input-landing"},{id:"biotech-model",code:"biotech",name:"Biotech Model",description:"Input assumptions, forecasts, and dashboards for biotech.",route:"/dashboard/biotech-input-landing"}];export{o as a};

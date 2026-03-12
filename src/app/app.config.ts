@@ -13,6 +13,25 @@ import { GoogleLoginProvider, SocialAuthServiceConfig } from '@abacritt/angularx
 
 import { routes } from './app.routes';
 import { authInterceptor } from './pages/services/auth.interceptor';
+import { environment } from '../environments/environment';
+
+const socialAuthConfig: SocialAuthServiceConfig = {
+  autoLogin: false,
+  providers: environment.googleClientId
+    ? [
+        {
+          id: GoogleLoginProvider.PROVIDER_ID,
+          provider: new GoogleLoginProvider(environment.googleClientId, {
+            oneTapEnabled: false,
+            scopes: 'openid profile email',
+          }),
+        },
+      ]
+    : [],
+  onError: (err) => {
+    console.error('Google OAuth Error:', err);
+  },
+};
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -31,24 +50,7 @@ export const appConfig: ApplicationConfig = {
     providePrimeNG({ theme: { preset: Aura, options: { darkModeSelector: '.app-dark' } } }),
     {
       provide: 'SocialAuthServiceConfig',
-      useValue: {
-        autoLogin: false,
-        providers: [
-          {
-            id: GoogleLoginProvider.PROVIDER_ID,
-            provider: new GoogleLoginProvider(
-              'YOUR_GOOGLE_CLIENT_ID', // Replace with your Google Client ID
-              {
-                oneTapEnabled: false,
-                scopes: 'openid profile email'
-              }
-            )
-          }
-        ],
-        onError: (err) => {
-          console.error('Google OAuth Error:', err);
-        }
-      } as SocialAuthServiceConfig,
+      useValue: socialAuthConfig,
     }
   ]
 };
