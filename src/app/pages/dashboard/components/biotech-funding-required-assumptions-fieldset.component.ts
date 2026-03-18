@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { FieldsetModule } from 'primeng/fieldset';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { CheckboxModule } from 'primeng/checkbox';
 import { BiotechModelService } from '../../services/biotech-model.service';
 
 @Component({
@@ -13,6 +15,7 @@ import { BiotechModelService } from '../../services/biotech-model.service';
     FormsModule,
     FieldsetModule,
     InputNumberModule,
+    CheckboxModule,
   ],
   template: `
     <p-fieldset legend="Funding required" [toggleable]="true" class="w-full">
@@ -20,7 +23,7 @@ import { BiotechModelService } from '../../services/biotech-model.service';
         <label class="text-xs font-semibold">Total funding required</label>
         <p-inputnumber
           [(ngModel)]="totalFundingRequired"
-          (ngModelChange)="updateFundingRequired()"
+          (ngModelChange)="persist()"
           [showButtons]="true"
           [min]="0"
           [useGrouping]="true"
@@ -31,17 +34,30 @@ import { BiotechModelService } from '../../services/biotech-model.service';
   `,
 })
 export class BiotechFundingRequiredAssumptionsFieldsetComponent
-  implements OnInit
+  implements OnInit, OnDestroy
 {
+  private readonly destroy$ = new Subject<void>();
+
   totalFundingRequired = 0;
+  cashBurn = 0;
+  workingCapitalDraw = 0;
 
   constructor(private biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
     this.syncFromModel();
+    this.biotechModelService.input$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.syncFromModel());
   }
 
-  updateFundingRequired(): void {
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  persist(): void {
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
     this.biotechModelService.patchInput({
       funding_required: Number(this.totalFundingRequired ?? 0),
     });

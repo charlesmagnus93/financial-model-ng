@@ -1,5 +1,4 @@
 import { Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import {
   BehaviorSubject,
   Observable,
@@ -7,6 +6,7 @@ import {
   map,
   shareReplay,
   switchMap,
+  take,
   tap,
   throwError,
 } from 'rxjs';
@@ -35,13 +35,19 @@ export class BiotechModelService {
   output$ = this.outputSubject.asObservable();
 
   private defaultsRequest?: Observable<any>;
+  private defaultsTemplate: any | null = null;
 
-  constructor(private api: ApiService, private http: HttpClient) {
+  constructor(private api: ApiService) {
     this.loadFromStorage();
+    this.hydrateInputWithDefaults();
   }
 
   getInputSnapshot(): any {
-    return this.inputSubject.getValue();
+    const current = this.inputSubject.getValue();
+    if (!this.defaultsTemplate) {
+      return current;
+    }
+    return this.mergeWithDefaults(current, this.defaultsTemplate);
   }
 
   getOutputSnapshot(): any {
@@ -63,14 +69,23 @@ export class BiotechModelService {
   }
 
   loadDefaults(): Observable<void> {
+    return this.getDefaultsTemplate().pipe(
+      tap((defaults) => {
+        this.defaultsTemplate = defaults;
+        this.setInput(defaults);
+      }),
+      map(() => undefined)
+    );
+  }
+
+  getDefaultsTemplate(): Observable<any> {
     if (!this.defaultsRequest) {
-      this.defaultsRequest = this.http
-        .get<any>('assets/biotech_input.json')
+      this.defaultsRequest = this.api
+        .get<any>('/inputs/biotech_v2/default')
         .pipe(shareReplay(1));
     }
     return this.defaultsRequest.pipe(
-      tap((defaults) => this.setInput(JSON.parse(JSON.stringify(defaults)))),
-      map(() => undefined)
+      map((defaults) => JSON.parse(JSON.stringify(defaults)))
     );
   }
 
@@ -98,7 +113,7 @@ export class BiotechModelService {
     const payload = { inputs: this.getInputSnapshot() };
     // console.log('Running Biotech Model with payload:', payload);
     this.validationErrors.set([]);
-    return this.api.post('/inputs/biotech/validate', payload).pipe(
+    return this.api.post('/inputs/biotech_v2/validate', payload).pipe(
       catchError((error) => {
         const issues = this.extractValidationIssues(error);
         if (issues.length) {
@@ -114,7 +129,7 @@ export class BiotechModelService {
           );
         }
         return this.api
-          .post('/model/biotech/run', payload)
+          .post('/model/biotech_v2/run', payload)
           .pipe(
             tap((response) => this.setOutput(response)),
             tap(() => this.validationErrors.set([]))
@@ -175,6 +190,23 @@ export class BiotechModelService {
     if (storedOutput) {
       this.outputSubject.next(storedOutput);
     }
+  }
+
+  private hydrateInputWithDefaults(): void {
+    this.getDefaultsTemplate()
+      .pipe(take(1))
+      .subscribe({
+        next: (defaults) => {
+          this.defaultsTemplate = defaults;
+          const current = this.inputSubject.getValue() ?? {};
+          const merged = this.mergeWithDefaults(current, defaults);
+          this.inputSubject.next(merged);
+          this.persist(INPUT_STORAGE_KEY, merged);
+        },
+        error: () => {
+          // Keep the current snapshot when defaults cannot be loaded.
+        },
+      });
   }
 
   private persist(key: string, value: unknown): void {
@@ -510,6 +542,65 @@ export class BiotechModelService {
     const num = Number(match[1] ?? 0);
     if (!Number.isFinite(num)) return null;
     return num > 1 ? num / 100 : num;
+  }
+
+  private mergeWithDefaults(current: any, defaults: any): any {
+    if (Array.isArray(defaults)) {
+      const currentArray = Array.isArray(current) ? current : [];
+      const merged = defaults.map((defaultItem, index) =>
+        this.mergeWithDefaults(currentArray[index], defaultItem)
+      );
+      if (currentArray.length > defaults.length) {
+        for (let i = defaults.length; i < currentArray.length; i += 1) {
+          merged.push(this.cloneValue(currentArray[i]));
+        }
+      }
+      return merged;
+    }
+
+    if (defaults && typeof defaults === 'object') {
+      const currentObject =
+        current && typeof current === 'object' && !Array.isArray(current)
+          ? current
+          : {};
+      const result: Record<string, unknown> = {};
+
+      for (const key of Object.keys(currentObject)) {
+        if (Object.prototype.hasOwnProperty.call(defaults, key)) {
+          result[key] = this.mergeWithDefaults(currentObject[key], defaults[key]);
+        } else {
+          result[key] = this.cloneValue(currentObject[key]);
+        }
+      }
+
+      for (const key of Object.keys(defaults)) {
+        if (!Object.prototype.hasOwnProperty.call(result, key)) {
+          result[key] = this.mergeWithDefaults(undefined, defaults[key]);
+        }
+      }
+
+      return result;
+    }
+
+    if (current === undefined || current === null) {
+      return this.cloneValue(defaults);
+    }
+
+    return current;
+  }
+
+  private cloneValue(value: any): any {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.cloneValue(item));
+    }
+    if (value && typeof value === 'object') {
+      const cloned: Record<string, unknown> = {};
+      for (const key of Object.keys(value)) {
+        cloned[key] = this.cloneValue(value[key]);
+      }
+      return cloned;
+    }
+    return value;
   }
 
   private formatId(value: number): string {

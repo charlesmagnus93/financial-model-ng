@@ -8,6 +8,9 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SliderModule } from 'primeng/slider';
 import { Subject, takeUntil } from 'rxjs';
 import { BiotechModelService } from '../../services/biotech-model.service';
+import { BiotechStartHereGuidedSetupFieldsetComponent } from './biotech-start-here-guided-setup-fieldset.component';
+import { BiotechPipelineStageTemplatesFieldsetComponent } from './biotech-pipeline-stage-templates-fieldset.component';
+import { BiotechStageToScheduleMappingFieldsetComponent } from './biotech-stage-to-schedule-mapping-fieldset.component';
 
 @Component({
   standalone: true,
@@ -20,8 +23,15 @@ import { BiotechModelService } from '../../services/biotech-model.service';
     InputTextModule,
     ReactiveFormsModule,
     SliderModule,
+    BiotechStartHereGuidedSetupFieldsetComponent,
+    BiotechPipelineStageTemplatesFieldsetComponent,
+    BiotechStageToScheduleMappingFieldsetComponent,
   ],
   template: `
+    <biotech-start-here-guided-setup-fieldset></biotech-start-here-guided-setup-fieldset>
+    <biotech-pipeline-stage-templates-fieldset></biotech-pipeline-stage-templates-fieldset>
+    <biotech-stage-to-schedule-mapping-fieldset></biotech-stage-to-schedule-mapping-fieldset>
+
     <p-fieldset legend="General assumptions" [toggleable]="true" class="w-full">
       <form [formGroup]="generalForm" class="grid grid-cols-12 gap-4">
         <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
@@ -35,20 +45,21 @@ import { BiotechModelService } from '../../services/biotech-model.service';
         </div>
         <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
           <label class="text-sm font-semibold">Tax rate</label>
-          <p-slider
+          <!-- <p-slider
             formControlName="taxRate"
-            [min]="0"
-            [max]="1"
-            [step]="0.01"
+            [min]="this.taxRateMin"
+            [max]="this.taxRateMax"
+            [step]="this.taxRateStep"
             class="mt-2"
-          ></p-slider>
+          ></p-slider> -->
           <p-inputnumber
             formControlName="taxRate"
-            [min]="0"
-            [max]="1"
-            [step]="0.01"
+            [min]="this.taxRateMin"
+            [max]="this.taxRateMax"
+            [step]="this.taxRateStep"
             [minFractionDigits]="2"
             [maxFractionDigits]="4"
+            [showButtons]="true"
             inputStyleClass="w-full"
           />
         </div>
@@ -61,7 +72,9 @@ import { BiotechModelService } from '../../services/biotech-model.service';
             [step]="0.01"
             [minFractionDigits]="2"
             [maxFractionDigits]="4"
+            [showButtons]="true"
             inputStyleClass="w-full"
+            mode="decimal"
           />
         </div>
         <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
@@ -76,20 +89,21 @@ import { BiotechModelService } from '../../services/biotech-model.service';
         </div>
         <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
           <label class="text-sm font-semibold">Working capital (% sales)</label>
-          <p-slider
+          <!-- <p-slider
             formControlName="workingCapitalPct"
             [min]="0"
             [max]="1"
             [step]="0.01"
             class="mt-2"
-          ></p-slider>
+          ></p-slider> -->
           <p-inputnumber
             formControlName="workingCapitalPct"
-            [min]="0"
-            [max]="1"
-            [step]="0.01"
+            [min]="this.workingCapitalPctMin"
+            [max]="this.workingCapitalPctMax"
+            [step]="this.workingCapitalPctStep"
             [minFractionDigits]="2"
             [maxFractionDigits]="4"
+            [showButtons]="true"
             inputStyleClass="w-full"
           />
         </div>
@@ -117,6 +131,13 @@ import { BiotechModelService } from '../../services/biotech-model.service';
 export class BiotechGeneralAssumptionsFieldsetComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   generalForm: FormGroup;
+  taxRateMin = 0.0;
+  taxRateMax = 0.35;
+  taxRateStep = 0.01;
+
+  workingCapitalPctMin = 0;
+  workingCapitalPctMax = 1;
+  workingCapitalPctStep = 0.01;
 
   constructor(
     private biotechModelService: BiotechModelService,

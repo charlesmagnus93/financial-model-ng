@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angul
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { FieldsetModule } from 'primeng/fieldset';
+import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
@@ -20,8 +21,16 @@ interface VaccineResearchRow {
 
 interface IncrementHelper {
   column: 'preGtmSpentUsd' | 'preGtmRemainingUsd' | 'postGtmAnnualCostUsd';
+  startRow: number;
   incrementPerYear: number;
   yearsToApply: number;
+  compound: boolean;
+}
+
+interface HelperColumnOption {
+  sourceKey: string;
+  label: string;
+  value: IncrementHelper['column'];
 }
 
 @Component({
@@ -34,6 +43,7 @@ interface IncrementHelper {
     ButtonModule,
     SelectModule,
     FieldsetModule,
+    CheckboxModule,
     InputNumberModule,
     InputTextModule,
     TableModule,
@@ -76,57 +86,43 @@ interface IncrementHelper {
           <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
             <div class="text-xs text-surface-600 font-semibold">Edit selected row</div>
             <form [formGroup]="rowForm" class="flex flex-col gap-2">
-              <div class="grid grid-cols-12 gap-3 items-end">
-                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
-                  <label class="text-xs font-semibold">ID_vaccine</label>
-                  <input pInputText formControlName="id" class="w-full" />
-                  <label class="text-xs font-semibold">Vaccine name</label>
-                  <input pInputText formControlName="name" class="w-full" />
-                  <label class="text-xs font-semibold">Cost accounting (capitalisation)</label>
-                  <input pInputText formControlName="costAccounting" class="w-full" />
-                  <label class="text-xs font-semibold">Pre-GTM spent to date (USD)</label>
-                  <p-inputnumber
-                    formControlName="preGtmSpentUsd"
-                    [showButtons]="true"
-                    [min]="0"
-                    [useGrouping]="true"
-                    inputStyleClass="w-full"
-                  />
-                </div>
-                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
-                  <label class="text-xs font-semibold">Pre-GTM remaining (USD)</label>
-                  <p-inputnumber
-                    formControlName="preGtmRemainingUsd"
-                    [showButtons]="true"
-                    [min]="0"
-                    [useGrouping]="true"
-                    inputStyleClass="w-full"
-                  />
-                  <label class="text-xs font-semibold">Post-GTM annual cost (USD/year)</label>
-                  <p-inputnumber
-                    formControlName="postGtmAnnualCostUsd"
-                    [showButtons]="true"
-                    [min]="0"
-                    [useGrouping]="true"
-                    inputStyleClass="w-full"
-                  />
-                  <label class="text-xs font-semibold">Pre-GTM total (USD)</label>
-                  <p-inputnumber
-                    [ngModel]="preGtmTotal(rowFormValue)"
-                    [ngModelOptions]="{ standalone: true }"
-                    [disabled]="false"
-                    [showButtons]="true"
-                    [useGrouping]="true"
-                    inputStyleClass="w-full"
-                  />
-                  <label class="text-xs font-semibold d-">&nbsp;</label>
-                  <p-button
-                    label="Save changes"
-                    [outlined]="true"
-                    (onClick)="saveSelectedRow()"
-                    fluid
-                  ></p-button>
-                </div>
+              <div class="flex flex-col gap-4">
+                <label class="text-xs font-semibold">ID_vaccine</label>
+                <input pInputText formControlName="id" class="w-full" />
+                <label class="text-xs font-semibold">Vaccine name</label>
+                <input pInputText formControlName="name" class="w-full" />
+                <label class="text-xs font-semibold">Cost accounting (capitalisation)</label>
+                <input pInputText formControlName="costAccounting" class="w-full" />
+                <label class="text-xs font-semibold">Pre-GTM spent to date (USD)</label>
+                <p-inputnumber
+                  formControlName="preGtmSpentUsd"
+                  [showButtons]="true"
+                  [min]="0"
+                  [useGrouping]="true"
+                  inputStyleClass="w-full"
+                />
+                <label class="text-xs font-semibold">Pre-GTM remaining (USD)</label>
+                <p-inputnumber
+                  formControlName="preGtmRemainingUsd"
+                  [showButtons]="true"
+                  [min]="0"
+                  [useGrouping]="true"
+                  inputStyleClass="w-full"
+                />
+                <label class="text-xs font-semibold">Post-GTM annual cost (USD/year)</label>
+                <p-inputnumber
+                  formControlName="postGtmAnnualCostUsd"
+                  [showButtons]="true"
+                  [min]="0"
+                  [useGrouping]="true"
+                  inputStyleClass="w-full"
+                />
+                <p-button
+                  label="Save changes"
+                  [outlined]="true"
+                  (onClick)="saveSelectedRow()"
+                  fluid
+                ></p-button>
               </div>
             </form>
           </div>
@@ -134,57 +130,43 @@ interface IncrementHelper {
           <div class="col-span-12 lg:col-span-4 rounded border border-surface-700 p-3 flex flex-col gap-2">
             <div class="text-xs text-surface-600 font-semibold">Add a new row</div>
             <form [formGroup]="newRowForm" class="flex flex-col gap-2">
-              <div class="grid grid-cols-12 gap-3 items-end">
-                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
-                  <label class="text-xs font-semibold">ID_vaccine</label>
-                  <input pInputText formControlName="id" class="w-full" />
-                  <label class="text-xs font-semibold">Vaccine name</label>
-                  <input pInputText formControlName="name" class="w-full" />
-                  <label class="text-xs font-semibold">Cost accounting (capitalisation)</label>
-                  <input pInputText formControlName="costAccounting" class="w-full" />
-                  <label class="text-xs font-semibold">Pre-GTM spent to date (USD)</label>
-                  <p-inputnumber
-                    formControlName="preGtmSpentUsd"
-                    [showButtons]="true"
-                    [min]="0"
-                    [useGrouping]="true"
-                    inputStyleClass="w-full"
-                  />
-                </div>
-                <div class="col-span-12 lg:col-span-6 flex flex-col gap-4">
-                  <label class="text-xs font-semibold">Pre-GTM remaining (USD)</label>
-                  <p-inputnumber
-                    formControlName="preGtmRemainingUsd"
-                    [showButtons]="true"
-                    [min]="0"
-                    [useGrouping]="true"
-                    inputStyleClass="w-full"
-                  />
-                  <label class="text-xs font-semibold">Post-GTM annual cost (USD/year)</label>
-                  <p-inputnumber
-                    formControlName="postGtmAnnualCostUsd"
-                    [showButtons]="true"
-                    [min]="0"
-                    [useGrouping]="true"
-                    inputStyleClass="w-full"
-                  />
-                  <label class="text-xs font-semibold">Pre-GTM total (USD)</label>
-                  <p-inputnumber
-                    [ngModel]="preGtmTotal(newRowFormValue)"
-                    [ngModelOptions]="{ standalone: true }"
-                    [disabled]="false"
-                    [showButtons]="true"
-                    [useGrouping]="true"
-                    inputStyleClass="w-full"
-                  />
-                  <label class="text-xs font-semibold d-">&nbsp;</label>
-                  <p-button
-                    label="Add row"
-                    [outlined]="true"
-                    (onClick)="addRow()"
-                    fluid
-                  ></p-button>
-                </div>
+              <div class="flex flex-col gap-4">
+                <label class="text-xs font-semibold">ID_vaccine</label>
+                <input pInputText formControlName="id" class="w-full" />
+                <label class="text-xs font-semibold">Vaccine name</label>
+                <input pInputText formControlName="name" class="w-full" />
+                <label class="text-xs font-semibold">Cost accounting (capitalisation)</label>
+                <input pInputText formControlName="costAccounting" class="w-full" />
+                <label class="text-xs font-semibold">Pre-GTM spent to date (USD)</label>
+                <p-inputnumber
+                  formControlName="preGtmSpentUsd"
+                  [showButtons]="true"
+                  [min]="0"
+                  [useGrouping]="true"
+                  inputStyleClass="w-full"
+                />
+                <label class="text-xs font-semibold">Pre-GTM remaining (USD)</label>
+                <p-inputnumber
+                  formControlName="preGtmRemainingUsd"
+                  [showButtons]="true"
+                  [min]="0"
+                  [useGrouping]="true"
+                  inputStyleClass="w-full"
+                />
+                <label class="text-xs font-semibold">Post-GTM annual cost (USD/year)</label>
+                <p-inputnumber
+                  formControlName="postGtmAnnualCostUsd"
+                  [showButtons]="true"
+                  [min]="0"
+                  [useGrouping]="true"
+                  inputStyleClass="w-full"
+                />
+                <p-button
+                  label="Add row"
+                  [outlined]="true"
+                  (onClick)="addRow()"
+                  fluid
+                ></p-button>
               </div>
             </form>
           </div>
@@ -192,6 +174,11 @@ interface IncrementHelper {
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
+              <p class="text-xs text-surface-500">
+                Apply a fixed change or % growth from a start year onward. "Increment per year" is
+                the step size (or growth rate when compounding). "Years to apply" controls how many
+                consecutive rows are updated.
+              </p>
               <label class="text-xs font-semibold">Column</label>
               <p-select
                 [options]="helperColumnOptions"
@@ -200,13 +187,12 @@ interface IncrementHelper {
                 optionValue="value"
                 class="w-full"
               ></p-select>
-              <label class="text-xs font-semibold">Increment per year</label>
+              <label class="text-xs font-semibold">Start row</label>
               <p-inputnumber
-                [(ngModel)]="helper.incrementPerYear"
+                [(ngModel)]="helper.startRow"
                 [showButtons]="true"
-                [step]="1"
-                [minFractionDigits]="2"
-                [maxFractionDigits]="2"
+                [min]="0"
+                [useGrouping]="false"
                 inputStyleClass="w-full"
               />
               <label class="text-xs font-semibold">Years to apply</label>
@@ -217,8 +203,20 @@ interface IncrementHelper {
                 [useGrouping]="false"
                 inputStyleClass="w-full"
               />
-              <div class="text-xs text-surface-500">
-                Current value: {{ currentHelperValue | number: '1.0-0' }}
+              <label class="text-xs font-semibold">Increment per year</label>
+              <p-inputnumber
+                [(ngModel)]="helper.incrementPerYear"
+                [showButtons]="true"
+                [step]="0.01"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                inputStyleClass="w-full"
+              />
+              <div class="flex items-center gap-2 mt-1">
+                <p-checkbox [(ngModel)]="helper.compound" [binary]="true"></p-checkbox>
+                <label class="text-xs font-semibold">
+                  Compound annually (apply % growth)
+                </label>
               </div>
               <p-button
                 label="Apply increment"
@@ -241,7 +239,6 @@ interface IncrementHelper {
                 <th>Pre-GTM spent to date (USD)</th>
                 <th>Pre-GTM remaining (USD)</th>
                 <th>Post-GTM annual cost (USD/year)</th>
-                <th>Pre-GTM total (USD)</th>
               </tr>
             </ng-template>
             <ng-template #body let-row>
@@ -252,7 +249,6 @@ interface IncrementHelper {
                 <td>{{ row.preGtmSpentUsd | number: '1.0-0' }}</td>
                 <td>{{ row.preGtmRemainingUsd | number: '1.0-0' }}</td>
                 <td>{{ row.postGtmAnnualCostUsd | number: '1.0-0' }}</td>
-                <td>{{ preGtmTotal(row) | number: '1.0-0' }}</td>
               </tr>
             </ng-template>
           </p-table>
@@ -262,6 +258,7 @@ interface IncrementHelper {
           <p-table [value]="summaryRows" showGridlines class="text-sm" [size]="'small'">
             <ng-template #header>
               <tr>
+                <th style="width: 3rem"></th>
                 <th>ID_vaccine</th>
                 <th>Vaccine name</th>
                 <th>Cost accounting (capitalisation)</th>
@@ -271,8 +268,9 @@ interface IncrementHelper {
                 <th>Post-GTM annual cost (USD/year)</th>
               </tr>
             </ng-template>
-            <ng-template #body let-row>
+            <ng-template #body let-row let-rowIndex="rowIndex">
               <tr>
+                <td class="text-right">{{ rowIndex }}</td>
                 <td>{{ row.id }}</td>
                 <td>{{ row.name }}</td>
                 <td>{{ row.costAccounting }}</td>
@@ -295,14 +293,29 @@ export class BiotechProductVaccineResearchDevFieldsetComponent implements OnInit
   newRowForm: FormGroup;
   helper: IncrementHelper = {
     column: 'preGtmSpentUsd',
+    startRow: 0,
     incrementPerYear: 1,
     yearsToApply: 1,
+    compound: false,
   };
 
-  helperColumnOptions = [
-    { label: 'Pre-GTM spent to date (USD)', value: 'preGtmSpentUsd' },
-    { label: 'Pre-GTM remaining (USD)', value: 'preGtmRemainingUsd' },
-    { label: 'Post-GTM annual cost (USD/year)', value: 'postGtmAnnualCostUsd' },
+  helperColumnOptions: Array<Pick<HelperColumnOption, 'label' | 'value'>> = [];
+  private readonly helperColumnDefinitions: HelperColumnOption[] = [
+    {
+      sourceKey: 'Pre-GTM spent to date (USD)',
+      label: 'Pre-GTM spent to date (USD)',
+      value: 'preGtmSpentUsd',
+    },
+    {
+      sourceKey: 'Pre-GTM remaining (USD)',
+      label: 'Pre-GTM remaining (USD)',
+      value: 'preGtmRemainingUsd',
+    },
+    {
+      sourceKey: 'Post-GTM annual cost (USD/year)',
+      label: 'Post-GTM annual cost (USD/year)',
+      value: 'postGtmAnnualCostUsd',
+    },
   ];
 
   constructor(
@@ -329,6 +342,7 @@ export class BiotechProductVaccineResearchDevFieldsetComponent implements OnInit
 
   ngOnInit(): void {
     this.syncFromModel();
+    this.refreshHelperColumnOptions();
   }
 
   get rowOptions() {
@@ -336,14 +350,6 @@ export class BiotechProductVaccineResearchDevFieldsetComponent implements OnInit
       label: row.name ? `${row.id} - ${row.name}` : row.id,
       value: row.id,
     }));
-  }
-
-  get currentHelperValue(): number {
-    const row = this.getSelectedRow();
-    if (!row) {
-      return 0;
-    }
-    return Number(row[this.helper.column] ?? 0);
   }
 
   get rowFormValue(): VaccineResearchRow {
@@ -439,14 +445,10 @@ export class BiotechProductVaccineResearchDevFieldsetComponent implements OnInit
   }
 
   applyIncrement(): void {
-    const startRow = this.getSelectedRow();
-    if (!startRow) {
-      return;
-    }
+    const startIndex = Math.max(0, Math.floor(this.helper.startRow || 0));
     const years = Math.max(1, Math.floor(this.helper.yearsToApply || 0));
     const increment = Number(this.helper.incrementPerYear || 0);
-    const startIndex = this.rows.findIndex((row) => row.id === startRow.id);
-    if (startIndex === -1) {
+    if (startIndex >= this.rows.length) {
       return;
     }
     const updated = [...this.rows];
@@ -457,7 +459,11 @@ export class BiotechProductVaccineResearchDevFieldsetComponent implements OnInit
       }
       const row = { ...updated[idx] };
       const key = this.helper.column;
-      row[key] = Number(row[key] ?? 0) + increment;
+      const current = Number(row[key] ?? 0);
+      const nextValue = this.helper.compound
+        ? current * (1 + increment / 100)
+        : current + increment;
+      row[key] = Math.max(0, nextValue);
       updated[idx] = row;
     }
     this.rows = updated;
@@ -483,7 +489,8 @@ export class BiotechProductVaccineResearchDevFieldsetComponent implements OnInit
   }
 
   private syncFromModel(): void {
-    const stored = this.biotechModelService.getInputSnapshot()?.vaccine_rd;
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const stored = snapshot?.vaccine_rd;
     if (Array.isArray(stored) && stored.length) {
       this.rows = stored.map((row: any) => ({
         id: String(row?.ID_vaccine ?? ''),
@@ -496,6 +503,7 @@ export class BiotechProductVaccineResearchDevFieldsetComponent implements OnInit
       this.selectedRowId = this.rows[0]?.id ?? '';
       this.syncSelectedRow();
     }
+    this.refreshHelperColumnOptions(snapshot);
     this.resetNewRow();
   }
 
@@ -519,6 +527,43 @@ export class BiotechProductVaccineResearchDevFieldsetComponent implements OnInit
       preGtmRemainingUsd: 10000000,
       postGtmAnnualCostUsd: 500000,
     });
+  }
+
+  private refreshHelperColumnOptions(snapshot?: any): void {
+    const sourceSnapshot = snapshot ?? this.biotechModelService.getInputSnapshot() ?? {};
+    const vaccineRdRows = Array.isArray(sourceSnapshot?.vaccine_rd)
+      ? sourceSnapshot.vaccine_rd
+      : [];
+
+    const availableKeys = new Set<string>();
+    vaccineRdRows.forEach((row: any) => {
+      Object.keys(row ?? {}).forEach((key) => {
+        const normalized = String(key ?? '').trim();
+        if (normalized) {
+          availableKeys.add(normalized);
+        }
+      });
+    });
+
+    const optionsFromData = this.helperColumnDefinitions
+      .filter((definition) => availableKeys.has(definition.sourceKey))
+      .map((definition) => ({
+        label: definition.label,
+        value: definition.value,
+      }));
+
+    this.helperColumnOptions =
+      optionsFromData.length > 0
+        ? optionsFromData
+        : this.helperColumnDefinitions.map((definition) => ({
+            label: definition.label,
+            value: definition.value,
+          }));
+
+    const allowedColumns = this.helperColumnOptions.map((item) => item.value);
+    if (!allowedColumns.includes(this.helper.column)) {
+      this.helper.column = this.helperColumnOptions[0]?.value ?? 'preGtmSpentUsd';
+    }
   }
 }
 

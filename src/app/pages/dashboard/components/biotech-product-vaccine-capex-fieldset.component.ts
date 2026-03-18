@@ -4,10 +4,14 @@ import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angul
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { FieldsetModule } from 'primeng/fieldset';
+import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
+import { DividerModule } from 'primeng/divider';
 import { BiotechModelService } from '../../services/biotech-model.service';
+import { BiotechProductSharedCapexPoolsFieldsetComponent } from './biotech-product-shared-capex-pools-fieldset.component';
+import { BiotechProductSharedCapexAllocationWeightsFieldsetComponent } from './biotech-product-shared-capex-allocation-weights-fieldset.component';
 
 interface VaccineCapexRow {
   id: string;
@@ -19,8 +23,16 @@ interface VaccineCapexRow {
 
 interface IncrementHelper {
   column: 'preGtmCapexSpentUsd' | 'preGtmCapexRemainingUsd' | 'postGtmYearlyCapexUsd';
+  startRow: number;
   incrementPerYear: number;
   yearsToApply: number;
+  compound: boolean;
+}
+
+interface HelperColumnOption {
+  sourceKey: string;
+  label: string;
+  value: IncrementHelper['column'];
 }
 
 @Component({
@@ -33,9 +45,13 @@ interface IncrementHelper {
     ButtonModule,
     SelectModule,
     FieldsetModule,
+    CheckboxModule,
     InputNumberModule,
     InputTextModule,
     TableModule,
+    DividerModule,
+    BiotechProductSharedCapexPoolsFieldsetComponent,
+    BiotechProductSharedCapexAllocationWeightsFieldsetComponent,
   ],
   template: `
     <p-fieldset
@@ -43,6 +59,9 @@ interface IncrementHelper {
       [toggleable]="true"
       class="w-full"
     >
+      <biotech-product-shared-capex-pools-fieldset></biotech-product-shared-capex-pools-fieldset>
+      <biotech-product-shared-capex-allocation-weights-fieldset></biotech-product-shared-capex-allocation-weights-fieldset>
+      <p-divider />
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-12 gap-3 items-end">
           <div class="col-span-12 lg:col-span-6 flex flex-col gap-2">
@@ -103,14 +122,6 @@ interface IncrementHelper {
                 [useGrouping]="true"
                 inputStyleClass="w-full"
               />
-              <label class="text-xs font-semibold">Total Pre-GTM capex (USD)</label>
-              <p-inputnumber
-                [ngModel]="preGtmTotal(rowFormValue)"
-                [ngModelOptions]="{ standalone: true }"
-                [disabled]="true"
-                [useGrouping]="true"
-                inputStyleClass="w-full"
-              />
               <p-button
                 label="Save changes"
                 size="small"
@@ -152,14 +163,6 @@ interface IncrementHelper {
                 [useGrouping]="true"
                 inputStyleClass="w-full"
               />
-              <label class="text-xs font-semibold">Total Pre-GTM capex (USD)</label>
-              <p-inputnumber
-                [ngModel]="preGtmTotal(newRowFormValue)"
-                [ngModelOptions]="{ standalone: true }"
-                [disabled]="true"
-                [useGrouping]="true"
-                inputStyleClass="w-full"
-              />
               <p-button
                 label="Add row"
                 size="small"
@@ -173,6 +176,11 @@ interface IncrementHelper {
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
+              <p class="text-xs text-surface-500">
+                Apply a fixed change or % growth from a start year onward. "Increment per year" is
+                the step size (or growth rate when compounding). "Years to apply" controls how many
+                consecutive rows are updated.
+              </p>
               <label class="text-xs font-semibold">Column</label>
               <p-select
                 [options]="helperColumnOptions"
@@ -181,13 +189,12 @@ interface IncrementHelper {
                 optionValue="value"
                 class="w-full"
               ></p-select>
-              <label class="text-xs font-semibold">Increment per year</label>
+              <label class="text-xs font-semibold">Start row</label>
               <p-inputnumber
-                [(ngModel)]="helper.incrementPerYear"
+                [(ngModel)]="helper.startRow"
                 [showButtons]="true"
-                [step]="1"
-                [minFractionDigits]="2"
-                [maxFractionDigits]="2"
+                [min]="0"
+                [useGrouping]="false"
                 inputStyleClass="w-full"
               />
               <label class="text-xs font-semibold">Years to apply</label>
@@ -198,8 +205,20 @@ interface IncrementHelper {
                 [useGrouping]="false"
                 inputStyleClass="w-full"
               />
-              <div class="text-xs text-surface-500">
-                Current value: {{ currentHelperValue | number: '1.0-0' }}
+              <label class="text-xs font-semibold">Increment per year</label>
+              <p-inputnumber
+                [(ngModel)]="helper.incrementPerYear"
+                [showButtons]="true"
+                [step]="0.01"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                inputStyleClass="w-full"
+              />
+              <div class="flex items-center gap-2 mt-1">
+                <p-checkbox [(ngModel)]="helper.compound" [binary]="true"></p-checkbox>
+                <label class="text-xs font-semibold">
+                  Compound annually (apply % growth)
+                </label>
               </div>
               <p-button
                 label="Apply increment"
@@ -220,7 +239,6 @@ interface IncrementHelper {
                 <th>Vaccine name</th>
                 <th>Pre-GTM capex spent (USD)</th>
                 <th>Pre-GTM capex remaining (USD)</th>
-                <th>Total Pre-GTM capex (USD)</th>
                 <th>Post-GTM yearly capex (USD)</th>
               </tr>
             </ng-template>
@@ -230,7 +248,6 @@ interface IncrementHelper {
                 <td>{{ row.name }}</td>
                 <td>{{ row.preGtmCapexSpentUsd | number: '1.0-0' }}</td>
                 <td>{{ row.preGtmCapexRemainingUsd | number: '1.0-0' }}</td>
-                <td>{{ preGtmTotal(row) | number: '1.0-0' }}</td>
                 <td>{{ row.postGtmYearlyCapexUsd | number: '1.0-0' }}</td>
               </tr>
             </ng-template>
@@ -241,22 +258,20 @@ interface IncrementHelper {
           <p-table [value]="summaryRows" showGridlines class="text-sm" [size]="'small'">
             <ng-template #header>
               <tr>
+                <th style="width: 3rem"></th>
                 <th>ID_vaccine</th>
                 <th>Vaccine name</th>
-                <th>Pre-GTM capex spent (USD)</th>
-                <th>Pre-GTM capex remaining (USD)</th>
                 <th>Total Pre-GTM capex (USD)</th>
-                <th>Post-GTM yearly capex (USD)</th>
+                <th>Total Post-GTM capex (USD/year)</th>
               </tr>
             </ng-template>
-            <ng-template #body let-row>
+            <ng-template #body let-row let-rowIndex="rowIndex">
               <tr>
+                <td class="text-right">{{ rowIndex }}</td>
                 <td>{{ row.id }}</td>
                 <td>{{ row.name }}</td>
-                <td>{{ row.preGtmCapexSpentUsd | number: '1.0-0' }}</td>
-                <td>{{ row.preGtmCapexRemainingUsd | number: '1.0-0' }}</td>
                 <td>{{ row.preGtmTotal | number: '1.0-0' }}</td>
-                <td>{{ row.postGtmYearlyCapexUsd | number: '1.0-0' }}</td>
+                <td>{{ row.totalPostGtmCapexUsd | number: '1.0-0' }}</td>
               </tr>
             </ng-template>
           </p-table>
@@ -272,14 +287,29 @@ export class BiotechProductVaccineCapexFieldsetComponent implements OnInit {
   newRowForm: FormGroup;
   helper: IncrementHelper = {
     column: 'preGtmCapexSpentUsd',
+    startRow: 0,
     incrementPerYear: 1,
     yearsToApply: 1,
+    compound: false,
   };
 
-  helperColumnOptions = [
-    { label: 'Pre-GTM capex spent (USD)', value: 'preGtmCapexSpentUsd' },
-    { label: 'Pre-GTM capex remaining (USD)', value: 'preGtmCapexRemainingUsd' },
-    { label: 'Post-GTM yearly capex (USD)', value: 'postGtmYearlyCapexUsd' },
+  helperColumnOptions: Array<Pick<HelperColumnOption, 'label' | 'value'>> = [];
+  private readonly helperColumnDefinitions: HelperColumnOption[] = [
+    {
+      sourceKey: 'Pre-GTM capex spent (USD)',
+      label: 'Pre-GTM capex spent (USD)',
+      value: 'preGtmCapexSpentUsd',
+    },
+    {
+      sourceKey: 'Pre-GTM capex remaining (USD)',
+      label: 'Pre-GTM capex remaining (USD)',
+      value: 'preGtmCapexRemainingUsd',
+    },
+    {
+      sourceKey: 'Post-GTM yearly capex (USD)',
+      label: 'Post-GTM yearly capex (USD)',
+      value: 'postGtmYearlyCapexUsd',
+    },
   ];
 
   constructor(
@@ -304,6 +334,7 @@ export class BiotechProductVaccineCapexFieldsetComponent implements OnInit {
 
   ngOnInit(): void {
     this.syncFromModel();
+    this.refreshHelperColumnOptions();
   }
 
   get rowOptions() {
@@ -311,14 +342,6 @@ export class BiotechProductVaccineCapexFieldsetComponent implements OnInit {
       label: row.name ? `${row.id} - ${row.name}` : row.id,
       value: row.id,
     }));
-  }
-
-  get currentHelperValue(): number {
-    const row = this.getSelectedRow();
-    if (!row) {
-      return 0;
-    }
-    return Number(row[this.helper.column] ?? 0);
   }
 
   get rowFormValue(): VaccineCapexRow {
@@ -333,10 +356,8 @@ export class BiotechProductVaccineCapexFieldsetComponent implements OnInit {
     return this.rows.map((row) => ({
       id: row.id,
       name: row.name,
-      preGtmCapexSpentUsd: row.preGtmCapexSpentUsd,
-      preGtmCapexRemainingUsd: row.preGtmCapexRemainingUsd,
       preGtmTotal: this.preGtmTotal(row),
-      postGtmYearlyCapexUsd: row.postGtmYearlyCapexUsd,
+      totalPostGtmCapexUsd: row.postGtmYearlyCapexUsd,
     }));
   }
 
@@ -411,14 +432,10 @@ export class BiotechProductVaccineCapexFieldsetComponent implements OnInit {
   }
 
   applyIncrement(): void {
-    const startRow = this.getSelectedRow();
-    if (!startRow) {
-      return;
-    }
+    const startIndex = Math.max(0, Math.floor(this.helper.startRow || 0));
     const years = Math.max(1, Math.floor(this.helper.yearsToApply || 0));
     const increment = Number(this.helper.incrementPerYear || 0);
-    const startIndex = this.rows.findIndex((row) => row.id === startRow.id);
-    if (startIndex === -1) {
+    if (startIndex >= this.rows.length) {
       return;
     }
     const updated = [...this.rows];
@@ -429,7 +446,11 @@ export class BiotechProductVaccineCapexFieldsetComponent implements OnInit {
       }
       const row = { ...updated[idx] };
       const key = this.helper.column;
-      row[key] = Number(row[key] ?? 0) + increment;
+      const current = Number(row[key] ?? 0);
+      const nextValue = this.helper.compound
+        ? current * (1 + increment / 100)
+        : current + increment;
+      row[key] = Math.max(0, nextValue);
       updated[idx] = row;
     }
     this.rows = updated;
@@ -454,7 +475,8 @@ export class BiotechProductVaccineCapexFieldsetComponent implements OnInit {
   }
 
   private syncFromModel(): void {
-    const stored = this.biotechModelService.getInputSnapshot()?.vaccine_capex;
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const stored = snapshot?.vaccine_capex;
     if (Array.isArray(stored) && stored.length) {
       this.rows = stored.map((row: any) => ({
         id: String(row?.ID_vaccine ?? ''),
@@ -466,6 +488,7 @@ export class BiotechProductVaccineCapexFieldsetComponent implements OnInit {
       this.selectedRowId = this.rows[0]?.id ?? '';
       this.syncSelectedRow();
     }
+    this.refreshHelperColumnOptions(snapshot);
     this.resetNewRow();
   }
 
@@ -488,6 +511,43 @@ export class BiotechProductVaccineCapexFieldsetComponent implements OnInit {
       preGtmCapexRemainingUsd: 5000000,
       postGtmYearlyCapexUsd: 2000000,
     });
+  }
+
+  private refreshHelperColumnOptions(snapshot?: any): void {
+    const sourceSnapshot = snapshot ?? this.biotechModelService.getInputSnapshot() ?? {};
+    const vaccineCapexRows = Array.isArray(sourceSnapshot?.vaccine_capex)
+      ? sourceSnapshot.vaccine_capex
+      : [];
+
+    const availableKeys = new Set<string>();
+    vaccineCapexRows.forEach((row: any) => {
+      Object.keys(row ?? {}).forEach((key) => {
+        const normalized = String(key ?? '').trim();
+        if (normalized) {
+          availableKeys.add(normalized);
+        }
+      });
+    });
+
+    const optionsFromData = this.helperColumnDefinitions
+      .filter((definition) => availableKeys.has(definition.sourceKey))
+      .map((definition) => ({
+        label: definition.label,
+        value: definition.value,
+      }));
+
+    this.helperColumnOptions =
+      optionsFromData.length > 0
+        ? optionsFromData
+        : this.helperColumnDefinitions.map((definition) => ({
+            label: definition.label,
+            value: definition.value,
+          }));
+
+    const allowedColumns = this.helperColumnOptions.map((item) => item.value);
+    if (!allowedColumns.includes(this.helper.column)) {
+      this.helper.column = this.helperColumnOptions[0]?.value ?? 'preGtmCapexSpentUsd';
+    }
   }
 }
 

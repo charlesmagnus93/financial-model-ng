@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { FieldsetModule } from 'primeng/fieldset';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputSwitchModule } from 'primeng/inputswitch';
+import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { BiotechModelService } from '../../services/biotech-model.service';
 
@@ -18,6 +20,7 @@ import { BiotechModelService } from '../../services/biotech-model.service';
     FieldsetModule,
     InputNumberModule,
     InputSwitchModule,
+    SelectModule,
     TableModule,
   ],
   template: `
@@ -101,9 +104,22 @@ import { BiotechModelService } from '../../services/biotech-model.service';
             </div>
           </div>
           <div class="col-span-12 lg:col-span-4">
-            <div class="rounded border border-surface-700 p-3 flex-col gap-3">
-              <div class="flex items-center gap-2 text-sm font-semibold">
-                <span>Yearly Increment Helper</span>
+            <div class="rounded border border-surface-700 p-3 flex flex-col gap-3">
+              <div class="text-sm font-semibold">Yearly Increment Helper</div>
+              <p class="text-xs text-surface-500">
+                Apply a fixed change or % growth from a start year onward. "Increment per year"
+                is the step size (or growth rate when compounding). "Years to apply" controls how
+                many consecutive rows are updated.
+              </p>
+              <div class="flex flex-col gap-2">
+                <label class="text-xs font-semibold">Column</label>
+                <p-select
+                  [options]="helperColumnOptions"
+                  [(ngModel)]="helper.column"
+                  optionLabel="label"
+                  optionValue="value"
+                  class="w-full"
+                ></p-select>
               </div>
               <div class="flex flex-col gap-2">
                 <label class="text-xs font-semibold">Start year offset</label>
@@ -138,10 +154,10 @@ import { BiotechModelService } from '../../services/biotech-model.service';
                   inputStyleClass="w-full"
                 />
               </div>
-              <div class="flex flex-col gap-2 mb-3">
-                <label class="text-xs font-semibold">Number of periods</label>
+              <div class="flex flex-col gap-2">
+                <label class="text-xs font-semibold">Years to apply</label>
                 <p-inputnumber
-                  [(ngModel)]="helper.numberOfPeriods"
+                  [(ngModel)]="helper.yearsToApply"
                   [showButtons]="true"
                   [min]="1"
                   [useGrouping]="false"
@@ -149,12 +165,12 @@ import { BiotechModelService } from '../../services/biotech-model.service';
                 />
               </div>
               <p-button
-                label="Apply helper"
+                label="Apply increment"
                 size="small"
-                class="mt-2"
                 [outlined]="true"
                 (onClick)="applyHelper()"
                 [disabled]="!salesRampEditEnabled"
+                fluid
               ></p-button>
             </div>
           </div>
@@ -166,20 +182,34 @@ import { BiotechModelService } from '../../services/biotech-model.service';
     </p-fieldset>
   `,
 })
-export class BiotechForecastAssumptionsFieldsetComponent implements OnInit {
+export class BiotechForecastAssumptionsFieldsetComponent
+  implements OnInit, OnDestroy
+{
+  private readonly destroy$ = new Subject<void>();
+
   salesRampEditEnabled = false;
   salesRampSchedule: Array<{ yearOffset: number; rampFactor: number }> = [];
   helper = {
+    column: 'rampFactor',
     startYearOffset: 0,
+    yearsToApply: 1,
     startingValue: 0,
     incrementPerYear: 0,
-    numberOfPeriods: 0,
   };
+  helperColumnOptions = [{ label: 'Ramp factor', value: 'rampFactor' }];
 
   constructor(private biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
     this.syncForecastAssumptions();
+    this.biotechModelService.input$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.syncForecastAssumptions());
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   addSalesRampRow(): void {
@@ -204,7 +234,7 @@ export class BiotechForecastAssumptionsFieldsetComponent implements OnInit {
     if (!this.salesRampEditEnabled) {
       return;
     }
-    const periods = Math.max(1, Math.floor(this.helper.numberOfPeriods || 0));
+    const periods = Math.max(1, Math.floor(this.helper.yearsToApply || 0));
     const startOffset = Math.max(0, Math.floor(this.helper.startYearOffset || 0));
     const startValue = Number(this.helper.startingValue || 0);
     const increment = Number(this.helper.incrementPerYear || 0);
@@ -249,6 +279,16 @@ export class BiotechForecastAssumptionsFieldsetComponent implements OnInit {
           rampFactor: Number(row?.rampFactor ?? 0),
         };
       });
+
+      const first = this.salesRampSchedule[0];
+      const second = this.salesRampSchedule[1];
+      this.helper = {
+        ...this.helper,
+        startYearOffset: Number(first?.yearOffset ?? 0),
+        yearsToApply: this.salesRampSchedule.length,
+        startingValue: Number(first?.rampFactor ?? 0),
+        incrementPerYear: Number(second?.rampFactor ?? first?.rampFactor ?? 0) - Number(first?.rampFactor ?? 0),
+      };
     }
   }
 }

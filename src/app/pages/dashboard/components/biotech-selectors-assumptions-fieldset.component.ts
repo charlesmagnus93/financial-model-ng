@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { FieldsetModule } from 'primeng/fieldset';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { BiotechModelService } from '../../services/biotech-model.service';
@@ -40,32 +41,76 @@ interface SelectorOption {
     </p-fieldset>
   `,
 })
-export class BiotechSelectorsAssumptionsFieldsetComponent implements OnInit {
-  selectorOptions: SelectorOption[] = [
-    { label: 'Base case', value: 'Base case' },
-    { label: 'Upside', value: 'Upside' },
-    { label: 'Downside', value: 'Downside' },
-    { label: 'Aggressive expansion', value: 'Aggressive expansion' },
-    { label: 'Defensive posture', value: 'Defensive posture' },
-  ];
+export class BiotechSelectorsAssumptionsFieldsetComponent
+  implements OnInit, OnDestroy
+{
+  private readonly destroy$ = new Subject<void>();
+
+  selectorOptions: SelectorOption[] = [];
   selectedSelectors: string[] = [];
 
   constructor(private biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
     this.syncFromModel();
+    this.biotechModelService.input$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.syncFromModel());
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   updateSelectors(): void {
+    this.selectedSelectors = this.uniqueStrings(this.selectedSelectors);
+    this.selectorOptions = this.toOptions([
+      ...this.selectorOptions.map((option) => option.value),
+      ...this.selectedSelectors,
+    ]);
+
     this.biotechModelService.patchInput({
       selectors: [...this.selectedSelectors],
     });
   }
 
   private syncFromModel(): void {
-    const stored = this.biotechModelService.getInputSnapshot()?.selectors;
-    if (Array.isArray(stored) && stored.length) {
-      this.selectedSelectors = stored.map((value: any) => String(value));
-    }
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const storedSelectors = Array.isArray(snapshot?.selectors)
+      ? snapshot.selectors
+      : [];
+    const scenarioPresets = Array.isArray(snapshot?.scenario_presets)
+      ? snapshot.scenario_presets
+      : [];
+
+    const presetNames = scenarioPresets
+      .map((preset: any) => String(preset?.name ?? '').trim())
+      .filter(Boolean);
+
+    this.selectedSelectors = this.uniqueStrings(storedSelectors);
+
+    const optionValues = [
+      ...presetNames,
+      ...this.selectedSelectors,
+    ];
+    this.selectorOptions = this.toOptions(optionValues);
+  }
+
+  private uniqueStrings(values: unknown[]): string[] {
+    return Array.from(
+      new Set(
+        (values ?? [])
+          .map((value) => String(value ?? '').trim())
+          .filter(Boolean)
+      )
+    );
+  }
+
+  private toOptions(values: string[]): SelectorOption[] {
+    return this.uniqueStrings(values).map((value) => ({
+      label: value,
+      value,
+    }));
   }
 }

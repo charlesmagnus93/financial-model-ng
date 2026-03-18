@@ -13,6 +13,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
+import { take } from 'rxjs';
 import { BiotechModelService } from '@/pages/services/biotech-model.service';
 
 interface ProductAssumptionRow {
@@ -23,18 +24,30 @@ interface ProductAssumptionRow {
   includeInConsolidation: boolean;
   firstYearForecast: number;
   timeToMarket: number;
+  marketEntryYear: number;
   patentDurationYears: number;
+  endPatentYear: number;
   extras: Record<string, unknown>;
 }
 
 interface IncrementHelper {
   column:
     | 'successProbPct'
+    | 'includeInConsolidation'
     | 'firstYearForecast'
     | 'timeToMarket'
-    | 'patentDurationYears';
-  incrementPerRow: number;
-  rowsToApply: number;
+    | 'marketEntryYear'
+    | 'patentDurationYears'
+    | 'endPatentYear';
+  startRow: number;
+  incrementPerYear: number;
+  yearsToApply: number;
+  compound: boolean;
+}
+
+interface SelectOption<T extends string = string> {
+  label: string;
+  value: T;
 }
 
 @Component({
@@ -144,9 +157,8 @@ interface IncrementHelper {
 
                   <label class="text-xs font-semibold">Market entry year</label>
                   <p-inputnumber
-                    [ngModel]="marketEntryYear"
-                    [ngModelOptions]="{ standalone: true }"
-                    [disabled]="true"
+                    formControlName="marketEntryYear"
+                    [showButtons]="true"
                     [useGrouping]="false"
                     inputStyleClass="w-full"
                   />
@@ -162,9 +174,8 @@ interface IncrementHelper {
 
                   <label class="text-xs font-semibold">End patent year</label>
                   <p-inputnumber
-                    [ngModel]="endPatentYear"
-                    [ngModelOptions]="{ standalone: true }"
-                    [disabled]="true"
+                    formControlName="endPatentYear"
+                    [showButtons]="true"
                     [useGrouping]="false"
                     inputStyleClass="w-full"
                   />
@@ -239,9 +250,8 @@ interface IncrementHelper {
 
                   <label class="text-xs font-semibold">Market entry year</label>
                   <p-inputnumber
-                    [ngModel]="newMarketEntryYear"
-                    [ngModelOptions]="{ standalone: true }"
-                    [disabled]="true"
+                    formControlName="marketEntryYear"
+                    [showButtons]="true"
                     [useGrouping]="false"
                     inputStyleClass="w-full"
                   />
@@ -257,9 +267,8 @@ interface IncrementHelper {
 
                   <label class="text-xs font-semibold">End patent year</label>
                   <p-inputnumber
-                    [ngModel]="newEndPatentYear"
-                    [ngModelOptions]="{ standalone: true }"
-                    [disabled]="true"
+                    formControlName="endPatentYear"
+                    [showButtons]="true"
                     [useGrouping]="false"
                     inputStyleClass="w-full"
                   />
@@ -278,6 +287,11 @@ interface IncrementHelper {
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
+              <p class="text-xs text-surface-500">
+                Apply a fixed change or % growth from a start year onward. "Increment per year" is
+                the step size (or growth rate when compounding). "Years to apply" controls how many
+                consecutive rows are updated.
+              </p>
               <label class="text-xs font-semibold">Column</label>
               <p-select
                 [options]="helperColumnOptions"
@@ -286,25 +300,36 @@ interface IncrementHelper {
                 optionValue="value"
                 class="w-full"
               ></p-select>
-              <label class="text-xs font-semibold">Increment per row</label>
+              <label class="text-xs font-semibold">Start row</label>
               <p-inputnumber
-                [(ngModel)]="helper.incrementPerRow"
+                [(ngModel)]="helper.startRow"
                 [showButtons]="true"
-                [step]="1"
-                [minFractionDigits]="2"
-                [maxFractionDigits]="2"
+                [min]="0"
+                [useGrouping]="false"
                 inputStyleClass="w-full"
               />
-              <label class="text-xs font-semibold">Rows to apply</label>
+              <label class="text-xs font-semibold">Years to apply</label>
               <p-inputnumber
-                [(ngModel)]="helper.rowsToApply"
+                [(ngModel)]="helper.yearsToApply"
                 [showButtons]="true"
                 [min]="1"
                 [useGrouping]="false"
                 inputStyleClass="w-full"
               />
-              <div class="text-xs text-surface-500">
-                Current value: {{ currentHelperValue | number: '1.2-2' }}
+              <label class="text-xs font-semibold">Increment per year</label>
+              <p-inputnumber
+                [(ngModel)]="helper.incrementPerYear"
+                [showButtons]="true"
+                [step]="0.01"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                inputStyleClass="w-full"
+              />
+              <div class="flex items-center gap-2 mt-1">
+                <p-checkbox [(ngModel)]="helper.compound" [binary]="true"></p-checkbox>
+                <label class="text-xs font-semibold">
+                  Compound annually (apply % growth)
+                </label>
               </div>
               <p-button
                 label="Apply increment"
@@ -347,9 +372,9 @@ interface IncrementHelper {
                 </td>
                 <td>{{ row.firstYearForecast }}</td>
                 <td>{{ row.timeToMarket }}</td>
-                <td>{{ marketEntryYearFor(row) }}</td>
+                <td>{{ row.marketEntryYear }}</td>
                 <td>{{ row.patentDurationYears }}</td>
-                <td>{{ endPatentYearFor(row) }}</td>
+                <td>{{ row.endPatentYear }}</td>
               </tr>
             </ng-template>
           </p-table>
@@ -364,27 +389,68 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
   selectedRowId = '';
   rowForm: FormGroup;
   newRowForm: FormGroup;
+  private defaultsVaccineDevelopmentRows: any[] = [];
   helper: IncrementHelper = {
     column: 'successProbPct',
-    incrementPerRow: 1,
-    rowsToApply: 1,
+    startRow: 0,
+    incrementPerYear: 1,
+    yearsToApply: 1,
+    compound: false,
   };
 
-  stageOptions = [
-    { label: 'Discovery', value: 'Discovery' },
-    { label: 'Preclinical', value: 'Preclinical' },
-    { label: 'Phase I', value: 'Phase I' },
-    { label: 'Phase II', value: 'Phase II' },
-    { label: 'Phase III', value: 'Phase III' },
-    { label: 'Filed', value: 'Filed' },
-    { label: 'Approved', value: 'Approved' },
+  stageOptions: SelectOption[] = [];
+  helperColumnOptions: SelectOption<IncrementHelper['column']>[] = [];
+
+  private readonly stageFallbackOrder = [
+    'Discovery',
+    'Preclinical',
+    'Phase I',
+    'Phase II',
+    'Phase III',
+    'Approval',
+    'Commercial',
   ];
 
-  helperColumnOptions = [
-    { label: 'Success Probability %', value: 'successProbPct' },
-    { label: 'First year forecast', value: 'firstYearForecast' },
-    { label: 'Time to market', value: 'timeToMarket' },
-    { label: 'Patent duration years', value: 'patentDurationYears' },
+  private readonly helperColumnDefinitions: Array<{
+    sourceKey: string;
+    label: string;
+    value: IncrementHelper['column'];
+  }> = [
+    {
+      sourceKey: 'Success Probability %',
+      label: 'Success Probability %',
+      value: 'successProbPct',
+    },
+    {
+      sourceKey: 'Consolidation',
+      label: 'Consolidation',
+      value: 'includeInConsolidation',
+    },
+    {
+      sourceKey: 'First year forecast',
+      label: 'First year forecast',
+      value: 'firstYearForecast',
+    },
+    {
+      sourceKey: 'Time to market',
+      label: 'Time to market',
+      value: 'timeToMarket',
+    },
+    {
+      sourceKey: 'Market entry year',
+      label: 'Market entry year',
+      value: 'marketEntryYear',
+    },
+    {
+      sourceKey: 'Patent duration years',
+      label: 'Patent duration years',
+      value: 'patentDurationYears',
+    },
+    {
+      sourceKey: 'End patent year',
+      label: 'End patent year',
+      value: 'endPatentYear',
+    },
   ];
 
   constructor(
@@ -399,7 +465,9 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
       includeInConsolidation: [false],
       firstYearForecast: [0],
       timeToMarket: [0],
+      marketEntryYear: [0],
       patentDurationYears: [0],
+      endPatentYear: [0],
     });
     this.newRowForm = this.formBuilder.group({
       id: [''],
@@ -409,11 +477,14 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
       includeInConsolidation: [true],
       firstYearForecast: [0],
       timeToMarket: [0],
+      marketEntryYear: [0],
       patentDurationYears: [0],
+      endPatentYear: [0],
     });
   }
 
   ngOnInit(): void {
+    this.loadDefaultVaccineDevelopment();
     this.syncFromModel();
     if (this.rows.length) {
       return;
@@ -430,45 +501,6 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
     }));
   }
 
-  get currentHelperValue(): number {
-    const row = this.getSelectedRow();
-    if (!row) {
-      return 0;
-    }
-    if (this.helper.column === 'successProbPct') return row.successProbPct;
-    if (this.helper.column === 'firstYearForecast') return row.firstYearForecast;
-    if (this.helper.column === 'timeToMarket') return row.timeToMarket;
-    return row.patentDurationYears;
-  }
-
-  get marketEntryYear(): number {
-    const value = this.rowForm.getRawValue() as ProductAssumptionRow;
-    return this.computeMarketEntryYear(value);
-  }
-
-  get endPatentYear(): number {
-    const value = this.rowForm.getRawValue() as ProductAssumptionRow;
-    return this.computeEndPatentYear(value);
-  }
-
-  get newMarketEntryYear(): number {
-    const value = this.newRowForm.getRawValue() as ProductAssumptionRow;
-    return this.computeMarketEntryYear(value);
-  }
-
-  get newEndPatentYear(): number {
-    const value = this.newRowForm.getRawValue() as ProductAssumptionRow;
-    return this.computeEndPatentYear(value);
-  }
-
-  marketEntryYearFor(row: ProductAssumptionRow): number {
-    return this.computeMarketEntryYear(row);
-  }
-
-  endPatentYearFor(row: ProductAssumptionRow): number {
-    return this.computeEndPatentYear(row);
-  }
-
   removeSelectedRow(): void {
     if (this.rows.length <= 1) {
       return;
@@ -480,32 +512,62 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
   }
 
   applyIncrement(): void {
-    const startRow = this.getSelectedRow();
-    if (!startRow) {
-      return;
-    }
-    const rowsToApply = Math.max(1, Math.floor(this.helper.rowsToApply || 0));
-    const increment = Number(this.helper.incrementPerRow || 0);
-    const startIndex = this.rows.findIndex((row) => row.id === startRow.id);
-    if (startIndex === -1) {
+    const startIndex = Math.max(0, Math.floor(this.helper.startRow || 0));
+    const yearsToApply = Math.max(1, Math.floor(this.helper.yearsToApply || 0));
+    const increment = Number(this.helper.incrementPerYear || 0);
+    if (startIndex >= this.rows.length) {
       return;
     }
     const updated = [...this.rows];
-    for (let i = 0; i < rowsToApply; i += 1) {
+    for (let i = 0; i < yearsToApply; i += 1) {
       const idx = startIndex + i;
       if (!updated[idx]) {
         break;
       }
       const row = { ...updated[idx] };
+
       if (this.helper.column === 'successProbPct') {
-        row.successProbPct = Number(row.successProbPct || 0) + increment;
+        const current = Number(row.successProbPct || 0);
+        const nextValue = this.helper.compound
+          ? current * (1 + increment / 100)
+          : current + increment;
+        row.successProbPct = Math.min(100, Math.max(0, nextValue));
+      } else if (this.helper.column === 'includeInConsolidation') {
+        if (increment > 0) {
+          row.includeInConsolidation = true;
+        } else if (increment < 0) {
+          row.includeInConsolidation = false;
+        }
       } else if (this.helper.column === 'firstYearForecast') {
-        row.firstYearForecast = Number(row.firstYearForecast || 0) + increment;
+        const current = Number(row.firstYearForecast || 0);
+        const nextValue = this.helper.compound
+          ? current * (1 + increment / 100)
+          : current + increment;
+        row.firstYearForecast = Math.max(0, nextValue);
       } else if (this.helper.column === 'timeToMarket') {
-        row.timeToMarket = Number(row.timeToMarket || 0) + increment;
+        const current = Number(row.timeToMarket || 0);
+        const nextValue = this.helper.compound
+          ? current * (1 + increment / 100)
+          : current + increment;
+        row.timeToMarket = Math.max(0, nextValue);
+      } else if (this.helper.column === 'marketEntryYear') {
+        const current = Number(row.marketEntryYear || 0);
+        const nextValue = this.helper.compound
+          ? current * (1 + increment / 100)
+          : current + increment;
+        row.marketEntryYear = Math.max(0, nextValue);
+      } else if (this.helper.column === 'endPatentYear') {
+        const current = Number(row.endPatentYear || 0);
+        const nextValue = this.helper.compound
+          ? current * (1 + increment / 100)
+          : current + increment;
+        row.endPatentYear = Math.max(0, nextValue);
       } else {
-        row.patentDurationYears =
-          Number(row.patentDurationYears || 0) + increment;
+        const current = Number(row.patentDurationYears || 0);
+        const nextValue = this.helper.compound
+          ? current * (1 + increment / 100)
+          : current + increment;
+        row.patentDurationYears = Math.max(0, nextValue);
       }
       updated[idx] = row;
     }
@@ -532,7 +594,9 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
       includeInConsolidation: Boolean(value.includeInConsolidation),
       firstYearForecast: Number(value.firstYearForecast || 0),
       timeToMarket: Number(value.timeToMarket || 0),
+      marketEntryYear: Number(value.marketEntryYear || 0),
       patentDurationYears: Number(value.patentDurationYears || 0),
+      endPatentYear: Number(value.endPatentYear || 0),
       extras: existing?.extras ?? {},
     };
     let nextRows = [...this.rows];
@@ -569,7 +633,9 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
       includeInConsolidation: Boolean(value.includeInConsolidation),
       firstYearForecast: Number(value.firstYearForecast || 0),
       timeToMarket: Number(value.timeToMarket || 0),
+      marketEntryYear: Number(value.marketEntryYear || 0),
       patentDurationYears: Number(value.patentDurationYears || 0),
+      endPatentYear: Number(value.endPatentYear || 0),
       extras: {},
     };
     const nextRows = [...this.rows, sanitized];
@@ -599,7 +665,15 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
 
     const productsPayload = this.rows.map((row, index) => {
       const base = productMap.get(row.id) ?? productMap.get(row.name) ?? {};
-      const { id, name, stage, successProbPct, includeInConsolidation, timeToMarket, patentDurationYears } =
+      const {
+        id,
+        name,
+        stage,
+        successProbPct,
+        includeInConsolidation,
+        timeToMarket,
+        patentDurationYears,
+      } =
         row;
       return {
         ...base,
@@ -621,9 +695,9 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
       Consolidation: row.includeInConsolidation,
       'First year forecast': row.firstYearForecast,
       'Time to market': row.timeToMarket,
-      'Market entry year': this.computeMarketEntryYear(row),
+      'Market entry year': row.marketEntryYear,
       'Patent duration years': row.patentDurationYears,
-      'End patent year': this.computeEndPatentYear(row),
+      'End patent year': row.endPatentYear,
     }));
 
     this.biotechModelService.patchInput({
@@ -634,6 +708,8 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
 
   private syncFromModel(): void {
     const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    this.refreshDynamicOptions(snapshot);
+    const defaultStage = this.stageOptions[0]?.value ?? this.stageFallbackOrder[0];
     const storedDevelopment = snapshot?.vaccine_development;
     const storedProducts = Array.isArray(snapshot?.products) ? snapshot.products : [];
     const productMap = new Map<string, any>();
@@ -652,12 +728,14 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
         return {
           id,
           name,
-          stage: String(row?.Stage ?? '').trim() || 'Discovery',
+          stage: String(row?.Stage ?? '').trim() || defaultStage,
           successProbPct: Number(row?.['Success Probability %'] ?? 0),
           includeInConsolidation: Boolean(row?.Consolidation),
           firstYearForecast: Number(row?.['First year forecast'] ?? new Date().getFullYear()),
           timeToMarket: Number(row?.['Time to market'] ?? 0),
+          marketEntryYear: Number(row?.['Market entry year'] ?? new Date().getFullYear()),
           patentDurationYears: Number(row?.['Patent duration years'] ?? 0),
+          endPatentYear: Number(row?.['End patent year'] ?? new Date().getFullYear()),
           extras: { ...match },
         } as ProductAssumptionRow;
       });
@@ -684,12 +762,14 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
         return {
           id: String(id ?? '').trim() || this.formatId(index + 1),
           name: String(name ?? '').trim(),
-          stage: String(stage ?? '').trim() || 'Discovery',
+          stage: String(stage ?? '').trim() || defaultStage,
           successProbPct,
           includeInConsolidation: Boolean(include_in_consolidation),
           firstYearForecast: new Date().getFullYear(),
           timeToMarket: Number(time_to_market ?? 0),
+          marketEntryYear: new Date().getFullYear(),
           patentDurationYears: Number(patent_years ?? 0),
+          endPatentYear: new Date().getFullYear(),
           extras,
         } as ProductAssumptionRow;
       });
@@ -697,18 +777,6 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
       this.onSelectedRowChange();
       this.resetNewRow();
     }
-  }
-
-  private computeMarketEntryYear(row: ProductAssumptionRow): number {
-    const firstYear = Number(row.firstYearForecast || 0);
-    const timeToMarket = Number(row.timeToMarket || 0);
-    return firstYear + timeToMarket;
-  }
-
-  private computeEndPatentYear(row: ProductAssumptionRow): number {
-    const entryYear = this.computeMarketEntryYear(row);
-    const patentYears = Number(row.patentDurationYears || 0);
-    return entryYear + Math.max(0, patentYears) - 1;
   }
 
   private toFormValue(row: ProductAssumptionRow) {
@@ -720,7 +788,9 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
       includeInConsolidation: row.includeInConsolidation,
       firstYearForecast: row.firstYearForecast,
       timeToMarket: row.timeToMarket,
+      marketEntryYear: row.marketEntryYear,
       patentDurationYears: row.patentDurationYears,
+      endPatentYear: row.endPatentYear,
     };
   }
 
@@ -736,7 +806,9 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
       includeInConsolidation: true,
       firstYearForecast: baseYear + 1,
       timeToMarket: 3,
+      marketEntryYear: baseYear + 1,
       patentDurationYears: 15,
+      endPatentYear: baseYear + 15,
     });
   }
 
@@ -753,6 +825,107 @@ export class BiotechProductAssumptionsFieldsetComponent implements OnInit {
 
   private formatId(value: number): string {
     return `VAC-${String(value).padStart(3, '0')}`;
+  }
+
+  private refreshDynamicOptions(snapshot: any): void {
+    this.stageOptions = this.buildStageOptions(snapshot);
+    this.helperColumnOptions = this.buildHelperColumnOptions(snapshot);
+
+    const availableColumns = this.helperColumnOptions.map((item) => item.value);
+    if (!availableColumns.includes(this.helper.column)) {
+      this.helper.column = this.helperColumnOptions[0]?.value ?? 'successProbPct';
+    }
+  }
+
+  private buildStageOptions(snapshot: any): SelectOption[] {
+    const orderedStages: string[] = [];
+    const seenStages = new Set<string>();
+
+    const appendStage = (value: unknown): void => {
+      const stage = String(value ?? '').trim();
+      if (!stage || seenStages.has(stage)) {
+        return;
+      }
+      seenStages.add(stage);
+      orderedStages.push(stage);
+    };
+
+    const stageMappingRows = Array.isArray(snapshot?.stage_schedule_mapping)
+      ? snapshot.stage_schedule_mapping
+      : [];
+    stageMappingRows.forEach((row: any) => appendStage(row?.Stage));
+
+    const developmentRows = Array.isArray(snapshot?.vaccine_development)
+      ? snapshot.vaccine_development
+      : [];
+    developmentRows.forEach((row: any) => appendStage(row?.Stage));
+
+    const productRows = Array.isArray(snapshot?.products) ? snapshot.products : [];
+    productRows.forEach((row: any) => appendStage(row?.stage));
+
+    this.rows.forEach((row) => appendStage(row.stage));
+
+    if (!orderedStages.length) {
+      this.stageFallbackOrder.forEach((stage) => appendStage(stage));
+    }
+
+    return orderedStages.map((stage) => ({
+      label: stage,
+      value: stage,
+    }));
+  }
+
+  private buildHelperColumnOptions(
+    snapshot: any
+  ): SelectOption<IncrementHelper['column']>[] {
+    const developmentRows = Array.isArray(snapshot?.vaccine_development)
+      ? snapshot.vaccine_development
+      : [];
+    const availableKeys = new Set<string>();
+
+    const collectKeys = (rows: any[]): void => {
+      rows.forEach((row: any) => {
+        Object.keys(row ?? {}).forEach((key) => {
+          const normalized = String(key ?? '').trim();
+          if (normalized) {
+            availableKeys.add(normalized);
+          }
+        });
+      });
+    };
+
+    collectKeys(this.defaultsVaccineDevelopmentRows);
+    collectKeys(developmentRows);
+
+    const optionsFromData = this.helperColumnDefinitions
+      .filter((definition) => availableKeys.has(definition.sourceKey))
+      .map((definition) => ({
+        label: definition.label,
+        value: definition.value,
+      }));
+
+    if (optionsFromData.length) {
+      return optionsFromData;
+    }
+
+    return this.helperColumnDefinitions.map((definition) => ({
+      label: definition.label,
+      value: definition.value,
+    }));
+  }
+
+  private loadDefaultVaccineDevelopment(): void {
+    this.biotechModelService
+      .getDefaultsTemplate()
+      .pipe(take(1))
+      .subscribe({
+        next: (defaults: any) => {
+          this.defaultsVaccineDevelopmentRows = Array.isArray(defaults?.vaccine_development)
+            ? defaults.vaccine_development
+            : [];
+          this.refreshDynamicOptions(this.biotechModelService.getInputSnapshot() ?? {});
+        },
+      });
   }
 }
 

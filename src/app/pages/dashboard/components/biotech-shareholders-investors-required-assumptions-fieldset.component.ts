@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormArray,
@@ -8,12 +8,14 @@ import {
   FormsModule,
   ReactiveFormsModule,
 } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { FieldsetModule } from 'primeng/fieldset';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
+import { CheckboxModule } from 'primeng/checkbox';
 import { BiotechModelService } from '../../services/biotech-model.service';
 
 interface ShareholderRow {
@@ -25,8 +27,10 @@ interface ShareholderRow {
 
 interface IncrementHelper {
   column: 'ownershipPct' | 'investment';
+  startRow: number;
   incrementPerYear: number;
   yearsToApply: number;
+  compound: boolean;
 }
 
 @Component({
@@ -42,6 +46,7 @@ interface IncrementHelper {
     InputNumberModule,
     InputTextModule,
     TableModule,
+    CheckboxModule,
   ],
   template: `
     <p-fieldset legend="Shareholders / Investors" [toggleable]="true" class="w-full">
@@ -98,13 +103,13 @@ interface IncrementHelper {
                   [min]="0"
                   inputStyleClass="w-full"
                 />
-                <label class="text-xs font-semibold">Equity value (rNPV)</label>
+                <!-- <label class="text-xs font-semibold">Equity value (rNPV)</label>
                 <p-inputnumber
                   formControlName="equityValue"
                   [showButtons]="true"
                   [min]="0"
                   inputStyleClass="w-full"
-                />
+                /> -->
               </div>
             </ng-container>
             <p-button
@@ -139,13 +144,13 @@ interface IncrementHelper {
                 [min]="0"
                 inputStyleClass="w-full"
               />
-              <label class="text-xs font-semibold">Equity value (rNPV)</label>
+              <!-- <label class="text-xs font-semibold">Equity value (rNPV)</label>
               <p-inputnumber
                 formControlName="equityValue"
                 [showButtons]="true"
                 [min]="0"
                 inputStyleClass="w-full"
-              />
+              /> -->
             </div>
             <p-button
               label="Add row"
@@ -159,6 +164,11 @@ interface IncrementHelper {
           <div class="col-span-12 lg:col-span-4 flex flex-col gap-3">
             <div class="rounded border border-surface-700 p-3 flex flex-col gap-2" [formGroup]="helperForm">
               <div class="text-xs font-semibold">Yearly Increment Helper</div>
+              <p class="text-xs text-surface-500">
+                Apply a fixed change or % growth from a start year onward. "Increment per year" is
+                the step size (or growth rate when compounding). "Years to apply" controls how many
+                consecutive rows are updated.
+              </p>
               <label class="text-xs font-semibold">Column</label>
               <p-select
                 [options]="helperColumnOptions"
@@ -167,13 +177,12 @@ interface IncrementHelper {
                 optionValue="value"
                 class="w-full"
               ></p-select>
-              <label class="text-xs font-semibold">Increment per year</label>
+              <label class="text-xs font-semibold">Start row</label>
               <p-inputnumber
-                formControlName="incrementPerYear"
+                formControlName="startRow"
                 [showButtons]="true"
-                [step]="0.01"
-                [minFractionDigits]="2"
-                [maxFractionDigits]="4"
+                [min]="0"
+                [useGrouping]="false"
                 inputStyleClass="w-full"
               />
               <label class="text-xs font-semibold">Years to apply</label>
@@ -184,8 +193,20 @@ interface IncrementHelper {
                 [useGrouping]="false"
                 inputStyleClass="w-full"
               />
-              <div class="text-xs text-surface-400">
-                Current value: {{ helperCurrentValue | number: '1.2-2' }}
+              <label class="text-xs font-semibold">Increment per year</label>
+              <p-inputnumber
+                formControlName="incrementPerYear"
+                [showButtons]="true"
+                [step]="0.01"
+                [minFractionDigits]="2"
+                [maxFractionDigits]="2"
+                inputStyleClass="w-full"
+              />
+              <div class="flex items-center gap-2 mt-1">
+                <p-checkbox formControlName="compound" binary></p-checkbox>
+                <label class="text-xs font-semibold">
+                  Compound annually (apply % growth)
+                </label>
               </div>
               <p-button
                 label="Apply increment"
@@ -199,21 +220,44 @@ interface IncrementHelper {
         </div>
 
         <div class="overflow-auto rounded">
-          <p-table [value]="rowsArray.value" showGridlines class="text-sm" [size]="'small'">
+          <p-table
+            [value]="rowsArray.value"
+            showGridlines
+            class="text-sm"
+            [size]="'small'"
+            [scrollable]="true"
+            scrollHeight="140px"
+            sortMode="single"
+          >
             <ng-template #header>
               <tr>
-                <th>Shareholder</th>
-                <th>Ownership %</th>
-                <th>Investment</th>
-                <th>Equity value (rNPV)</th>
+                <th style="width: 3rem"></th>
+                <th pSortableColumn="name">
+                  <span class="inline-flex items-center gap-1">
+                    <p-sortIcon field="name"></p-sortIcon>
+                    <span>Shareholder</span>
+                  </span>
+                </th>
+                <th pSortableColumn="ownershipPct">
+                  <span class="inline-flex items-center gap-1">
+                    <p-sortIcon field="ownershipPct"></p-sortIcon>
+                    <span>Ownership %</span>
+                  </span>
+                </th>
+                <th pSortableColumn="investment">
+                  <span class="inline-flex items-center gap-1">
+                    <p-sortIcon field="investment"></p-sortIcon>
+                    <span>Investment</span>
+                  </span>
+                </th>
               </tr>
             </ng-template>
-            <ng-template #body let-row>
+            <ng-template #body let-row let-rowIndex="rowIndex">
               <tr>
+                <td class="text-right">{{ rowIndex }}</td>
                 <td>{{ row.name }}</td>
-                <td>{{ row.ownershipPct | number: '1.2-2' }}</td>
-                <td>{{ row.investment | number: '1.0-0' }}</td>
-                <td>{{ row.equityValue | number: '1.0-0' }}</td>
+                <td class="text-right">{{ row.ownershipPct | number: '1.2-2' }}</td>
+                <td class="text-right">{{ row.investment | number: '1.0-0' }}</td>
               </tr>
             </ng-template>
           </p-table>
@@ -228,10 +272,13 @@ interface IncrementHelper {
   `,
 })
 export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
-  implements OnInit
+  implements OnInit, OnDestroy
 {
+  private readonly destroy$ = new Subject<void>();
+
   form: FormGroup;
   selectedRowControl: FormControl<number | null>;
+  rowOptions: Array<{ label: string; value: number }> = [];
 
   helperColumnOptions = [
     { label: 'Ownership %', value: 'ownershipPct' },
@@ -253,14 +300,27 @@ export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
       }),
       helper: this.formBuilder.group({
         column: 'ownershipPct',
-        incrementPerYear: 0.01,
+        startRow: 0,
         yearsToApply: 1,
+        incrementPerYear: 1,
+        compound: false,
       }),
     });
   }
 
   ngOnInit(): void {
     this.syncFromModel();
+    this.rowsArray.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.refreshRowOptions());
+    this.biotechModelService.input$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.syncFromModel());
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get rowsArray(): FormArray {
@@ -290,22 +350,6 @@ export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
   get totalOwnership(): number {
     const rows = this.rowsArray.value as ShareholderRow[];
     return rows.reduce((sum, row) => sum + (row.ownershipPct || 0), 0);
-  }
-
-  get helperCurrentValue(): number {
-    const row = this.selectedRowForm?.value as ShareholderRow | undefined;
-    if (!row) {
-      return 0;
-    }
-    const helper = this.helperForm.value as IncrementHelper;
-    return helper.column === 'ownershipPct' ? row.ownershipPct : row.investment;
-  }
-
-  get rowOptions() {
-    return this.rowsArray.controls.map((row, index) => ({
-      label: row.value.name,
-      value: index,
-    }));
   }
 
   saveSelectedRow(): void {
@@ -341,18 +385,31 @@ export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
     const helper = this.helperForm.value as IncrementHelper;
     const increment = Number(helper.incrementPerYear || 0);
     const years = Math.max(1, Math.floor(helper.yearsToApply || 0));
+    const start = Math.max(0, Math.floor(helper.startRow || 0));
     for (let i = 0; i < years; i += 1) {
-      const idx = this.selectedRowIndex + i;
+      const idx = start + i;
       const row = this.rowsArray.at(idx) as FormGroup | undefined;
       if (!row) {
         break;
       }
       if (helper.column === 'ownershipPct') {
         const current = Number(row.value.ownershipPct || 0);
-        row.patchValue({ ownershipPct: current + increment }, { emitEvent: false });
+        const nextValue = helper.compound
+          ? current * (1 + increment / 100)
+          : current + increment;
+        row.patchValue(
+          { ownershipPct: Math.min(1, Math.max(0, nextValue)) },
+          { emitEvent: false }
+        );
       } else {
         const current = Number(row.value.investment || 0);
-        row.patchValue({ investment: current + increment }, { emitEvent: false });
+        const nextValue = helper.compound
+          ? current * (1 + increment / 100)
+          : current + increment;
+        row.patchValue(
+          { investment: Math.max(0, nextValue) },
+          { emitEvent: false }
+        );
       }
     }
     this.persist();
@@ -368,21 +425,37 @@ export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
   }
 
   private persist(): void {
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const currentFunding = snapshot?.funding_assumptions ?? {};
+    const helper = this.helperForm.getRawValue() as IncrementHelper;
     const rows = this.rowsArray.value as ShareholderRow[];
     this.biotechModelService.patchInput({
       shareholders: rows.map((row) => ({
         Shareholder: row.name,
         'Ownership %': row.ownershipPct,
         Investment: row.investment,
-        'Equity value (rNPV)': row.equityValue,
+        // 'Equity value (rNPV)': row.equityValue,
       })),
+      funding_assumptions: {
+        ...currentFunding,
+        shareholders_increment_helper: {
+          column: helper.column === 'investment' ? 'investment' : 'ownershipPct',
+          startRow: Math.max(0, Number(helper.startRow ?? 0)),
+          yearsToApply: Math.max(1, Number(helper.yearsToApply ?? 1)),
+          incrementPerYear: Number(helper.incrementPerYear ?? 1),
+          compound: Boolean(helper.compound ?? false),
+        },
+      },
     });
   }
 
   private syncFromModel(): void {
-    const stored = this.biotechModelService.getInputSnapshot()?.shareholders;
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const stored = snapshot?.shareholders;
+    const currentIndex = this.selectedRowIndex;
+
+    this.rowsArray.clear();
     if (Array.isArray(stored) && stored.length) {
-      this.rowsArray.clear();
       stored.forEach((row: any) => {
         this.rowsArray.push(
           this.createRowForm({
@@ -393,7 +466,43 @@ export class BiotechShareholdersInvestorsRequiredAssumptionsFieldsetComponent
           }),
         );
       });
-      this.selectedRowIndex = 0;
+    } else {
+      this.rowsArray.push(
+        this.createRowForm({
+          name: '',
+          ownershipPct: 0,
+          investment: 0,
+          equityValue: 0,
+        }),
+      );
     }
+
+    const helper = snapshot?.funding_assumptions?.shareholders_increment_helper;
+    this.helperForm.patchValue(
+      {
+        column: helper?.column === 'investment' ? 'investment' : 'ownershipPct',
+        startRow: Math.max(0, Number(helper?.startRow ?? 0)),
+        yearsToApply: Math.max(1, Number(helper?.yearsToApply ?? 1)),
+        incrementPerYear: Number(helper?.incrementPerYear ?? 1),
+        compound: Boolean(helper?.compound ?? false),
+      },
+      { emitEvent: false }
+    );
+
+    this.selectedRowIndex = Math.min(
+      Math.max(0, currentIndex),
+      Math.max(0, this.rowsArray.length - 1)
+    );
+    this.refreshRowOptions();
+  }
+
+  private refreshRowOptions(): void {
+    this.rowOptions = this.rowsArray.controls.map((row, index) => {
+      const name = String(row?.value?.name ?? '').trim();
+      return {
+        label: name || `Shareholder ${index + 1}`,
+        value: index,
+      };
+    });
   }
 }
