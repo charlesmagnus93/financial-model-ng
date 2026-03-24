@@ -4,8 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SliderModule } from 'primeng/slider';
+import { ButtonModule } from 'primeng/button';
 import { BiotechModelService } from '../../services/biotech-model.service';
 import { formatNumberEnglish } from '@/utils/number-format';
+import { take } from 'rxjs';
 
 interface VcMetricRow {
   metric: string;
@@ -15,7 +17,14 @@ interface VcMetricRow {
 @Component({
   standalone: true,
   selector: 'app-biotech-vc-method-helper',
-  imports: [CommonModule, FormsModule, TableModule, InputNumberModule, SliderModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,
+    InputNumberModule,
+    SliderModule,
+    ButtonModule,
+  ],
   template: `
     <div class="card flex flex-col gap-6">
       <div class="text-xl font-semibold">VC method helper</div>
@@ -26,8 +35,8 @@ interface VcMetricRow {
           <p-inputnumber
             [(ngModel)]="exitYear"
             [useGrouping]="false"
-            [min]="2024"
-            [max]="2050"
+            [min]="exitYearMin"
+            [max]="exitYearMax"
             [showButtons]="true"
             inputStyleClass="w-full"
           />
@@ -49,13 +58,13 @@ interface VcMetricRow {
         <div class="flex flex-col gap-2">
           <div class="text-sm text-surface-400">Investor ownership at exit</div>
           <div class="flex items-center justify-between text-xs text-surface-400">
-            <span>0%</span>
+            <span>5%</span>
             <span>{{ formatPercent(investorOwnership) }}</span>
             <span>100%</span>
           </div>
           <p-slider
             [(ngModel)]="investorOwnership"
-            [min]="0"
+            [min]="0.05"
             [max]="1"
             [step]="0.01"
           ></p-slider>
@@ -87,6 +96,22 @@ interface VcMetricRow {
         ></p-slider>
       </div>
 
+      <div class="flex items-center gap-3">
+        <p-button
+          label="Run VC method"
+          [outlined]="true"
+          [loading]="isRunning"
+          [disabled]="isRunning"
+          (onClick)="runVcMethod()"
+        ></p-button>
+      </div>
+
+      @if (errorMessage) {
+        <div class="rounded-lg bg-red-100 px-4 py-3 text-sm text-red-500">
+          {{ errorMessage }}
+        </div>
+      }
+
       <div class="overflow-auto">
         <p-table
           [value]="rows"
@@ -115,43 +140,70 @@ interface VcMetricRow {
 })
 export class BiotechVcMethodHelperComponent implements OnInit {
   exitYear = 2029;
+  exitYearMin = 2024;
+  exitYearMax = 2050;
   targetIrr = 0.3;
   investorOwnership = 0.25;
   newMoney = 50_000_000;
   exitMultiple = 8.0;
   rows: VcMetricRow[] = [];
+  isRunning = false;
+  errorMessage = '';
 
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
     const output = this.biotechModelService.getOutputSnapshot() ?? {};
-    const baseRnpv = Number(output?.rnpv ?? 0);
     const consolidated = output?.consolidated ?? {};
-    const years = (consolidated.index as number[]) ?? [];
-    const data = consolidated.data ?? {};
-    const ebitda = this.asNumberArray(data['ebitda']);
-    const exitIndex = Math.max(0, years.indexOf(this.exitYear));
-    const exitEbitda = ebitda[exitIndex] ?? 0;
-    const exitEnterpriseValue = exitEbitda * this.exitMultiple;
-    const investorExitValue = exitEnterpriseValue * this.investorOwnership;
-    const yearsToExit = Math.max(1, this.exitYear - (years[0] ?? this.exitYear));
-    const investorPvRequired =
-      investorExitValue / Math.pow(1 + this.targetIrr, yearsToExit);
-    const impliedPostMoney = investorPvRequired / this.investorOwnership;
-    const impliedPreMoney = impliedPostMoney - this.newMoney;
-    const investorIrrIfPayNewMoney =
-      investorExitValue > 0
-        ? Math.pow(investorExitValue / Math.max(1, this.newMoney), 1 / yearsToExit) - 1
-        : 0;
+    const years = this.asNumberArray(consolidated?.index);
+    if (years.length) {
+      const minYear = Math.min(...years);
+      const maxYear = Math.max(...years);
+      this.exitYearMin = minYear;
+      this.exitYearMax = maxYear;
+      this.exitYear = Math.min(maxYear, minYear + 5);
+    }
+    this.runVcMethod();
+  }
 
-    this.rows = [
-      { metric: 'exit_enterprise_value', value: this.formatNumber(exitEnterpriseValue) },
-      { metric: 'investor_exit_value', value: this.formatNumber(investorExitValue) },
-      { metric: 'investor_pv_required', value: this.formatNumber(investorPvRequired) },
-      { metric: 'implied_post_money', value: this.formatNumber(impliedPostMoney) },
-      { metric: 'implied_pre_money', value: this.formatNumber(impliedPreMoney) },
-      { metric: 'investor_irr_if_pay_new_money', value: this.formatPercent(investorIrrIfPayNewMoney) },
-    ];
+  runVcMethod(): void {
+    if (this.isRunning) {
+      return;
+    }
+    this.errorMessage = '';
+    this.isRunning = true;
+    this.biotechModelService
+      .runVcMethod({
+        exit_year: Number(this.exitYear),
+        target_irr: Number(this.targetIrr),
+        investor_ownership_at_exit: Number(this.investorOwnership),
+        new_money: Number(this.newMoney),
+        exit_multiple: Number(this.exitMultiple),
+      })
+      .pipe(take(1))
+      .subscribe({
+        next: (results) => {
+          this.rows = this.mapRows(results);
+          this.isRunning = false;
+        },
+        error: (err: Error) => {
+          this.errorMessage =
+            err?.message || 'Unable to run VC method with current assumptions.';
+          this.rows = [];
+          this.isRunning = false;
+        },
+      });
+  }
+
+  private mapRows(results: Record<string, number>): VcMetricRow[] {
+    const entries = Object.entries(results ?? {});
+    return entries.map(([metric, rawValue]) => {
+      const numericValue = Number(rawValue ?? 0);
+      const value = metric.toLowerCase().includes('irr')
+        ? this.formatPercent(numericValue)
+        : this.formatNumber(numericValue);
+      return { metric, value };
+    });
   }
 
   formatPercent(value: number): string {

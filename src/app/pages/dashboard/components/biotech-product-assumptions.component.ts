@@ -21,8 +21,18 @@ import { BiotechProductFullProfilesFieldsetComponent } from './biotech-product-f
     <biotech-product-assumptions-fieldset></biotech-product-assumptions-fieldset>
     <biotech-product-vaccine-research-dev-fieldset></biotech-product-vaccine-research-dev-fieldset>
     <biotech-product-vaccine-capex-fieldset></biotech-product-vaccine-capex-fieldset>
-    <biotech-product-template-library-fieldset></biotech-product-template-library-fieldset>
-    <biotech-product-full-profiles-fieldset></biotech-product-full-profiles-fieldset>
+    <biotech-product-template-library-fieldset
+      (templateRowsLoaded)="onTemplateRowsLoaded($event)"
+    ></biotech-product-template-library-fieldset>
+    <biotech-product-full-profiles-fieldset
+      [tableOverrideRows]="templatePreviewRows"
+    ></biotech-product-full-profiles-fieldset>
   `,
 })
-export class BiotechProductAssumptionsComponent {}
+export class BiotechProductAssumptionsComponent {
+  templatePreviewRows: any[] = [];
+
+  onTemplateRowsLoaded(rows: any[]): void {
+    this.templatePreviewRows = Array.isArray(rows) ? [...rows] : [];
+  }
+}

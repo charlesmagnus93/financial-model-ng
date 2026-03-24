@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FieldsetModule } from 'primeng/fieldset';
@@ -7,7 +7,13 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import { BiotechModelService } from '../../services/biotech-model.service';
+import { finalize, take } from 'rxjs';
+import {
+  BiotechModelService,
+  BiotechMonteCarloResponse,
+  BiotechMonteCarloSimulationPayload,
+  TablePayload,
+} from '../../services/biotech-model.service';
 import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format';
 
 @Component({
@@ -35,7 +41,9 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
             <p-inputnumber
               [(ngModel)]="simulations"
               [showButtons]="true"
-              [min]="1"
+              [min]="100"
+              [max]="5000"
+              [step]="100"
               [useGrouping]="false"
               inputStyleClass="w-full"
             />
@@ -78,7 +86,8 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
             <p-inputnumber
               [(ngModel)]="revenueSigma"
               [showButtons]="true"
-              [min]="0"
+              [min]="0.01"
+              [max]="0.5"
               [step]="0.01"
               [minFractionDigits]="2"
               [maxFractionDigits]="2"
@@ -90,7 +99,8 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
             <p-inputnumber
               [(ngModel)]="costSigma"
               [showButtons]="true"
-              [min]="0"
+              [min]="0.01"
+              [max]="0.5"
               [step]="0.01"
               [minFractionDigits]="2"
               [maxFractionDigits]="2"
@@ -106,7 +116,7 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
               [(ngModel)]="revenueMin"
               [showButtons]="true"
               [min]="0"
-              [step]="0.01"
+              [step]="0.05"
               [minFractionDigits]="2"
               [maxFractionDigits]="2"
               inputStyleClass="w-full"
@@ -118,7 +128,7 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
               [(ngModel)]="revenueMax"
               [showButtons]="true"
               [min]="0"
-              [step]="0.01"
+              [step]="0.05"
               [minFractionDigits]="2"
               [maxFractionDigits]="2"
               inputStyleClass="w-full"
@@ -133,7 +143,7 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
               [(ngModel)]="costMin"
               [showButtons]="true"
               [min]="0"
-              [step]="0.01"
+              [step]="0.05"
               [minFractionDigits]="2"
               [maxFractionDigits]="2"
               inputStyleClass="w-full"
@@ -145,7 +155,7 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
               [(ngModel)]="costMax"
               [showButtons]="true"
               [min]="0"
-              [step]="0.01"
+              [step]="0.05"
               [minFractionDigits]="2"
               [maxFractionDigits]="2"
               inputStyleClass="w-full"
@@ -157,13 +167,21 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
           <p-button
             label="Run Monte Carlo simulation"
             [outlined]="true"
+            [loading]="isRunning"
+            [disabled]="isRunning"
             (onClick)="runSimulation()"
           ></p-button>
         </div>
 
-        @if (!hasRun) {
+        @if (errorMessage) {
+          <div class="rounded-lg bg-red-100 px-4 py-3 text-sm text-red-500">
+            {{ errorMessage }}
+          </div>
+        }
+
+        @if (!hasRun && !errorMessage) {
           <div class="rounded-lg bg-blue-300 px-4 py-3 text-sm text-blue-600">
-            Run the simulation to unlock probabilistic metrics.
+            {{ infoMessage }}
           </div>
         }
 
@@ -179,7 +197,6 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
                     [options]="lineOptions"
                   ></canvas>
                 </div>
-
               </div>
               <div class="col-span-12 flex flex-col gap-2">
                 <div class="h-64 md:h-[20rem]">
@@ -190,36 +207,32 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
                     [options]="barOptions"
                   ></canvas>
                 </div>
-                <div class="text-sm text-surface-300">
+                <div class="text-sm text-surface-500">
                   Mean rNPV: {{ formatNumber(stats.mean) }} | Std: {{ formatNumber(stats.std) }}
                   | VaR95: {{ formatNumber(stats.var95) }} | CVaR95: {{ formatNumber(stats.cvar95) }}
                 </div>
-
               </div>
               <div class="col-span-12 flex flex-col gap-2">
-                <div class="text-sm text-surface-300">
+                <div class="text-sm">
                   Probabilistic valuation percentiles:
                 </div>
-                <ul class=" gap-2 md:grid-cols-3">
+                <ul class="grid gap-2 md:grid-cols-3">
                   @for (row of percentileRows; track row.label) {
                     <li class="rounded flex justify-between px-3 py-2 text-sm">
                       <code class="text-xs text-surface-400">{{ row.label }}</code>
-                      <code class="font-semibold">{{ row.value }}</code>
+                      <code class="font-semibold">{{ formatNumber(row.value) }}</code>
                     </li>
                   }
                 </ul>
               </div>
             </div>
-
-
-
           </div>
         }
       </div>
     </p-fieldset>
   `,
 })
-export class BiotechMonteCarloProbabilisticComponent implements OnInit {
+export class BiotechMonteCarloProbabilisticComponent {
   simulations = 1000;
   revenueDistribution = 'normal';
   costDistribution = 'normal';
@@ -230,8 +243,11 @@ export class BiotechMonteCarloProbabilisticComponent implements OnInit {
   costMin = 0.8;
   costMax = 1.2;
   randomSeed = 42;
-  baseRnpv = 0;
+
   hasRun = false;
+  isRunning = false;
+  errorMessage = '';
+  infoMessage = 'Run the simulation to unlock probabilistic metrics.';
 
   lineType: ChartType = 'line';
   barType: ChartType = 'bar';
@@ -269,26 +285,69 @@ export class BiotechMonteCarloProbabilisticComponent implements OnInit {
   stats = { mean: 0, std: 0, var95: 0, cvar95: 0 };
   percentileRows: Array<{ label: string; value: number }> = [];
 
-  constructor(private readonly biotechModelService: BiotechModelService) {}
-
   distributionOptions = [
     { label: 'Normal', value: 'normal' },
+    { label: 'Lognormal', value: 'lognormal' },
     { label: 'Uniform', value: 'uniform' },
   ];
 
-  ngOnInit(): void {
-    const output = this.biotechModelService.getOutputSnapshot() ?? {};
-    this.baseRnpv = Number(output?.rnpv ?? 0);
-  }
+  constructor(private readonly biotechModelService: BiotechModelService) {}
 
   formatNumber(value: number): string {
     return formatNumberEnglish(value);
   }
 
   runSimulation(): void {
-    const base = Number.isFinite(this.baseRnpv) && this.baseRnpv !== 0 ? this.baseRnpv : 1;
-    const samples = this.generateSamples(base, Math.max(1, Math.floor(this.simulations)));
+    if (this.isRunning) {
+      return;
+    }
+    this.errorMessage = '';
+    this.isRunning = true;
+
+    const payload: BiotechMonteCarloSimulationPayload = {
+      n_sims: this.clampInt(this.simulations, 100, 5000),
+      revenue_sigma: this.clampNumber(this.revenueSigma, 0.01, 0.5),
+      cost_sigma: this.clampNumber(this.costSigma, 0.01, 0.5),
+      revenue_dist: String(this.revenueDistribution || 'normal').toLowerCase(),
+      cost_dist: String(this.costDistribution || 'normal').toLowerCase(),
+      revenue_min: this.toFiniteNumber(this.revenueMin, 0.8),
+      revenue_max: this.toFiniteNumber(this.revenueMax, 1.2),
+      cost_min: this.toFiniteNumber(this.costMin, 0.8),
+      cost_max: this.toFiniteNumber(this.costMax, 1.2),
+      random_seed: this.toOptionalInt(this.randomSeed),
+      alpha: 0.95,
+    };
+
+    this.biotechModelService
+      .runMonteCarlo(payload)
+      .pipe(
+        take(1),
+        finalize(() => {
+          this.isRunning = false;
+        })
+      )
+      .subscribe({
+        next: (response) => this.applyMonteCarloResponse(response),
+        error: (err: unknown) => {
+          this.errorMessage = this.resolveErrorMessage(err, 'Monte Carlo API call failed.');
+        },
+      });
+  }
+
+  private applyMonteCarloResponse(response: BiotechMonteCarloResponse): void {
+    const samples = this.extractNumericColumn(response?.simulations, 'rnpv_sim');
+    if (!samples.length) {
+      this.hasRun = false;
+      this.infoMessage = 'Simulation payload did not include rnpv_sim values.';
+      this.lineData = { labels: [], datasets: [] };
+      this.histData = { labels: [], datasets: [] };
+      this.stats = { mean: 0, std: 0, var95: 0, cvar95: 0 };
+      this.percentileRows = [];
+      return;
+    }
+
     this.hasRun = true;
+    this.infoMessage = 'Run the simulation to unlock probabilistic metrics.';
 
     this.lineData = {
       labels: samples.map((_, idx) => idx + 1),
@@ -302,7 +361,14 @@ export class BiotechMonteCarloProbabilisticComponent implements OnInit {
     };
 
     this.histData = this.buildHistogram(samples, 20);
-    this.stats = this.computeStats(samples);
+    const fallbackStats = this.computeStats(samples);
+    const summary = response?.summary ?? {};
+    this.stats = {
+      mean: this.toFiniteNumber(summary['mean'], fallbackStats.mean),
+      std: this.toFiniteNumber(summary['std'], fallbackStats.std),
+      var95: this.toFiniteNumber(summary['var'], fallbackStats.var95),
+      cvar95: this.toFiniteNumber(summary['cvar'], fallbackStats.cvar95),
+    };
     this.percentileRows = [
       { label: '0.1', value: this.percentile(samples, 0.1) },
       { label: '0.25', value: this.percentile(samples, 0.25) },
@@ -312,72 +378,27 @@ export class BiotechMonteCarloProbabilisticComponent implements OnInit {
     ];
   }
 
-  private generateSamples(base: number, count: number): number[] {
-    const rng = this.createSeededRng(this.randomSeed);
-    const values: number[] = [];
-    for (let i = 0; i < count; i += 1) {
-      const revFactor = this.sampleFactor(
-        rng,
-        this.revenueDistribution,
-        this.revenueSigma,
-        this.revenueMin,
-        this.revenueMax
-      );
-      const costFactor = this.sampleFactor(
-        rng,
-        this.costDistribution,
-        this.costSigma,
-        this.costMin,
-        this.costMax
-      );
-      const adjusted = base * (revFactor - (costFactor - 1));
-      values.push(adjusted);
+  private extractNumericColumn(payload: TablePayload | undefined, column: string): number[] {
+    const values = payload?.data?.[column];
+    if (!Array.isArray(values)) {
+      return [];
     }
-    return values;
-  }
-
-  private sampleFactor(
-    rng: () => number,
-    distribution: string,
-    sigma: number,
-    min: number,
-    max: number
-  ): number {
-    if (distribution === 'uniform') {
-      const lo = Math.min(min, max);
-      const hi = Math.max(min, max);
-      return lo + (hi - lo) * rng();
-    }
-    const z = this.randn(rng);
-    return 1 + z * sigma;
-  }
-
-  private randn(rng: () => number): number {
-    let u = 0;
-    let v = 0;
-    while (u === 0) u = rng();
-    while (v === 0) v = rng();
-    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-  }
-
-  private createSeededRng(seed: number): () => number {
-    let t = Math.floor(seed) || 1;
-    return () => {
-      t += 0x6d2b79f5;
-      let r = Math.imul(t ^ (t >>> 15), 1 | t);
-      r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
-      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-    };
+    const numeric = values
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value));
+    return numeric as number[];
   }
 
   private buildHistogram(values: number[], bins: number): ChartConfiguration['data'] {
-    if (!values.length) return { labels: [], datasets: [] };
+    if (!values.length || bins <= 0) {
+      return { labels: [], datasets: [] };
+    }
     const min = Math.min(...values);
     const max = Math.max(...values);
     const width = (max - min) / bins || 1;
     const counts = Array.from({ length: bins }, () => 0);
-    values.forEach((v) => {
-      const idx = Math.min(bins - 1, Math.max(0, Math.floor((v - min) / width)));
+    values.forEach((value) => {
+      const idx = Math.min(bins - 1, Math.max(0, Math.floor((value - min) / width)));
       counts[idx] += 1;
     });
     const labels = counts.map((_, i) => (min + i * width).toFixed(0));
@@ -394,21 +415,88 @@ export class BiotechMonteCarloProbabilisticComponent implements OnInit {
   }
 
   private computeStats(values: number[]): { mean: number; std: number; var95: number; cvar95: number } {
-    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
-    const variance =
-      values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    if (!values.length) {
+      return { mean: 0, std: 0, var95: 0, cvar95: 0 };
+    }
+    const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+    const varianceNumerator = values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0);
+    const variance = values.length > 1 ? varianceNumerator / (values.length - 1) : 0;
     const std = Math.sqrt(variance);
     const var95 = this.percentile(values, 0.05);
-    const tail = values.filter((v) => v <= var95);
-    const cvar95 = tail.length ? tail.reduce((sum, v) => sum + v, 0) / tail.length : var95;
+    const tail = values.filter((value) => value <= var95);
+    const cvar95 = tail.length ? tail.reduce((sum, value) => sum + value, 0) / tail.length : var95;
     return { mean, std, var95, cvar95 };
   }
 
   private percentile(values: number[], p: number): number {
-    if (!values.length) return 0;
+    if (!values.length) {
+      return 0;
+    }
     const sorted = [...values].sort((a, b) => a - b);
-    const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor(p * sorted.length)));
-    return sorted[idx] ?? 0;
+    const clamped = Math.min(1, Math.max(0, p));
+    const position = (sorted.length - 1) * clamped;
+    const lower = Math.floor(position);
+    const upper = Math.ceil(position);
+    if (lower === upper) {
+      return sorted[lower] ?? 0;
+    }
+    const weight = position - lower;
+    const lowValue = sorted[lower] ?? 0;
+    const highValue = sorted[upper] ?? lowValue;
+    return lowValue + (highValue - lowValue) * weight;
   }
 
+  private clampInt(value: unknown, min: number, max: number): number {
+    const numeric = Math.floor(Number(value));
+    if (!Number.isFinite(numeric)) {
+      return min;
+    }
+    return Math.min(max, Math.max(min, numeric));
+  }
+
+  private clampNumber(value: unknown, min: number, max: number): number {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return min;
+    }
+    return Math.min(max, Math.max(min, numeric));
+  }
+
+  private toFiniteNumber(value: unknown, fallback = 0): number {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  private toOptionalInt(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return null;
+    }
+    return Math.floor(numeric);
+  }
+
+  private resolveErrorMessage(error: unknown, fallback: string): string {
+    if (error && typeof error === 'object') {
+      const maybeError = error as { message?: string; error?: unknown };
+      if (typeof maybeError.message === 'string' && maybeError.message.trim()) {
+        return maybeError.message;
+      }
+      if (typeof maybeError.error === 'string' && maybeError.error.trim()) {
+        return maybeError.error;
+      }
+      if (maybeError.error && typeof maybeError.error === 'object') {
+        const inner = maybeError.error as { detail?: string; message?: string };
+        if (typeof inner.detail === 'string' && inner.detail.trim()) {
+          return inner.detail;
+        }
+        if (typeof inner.message === 'string' && inner.message.trim()) {
+          return inner.message;
+        }
+      }
+    }
+    return fallback;
+  }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -9,7 +9,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { BiotechModelService } from '../../services/biotech-model.service';
-import { take } from 'rxjs';
+import { Subject, take, takeUntil } from 'rxjs';
 
 interface VaccineProductRow {
   id: string;
@@ -631,7 +631,7 @@ interface HelperColumnDefinition {
         <div class="grid grid-cols-12 gap-2">
           <div class="col-span-12 flex flex-col gap-2">
             <div class="overflow-x-auto rounded max-w-full">
-              <p-table [value]="rows" [scrollable]="true" showGridlines class="text-sm w-full" [size]="'small'">
+              <p-table [value]="displayRows" [scrollable]="true" showGridlines class="text-sm w-full" [size]="'small'">
                 <ng-template #header>
                   <tr>
                     <th style="min-width:150px">name</th>
@@ -691,24 +691,19 @@ interface HelperColumnDefinition {
             </div>
           </div>
         </div>
-        <div class="flex">
-          <p-button
-            label="Run locally"
-            size="small"
-            [outlined]="true"
-            [loading]="isRunningLocally"
-            [disabled]="isRunningLocally"
-            (onClick)="runLocally()"
-          ></p-button>
-        </div>
       </div>
     </p-fieldset>
   `,
 })
-export class BiotechProductFullProfilesFieldsetComponent implements OnInit {
+export class BiotechProductFullProfilesFieldsetComponent
+  implements OnInit, OnDestroy, OnChanges
+{
+  @Input() tableOverrideRows: any[] = [];
+  private readonly destroy$ = new Subject<void>();
   rows: VaccineProductRow[] = [];
+  displayRows: VaccineProductRow[] = [];
+  private useTableOverrideRows = false;
   selectedRowId = '';
-  isRunningLocally = false;
   rowForm: FormGroup;
   newRowForm: FormGroup;
   helper: IncrementHelper = {
@@ -849,6 +844,22 @@ export class BiotechProductFullProfilesFieldsetComponent implements OnInit {
   ngOnInit(): void {
     this.loadDefaultsData();
     this.syncFromModel();
+    this.biotechModelService.input$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.syncFromModel());
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['tableOverrideRows']) {
+      this.useTableOverrideRows =
+        Array.isArray(this.tableOverrideRows) && this.tableOverrideRows.length > 0;
+      this.syncDisplayRows();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   get rowOptions() {
@@ -895,6 +906,8 @@ export class BiotechProductFullProfilesFieldsetComponent implements OnInit {
     this.rows = nextRows;
     this.selectedRowId = sanitized.id;
     this.rowForm.reset({ ...sanitized });
+    this.useTableOverrideRows = false;
+    this.syncDisplayRows();
     this.persist();
   }
 
@@ -905,6 +918,8 @@ export class BiotechProductFullProfilesFieldsetComponent implements OnInit {
     this.selectedRowId = sanitized.id;
     this.syncSelectedRow();
     this.resetNewRow();
+    this.useTableOverrideRows = false;
+    this.syncDisplayRows();
     this.persist();
   }
 
@@ -916,6 +931,8 @@ export class BiotechProductFullProfilesFieldsetComponent implements OnInit {
     this.selectedRowId = this.rows[0]?.id ?? '';
     this.syncSelectedRow();
     this.resetNewRow();
+    this.useTableOverrideRows = false;
+    this.syncDisplayRows();
     this.persist();
   }
 
@@ -943,25 +960,9 @@ export class BiotechProductFullProfilesFieldsetComponent implements OnInit {
     }
     this.rows = updated;
     this.syncSelectedRow();
+    this.useTableOverrideRows = false;
+    this.syncDisplayRows();
     this.persist();
-  }
-
-  runLocally(): void {
-    if (this.isRunningLocally) {
-      return;
-    }
-    this.isRunningLocally = true;
-    this.biotechModelService
-      .runBiotechModel()
-      .pipe(take(1))
-      .subscribe({
-        next: () => {
-          this.isRunningLocally = false;
-        },
-        error: () => {
-          this.isRunningLocally = false;
-        },
-      });
   }
 
   private sanitizeRow(value: VaccineProductRow, fallbackId: string): VaccineProductRow {
@@ -1006,43 +1007,48 @@ export class BiotechProductFullProfilesFieldsetComponent implements OnInit {
   private syncFromModel(): void {
     const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
     this.refreshDynamicOptions(snapshot);
+    const currentSelectedId = this.selectedRowId;
     const stored =
       Array.isArray(snapshot?.products) && snapshot.products.length
         ? snapshot.products
         : this.defaultsProductsRows;
     const defaultStage = this.stageOptions[0]?.value ?? this.stageFallbackOrder[0];
     if (stored.length) {
-      this.rows = stored.map((row: any, index: number) => ({
-        id: String(row?.id ?? '').trim() || `VAC-${String(index + 1).padStart(3, '0')}`,
-        name: String(row?.name ?? ''),
-        stage: String(row?.stage ?? '').trim() || defaultStage,
-        success_prob: Number(row?.success_prob ?? 0),
-        include_in_consolidation: Boolean(row?.include_in_consolidation),
-        time_to_market: Number(row?.time_to_market ?? 0),
-        patent_years: Number(row?.patent_years ?? 0),
-        patent_revenue_target: Number(row?.patent_revenue_target ?? 0),
-        post_patent_revenue_target: Number(row?.post_patent_revenue_target ?? 0),
-        market_growth_patent: Number(row?.market_growth_patent ?? 0),
-        market_growth_post: Number(row?.market_growth_post ?? 0),
-        cogs_patent: Number(row?.cogs_patent ?? 0),
-        cogs_post: Number(row?.cogs_post ?? 0),
-        labor_pct: Number(row?.labor_pct ?? 0),
-        overhead_pct: Number(row?.overhead_pct ?? 0),
-        material_pct: Number(row?.material_pct ?? 0),
-        sales_marketing_pct: Number(row?.sales_marketing_pct ?? 0),
-        gna_pct: Number(row?.gna_pct ?? 0),
-        rd_remaining_pre_launch: Number(row?.rd_remaining_pre_launch ?? 0),
-        rd_annual_post_launch: Number(row?.rd_annual_post_launch ?? 0),
-        capex_remaining_pre_launch: Number(row?.capex_remaining_pre_launch ?? 0),
-        capex_annual_post_launch: Number(row?.capex_annual_post_launch ?? 0),
-      }));
-      this.selectedRowId = this.rows[0]?.id ?? '';
+      this.rows = stored.map((row: any, index: number) =>
+        this.normalizeRow(row, index, defaultStage)
+      );
+      this.selectedRowId =
+        this.rows.find((row) => row.id === currentSelectedId)?.id ??
+        this.rows[0]?.id ??
+        '';
       this.syncSelectedRow();
     } else {
       this.rows = [];
       this.selectedRowId = '';
     }
+    this.syncDisplayRows();
     this.resetNewRow();
+  }
+
+  private syncDisplayRows(): void {
+    const defaultStage = this.stageOptions[0]?.value ?? this.stageFallbackOrder[0];
+    if (this.useTableOverrideRows && Array.isArray(this.tableOverrideRows) && this.tableOverrideRows.length) {
+      this.displayRows = this.tableOverrideRows.map((row: any, index: number) =>
+        this.normalizeRow(row, index, defaultStage)
+      );
+      return;
+    }
+    this.displayRows = this.rows.map((row) => ({ ...row }));
+  }
+
+  private normalizeRow(row: any, index: number, defaultStage: string): VaccineProductRow {
+    const fallbackId = `VAC-${String(index + 1).padStart(3, '0')}`;
+    const sanitized = this.sanitizeRow((row ?? {}) as VaccineProductRow, fallbackId);
+    return {
+      ...sanitized,
+      name: sanitized.name || `Template ${index + 1}`,
+      stage: sanitized.stage || defaultStage,
+    };
   }
 
   private nextProductId(): string {

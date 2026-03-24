@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ChartConfiguration, ChartType } from 'chart.js';
+import { Chart, ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -9,8 +9,16 @@ import { SliderModule } from 'primeng/slider';
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { FieldsetModule } from 'primeng/fieldset';
 import { BiotechModelService } from '../../services/biotech-model.service';
 import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format';
+import { Subject, takeUntil } from 'rxjs';
+
+interface ComparableMultipleRow {
+  peer: string;
+  multiple: number;
+  metric: string;
+}
 
 @Component({
   standalone: true,
@@ -25,6 +33,7 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
     CardModule,
     TableModule,
     InputNumberModule,
+    FieldsetModule,
   ],
   template: `
     <div class="card flex flex-col gap-6">
@@ -74,6 +83,51 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
         </div>
       </div>
 
+      <p-fieldset
+        legend="Comparable multiples (EV/EBITDA or EV/Sales)"
+        [toggleable]="true"
+        class="w-full"
+      >
+        <div class="flex flex-col gap-4">
+          <div class="overflow-auto rounded">
+            <p-table
+              [value]="comparableMultipleRows"
+              showGridlines
+              [scrollable]="true"
+              [size]="'small'"
+              class="text-xs"
+              [tableStyle]="{ 'min-width': '700px' }"
+            >
+              <ng-template pTemplate="header">
+                <tr>
+                  <th>Peer</th>
+                  <th class="text-right">Multiple</th>
+                  <th>Metric</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-row>
+                <tr>
+                  <td>{{ row.peer }}</td>
+                  <td class="text-right">{{ row.multiple | number: '1.1-1' }}</td>
+                  <td>{{ row.metric }}</td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+
+          <div class="text-sm font-semibold">
+            Implied EV range (using last-year {{ comparableBaseMetricLabel }}
+            {{ formatNumber(comparableBaseMetricValue) }}):
+            {{ formatNumber(comparableImpliedEvLow) }} -
+            {{ formatNumber(comparableImpliedEvHigh) }}
+          </div>
+
+          <div class="text-xs text-surface-500">
+            Median multiple: {{ comparableMedianMultiple | number: '1.1-1' }}x
+          </div>
+        </div>
+      </p-fieldset>
+
 
       <div class="flex flex-col gap-4">
         <div class="text-lg font-semibold">Scenario analysis</div>
@@ -119,7 +173,7 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
           </div>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div class="flex flex-col gap-2">
             <div class="flex items-center justify-between text-xs text-surface-400 font-semibold">
               <span>Revenue multiplier</span>
@@ -176,9 +230,57 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
               (onChange)="recalculateScenario()"
             ></p-slider>
           </div>
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between text-xs text-surface-400 font-semibold">
+              <span>Launch delay (years)</span>
+              <span class="text-red-400">{{ launchDelayYears }}</span>
+            </div>
+            <p-slider
+              [(ngModel)]="launchDelayYears"
+              [min]="0"
+              [max]="10"
+              [step]="1"
+              styleClass="w-full"
+              (onChange)="recalculateScenario()"
+            ></p-slider>
+          </div>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="flex flex-col gap-3">
+          <div class="text-sm text-surface-300 font-semibold">Stage slippage (years)</div>
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between text-xs text-surface-400 font-semibold">
+                <span>Phase II delay</span>
+                <span class="text-red-400">{{ phaseIiDelayYears }}</span>
+              </div>
+              <p-slider
+                [(ngModel)]="phaseIiDelayYears"
+                [min]="0"
+                [max]="3"
+                [step]="1"
+                styleClass="w-full"
+                (onChange)="recalculateScenario()"
+              ></p-slider>
+            </div>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between text-xs text-surface-400 font-semibold">
+                <span>Phase III delay</span>
+                <span class="text-red-400">{{ phaseIiiDelayYears }}</span>
+              </div>
+              <p-slider
+                [(ngModel)]="phaseIiiDelayYears"
+                [min]="0"
+                [max]="3"
+                [step]="1"
+                styleClass="w-full"
+                (onChange)="recalculateScenario()"
+              ></p-slider>
+            </div>
+          </div>
+        </div>
+
+        <!-- <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div class="flex flex-col gap-2">
             <div class="text-xs text-surface-400 font-semibold">Scenario rNPV</div>
             <div class="text-2xl font-semibold">{{ formatNumber(scenarioRnpv) }}</div>
@@ -227,9 +329,9 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
               </span>
             </div>
           </div>
-        </div>
+        </div> -->
 
-        <div class="flex flex-col gap-3">
+        <!-- <div class="flex flex-col gap-3">
           <div class="text-sm text-surface-300 font-semibold">Scenario overlay vs base</div>
           <div class="">
             <div class="flex items-center justify-between text-xs text-surface-500">
@@ -358,11 +460,11 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
               </p-table>
             </div>
           }
-        </div>
+        </div> -->
       </div>
 
 
-      <div class="flex flex-col gap-4">
+      <!-- <div class="flex flex-col gap-4">
         <div class="text-lg font-semibold">Tornado sensitivity (interactive)</div>
 
         <div class="overflow-auto rounded">
@@ -409,10 +511,6 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
               inputStyleClass="w-full"
               styleClass="flex-1"
             ></p-inputnumber>
-            <!-- <div class="flex items-center gap-2">
-              <p-button label="-" [outlined]="true" [size]="'small'" (onClick)="nudgeTarget(-1)"></p-button>
-              <p-button label="+" [outlined]="true" [size]="'small'" (onClick)="nudgeTarget(1)"></p-button>
-            </div> -->
           </div>
           <p-button
             label="Solve revenue multiplier"
@@ -430,11 +528,13 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
             Tip: Upload a Prophet-ready dataframe (ds, y) and plug it into ForecastScenarioBridge for richer scenarios.
           </div>
         </div>
-      </div>
+      </div> -->
     </div>
   `,
 })
-export class BiotechDashboardComponent implements OnInit {
+export class BiotechDashboardComponent implements OnInit, OnDestroy {
+  private readonly destroy$ = new Subject<void>();
+  private isPresetInitialized = false;
   rnpv = 0;
   peakRevenue = 0;
   avgEbitdaMargin = 0;
@@ -445,6 +545,9 @@ export class BiotechDashboardComponent implements OnInit {
   costMultiplier = 1;
   discountRateShift = 0;
   successProbMultiplier = 1;
+  launchDelayYears = 0;
+  phaseIiDelayYears = 0;
+  phaseIiiDelayYears = 0;
   scenarioRnpv = 0;
   scenarioEbitdaTotal = 0;
   scenarioRevenueDelta = 0;
@@ -481,6 +584,12 @@ export class BiotechDashboardComponent implements OnInit {
   baseRevenueTotal = 0;
   baseEbitdaTotal = 0;
   baseFcffTotal = 0;
+  comparableMultipleRows: ComparableMultipleRow[] = this.getDefaultComparableRows();
+  comparableBaseMetricLabel = 'EBITDA';
+  comparableBaseMetricValue = 0;
+  comparableImpliedEvLow = 0;
+  comparableImpliedEvHigh = 0;
+  comparableMedianMultiple = 0;
 
   trendChartType: ChartType = 'line';
   trendChartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
@@ -490,7 +599,32 @@ export class BiotechDashboardComponent implements OnInit {
     plugins: {
       legend: {
         position: 'bottom',
-        labels: { color: '#cbd5e1', usePointStyle: true, padding: 12 },
+        labels: {
+          color: '#cbd5e1',
+          usePointStyle: true,
+          padding: 12,
+          generateLabels: (chart) => {
+            const labels =
+              Chart.defaults.plugins.legend.labels.generateLabels(chart);
+            return labels.map((item) => {
+              const datasetIndex =
+                typeof item.datasetIndex === 'number' ? item.datasetIndex : -1;
+              const dataset =
+                datasetIndex >= 0 ? chart.data.datasets[datasetIndex] : undefined;
+              const legendColor = this.resolveLegendColor(
+                dataset?.borderColor,
+                dataset?.backgroundColor
+              );
+              return {
+                ...item,
+                fillStyle: legendColor,
+                strokeStyle: legendColor,
+                lineWidth: 2,
+                pointStyle: 'circle',
+              };
+            });
+          },
+        },
       },
       tooltip: {
         mode: 'index',
@@ -589,29 +723,54 @@ export class BiotechDashboardComponent implements OnInit {
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.biotechModelService.getOutputSnapshot();
-    const consolidated = output?.consolidated ?? {};
-    const years = (consolidated.index as number[]) ?? [];
-    const data = consolidated.data ?? {};
-    const revenue = this.asNumberArray(data['revenue']);
-    const ebitda = this.asNumberArray(data['ebitda']);
-    const fcffAfterWc = this.asNumberArray(data['fcff_after_wc']);
+    this.biotechModelService.output$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((output) => this.updateDashboardFromOutput(output));
+  }
 
-    this.rnpv = Number(output?.rnpv ?? 0);
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private updateDashboardFromOutput(output: any): void {
+    const resolvedOutput = output ?? this.biotechModelService.getOutputSnapshot() ?? {};
+    const consolidated = resolvedOutput?.consolidated ?? {};
+    const years = this.asNumberArray(consolidated?.index);
+    const data = consolidated?.data ?? {};
+    const revenueRaw = this.asNumberArray(data['revenue']);
+    const ebitdaRaw = this.asNumberArray(data['ebitda']);
+    const fcffAfterWcRaw = this.asNumberArray(data['fcff_after_wc']);
+    const fcffFallback = this.asNumberArray(data['fcff']);
+    const fcffSource = fcffAfterWcRaw.length ? fcffAfterWcRaw : fcffFallback;
+
+    const maxLength = Math.max(
+      years.length,
+      revenueRaw.length,
+      ebitdaRaw.length,
+      fcffSource.length
+    );
+    const labels = this.buildChartLabels(years, maxLength);
+    const revenue = this.normalizeSeriesLength(revenueRaw, maxLength);
+    const ebitda = this.normalizeSeriesLength(ebitdaRaw, maxLength);
+    const fcffAfterWc = this.normalizeSeriesLength(fcffSource, maxLength);
+
+    this.rnpv = Number(resolvedOutput?.rnpv ?? 0);
     this.targetRnpv = this.rnpv;
     this.peakRevenue = revenue.reduce((max, value) => Math.max(max, value ?? 0), 0);
     this.totalFcffAfterWc = this.total(fcffAfterWc);
     this.avgEbitdaMargin = this.calculateAverageMargin(revenue, ebitda);
-    this.baseYears = years;
+    this.baseYears = labels;
     this.baseRevenue = revenue;
     this.baseEbitda = ebitda;
     this.baseFcff = fcffAfterWc;
     this.baseRevenueTotal = this.total(revenue);
     this.baseEbitdaTotal = this.total(ebitda);
     this.baseFcffTotal = this.total(fcffAfterWc);
+    this.updateComparableMultiples(resolvedOutput, revenue, ebitda);
 
     this.trendChartData = {
-      labels: years,
+      labels,
       datasets: [
         {
           label: 'revenue',
@@ -641,7 +800,7 @@ export class BiotechDashboardComponent implements OnInit {
     };
 
     this.fcffChartData = {
-      labels: years,
+      labels,
       datasets: [
         {
           data: fcffAfterWc,
@@ -650,7 +809,13 @@ export class BiotechDashboardComponent implements OnInit {
         },
       ],
     };
-    this.applyPreset('base');
+
+    if (!this.isPresetInitialized) {
+      this.applyPreset('base');
+      this.isPresetInitialized = true;
+    } else {
+      this.recalculateScenario();
+    }
     this.buildTornadoRows();
   }
 
@@ -703,6 +868,274 @@ export class BiotechDashboardComponent implements OnInit {
   private asNumberArray(values: unknown): number[] {
     if (!Array.isArray(values)) return [];
     return values.map((v) => Number(v ?? 0));
+  }
+
+  private buildChartLabels(years: number[], requiredLength: number): number[] {
+    if (requiredLength <= 0) {
+      return [];
+    }
+    if (years.length >= requiredLength) {
+      return years.slice(0, requiredLength);
+    }
+    if (years.length > 0) {
+      const labels = [...years];
+      let nextYear = labels[labels.length - 1] ?? 0;
+      while (labels.length < requiredLength) {
+        nextYear += 1;
+        labels.push(nextYear);
+      }
+      return labels;
+    }
+    return Array.from({ length: requiredLength }, (_, index) => index + 1);
+  }
+
+  private normalizeSeriesLength(values: number[], requiredLength: number): number[] {
+    if (requiredLength <= 0) {
+      return [];
+    }
+    if (values.length >= requiredLength) {
+      return values.slice(0, requiredLength);
+    }
+    const normalized = [...values];
+    while (normalized.length < requiredLength) {
+      normalized.push(0);
+    }
+    return normalized;
+  }
+
+  private shiftSeries(values: number[], shiftYears: number): number[] {
+    const shift = Math.max(0, Math.floor(shiftYears || 0));
+    if (!shift) {
+      return [...values];
+    }
+    const padded = [...Array.from({ length: shift }, () => 0), ...values];
+    return padded.slice(0, values.length);
+  }
+
+  private resolveLegendColor(primary: unknown, fallback: unknown): string {
+    const pickColor = (value: unknown): string | null => {
+      if (typeof value === 'string' && value.trim()) {
+        return value;
+      }
+      if (Array.isArray(value) && value.length) {
+        const first = value[0];
+        if (typeof first === 'string' && first.trim()) {
+          return first;
+        }
+      }
+      return null;
+    };
+
+    return (
+      pickColor(primary) ??
+      pickColor(fallback) ??
+      '#94a3b8'
+    );
+  }
+
+  private updateComparableMultiples(
+    output: any,
+    revenueSeries: number[],
+    ebitdaSeries: number[]
+  ): void {
+    const extractedRows = this.extractComparableRows(output);
+    this.comparableMultipleRows = extractedRows.length
+      ? extractedRows
+      : this.getDefaultComparableRows();
+
+    const metrics = this.comparableMultipleRows.map((row) =>
+      String(row.metric ?? '').toUpperCase()
+    );
+    const useSalesMetric = metrics.length > 0 && metrics.every((metric) => metric.includes('SALES'));
+    this.comparableBaseMetricLabel = useSalesMetric ? 'Revenue' : 'EBITDA';
+
+    const sourceSeries = useSalesMetric ? revenueSeries : ebitdaSeries;
+    this.comparableBaseMetricValue = this.getLastSeriesValue(sourceSeries);
+
+    const multiples = this.comparableMultipleRows
+      .map((row) => Number(row.multiple))
+      .filter((value) => Number.isFinite(value));
+
+    if (!multiples.length) {
+      this.comparableMedianMultiple = 0;
+      this.comparableImpliedEvLow = 0;
+      this.comparableImpliedEvHigh = 0;
+      return;
+    }
+
+    const minMultiple = Math.min(...multiples);
+    const maxMultiple = Math.max(...multiples);
+    const medianMultiple = this.getMedian(multiples);
+    const baseValue = this.comparableBaseMetricValue;
+
+    this.comparableMedianMultiple = medianMultiple;
+    this.comparableImpliedEvLow = baseValue * minMultiple;
+    this.comparableImpliedEvHigh = baseValue * maxMultiple;
+  }
+
+  private extractComparableRows(output: any): ComparableMultipleRow[] {
+    const candidates = [
+      output?.comparable_multiples,
+      output?.comparables,
+      output?.valuation?.comparable_multiples,
+      output?.valuation?.comparables,
+    ];
+
+    for (const candidate of candidates) {
+      const rows = this.normalizeComparableRows(candidate);
+      if (rows.length) {
+        return rows;
+      }
+    }
+
+    return [];
+  }
+
+  private normalizeComparableRows(payload: any): ComparableMultipleRow[] {
+    if (!payload) {
+      return [];
+    }
+
+    if (Array.isArray(payload)) {
+      return payload
+        .map((row, index) => this.normalizeComparableRow(row, index))
+        .filter(
+          (row: ComparableMultipleRow | null): row is ComparableMultipleRow =>
+            row !== null
+        );
+    }
+
+    if (payload && typeof payload === 'object') {
+      const rowsPayload = Array.isArray(payload?.rows)
+        ? payload.rows
+        : Array.isArray(payload?.values)
+          ? payload.values
+          : null;
+
+      if (rowsPayload) {
+        return rowsPayload
+          .map((row: any, index: number) => this.normalizeComparableRow(row, index))
+          .filter(
+            (row: ComparableMultipleRow | null): row is ComparableMultipleRow =>
+              row !== null
+          );
+      }
+
+      const tableRows = this.tablePayloadToRows(payload);
+      if (tableRows.length) {
+        return tableRows
+          .map((row, index) => this.normalizeComparableRow(row, index))
+          .filter(
+            (row: ComparableMultipleRow | null): row is ComparableMultipleRow =>
+              row !== null
+          );
+      }
+    }
+
+    return [];
+  }
+
+  private normalizeComparableRow(
+    row: any,
+    index: number
+  ): ComparableMultipleRow | null {
+    if (!row || typeof row !== 'object') {
+      return null;
+    }
+
+    const peer = String(
+      row?.peer ?? row?.Peer ?? row?.company ?? row?.name ?? `Peer ${index + 1}`
+    ).trim();
+
+    const multiple = Number(
+      row?.multiple ??
+      row?.Multiple ??
+      row?.['EV/EBITDA'] ??
+      row?.['EV/Sales'] ??
+      row?.value
+    );
+
+    if (!peer || !Number.isFinite(multiple)) {
+      return null;
+    }
+
+    const explicitMetric = String(
+      row?.metric ?? row?.Metric ?? row?.multiple_type ?? row?.type ?? ''
+    ).trim();
+    const metric =
+      explicitMetric ||
+      (row?.['EV/Sales'] !== undefined ? 'EV/Sales' : 'EV/EBITDA');
+
+    return {
+      peer,
+      multiple,
+      metric,
+    };
+  }
+
+  private tablePayloadToRows(payload: any): Array<Record<string, unknown>> {
+    if (!payload || typeof payload !== 'object') {
+      return [];
+    }
+    const data = payload?.data;
+    if (!data || typeof data !== 'object') {
+      return [];
+    }
+    const columns = Object.keys(data);
+    if (!columns.length) {
+      return [];
+    }
+    const rowCount = Math.max(
+      0,
+      ...columns.map((column) =>
+        Array.isArray((data as Record<string, unknown[]>)[column])
+          ? (data as Record<string, unknown[]>)[column].length
+          : 0
+      )
+    );
+    const rows: Array<Record<string, unknown>> = [];
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+      const row: Record<string, unknown> = {};
+      for (const column of columns) {
+        const values = (data as Record<string, unknown[]>)[column];
+        row[column] = Array.isArray(values) ? values[rowIndex] : undefined;
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  private getMedian(values: number[]): number {
+    if (!values.length) {
+      return 0;
+    }
+    const sorted = [...values].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 0) {
+      return (sorted[middle - 1] + sorted[middle]) / 2;
+    }
+    return sorted[middle];
+  }
+
+  private getLastSeriesValue(values: number[]): number {
+    if (!values.length) {
+      return 0;
+    }
+    for (let idx = values.length - 1; idx >= 0; idx -= 1) {
+      const value = Number(values[idx] ?? 0);
+      if (Number.isFinite(value)) {
+        return value;
+      }
+    }
+    return 0;
+  }
+
+  private getDefaultComparableRows(): ComparableMultipleRow[] {
+    return [
+      { peer: 'Peer A', multiple: 8, metric: 'EV/EBITDA' },
+      { peer: 'Peer B', multiple: 10, metric: 'EV/EBITDA' },
+      { peer: 'Peer C', multiple: 12, metric: 'EV/EBITDA' },
+    ];
   }
 
   private sumPerProductSeries(
@@ -790,24 +1223,36 @@ export class BiotechDashboardComponent implements OnInit {
       this.costMultiplier = 1;
       this.discountRateShift = 0;
       this.successProbMultiplier = 1;
+      this.launchDelayYears = 0;
+      this.phaseIiDelayYears = 0;
+      this.phaseIiiDelayYears = 0;
     } else if (preset === 'upside') {
       this.scenarioName = 'Upside';
       this.revenueMultiplier = 1.2;
       this.costMultiplier = 0.95;
       this.discountRateShift = -0.02;
       this.successProbMultiplier = 1.1;
+      this.launchDelayYears = 0;
+      this.phaseIiDelayYears = 0;
+      this.phaseIiiDelayYears = 0;
     } else if (preset === 'downside') {
       this.scenarioName = 'Downside';
       this.revenueMultiplier = 0.85;
       this.costMultiplier = 1.1;
       this.discountRateShift = 0.03;
       this.successProbMultiplier = 0.85;
+      this.launchDelayYears = 1;
+      this.phaseIiDelayYears = 1;
+      this.phaseIiiDelayYears = 1;
     } else {
       this.scenarioName = 'Trial failure';
       this.revenueMultiplier = 0.3;
       this.costMultiplier = 1.3;
       this.discountRateShift = 0.05;
       this.successProbMultiplier = 0.4;
+      this.launchDelayYears = 2;
+      this.phaseIiDelayYears = 2;
+      this.phaseIiiDelayYears = 3;
     }
     this.recalculateScenario();
   }
@@ -818,17 +1263,43 @@ export class BiotechDashboardComponent implements OnInit {
     const costFactor = this.costMultiplier || 1;
     const profitFactor = revenueFactor / costFactor;
     const discountFactor = Math.max(0.5, 1 - this.discountRateShift);
+    const launchDelay = Math.max(0, Math.round(this.launchDelayYears || 0));
+    const phaseIiDelay = Math.max(0, Math.round(this.phaseIiDelayYears || 0));
+    const phaseIiiDelay = Math.max(0, Math.round(this.phaseIiiDelayYears || 0));
+    const totalDelayYears = launchDelay + phaseIiDelay + phaseIiiDelay;
+    const launchPenalty = Math.max(0.25, 1 - launchDelay * 0.03);
+    const stageSlippagePenalty = Math.max(0.25, 1 - (phaseIiDelay + phaseIiiDelay) * 0.05);
+    const scenarioScale = launchPenalty * stageSlippagePenalty;
 
-    this.scenarioRevenue = this.baseRevenue.map((value) => value * revenueFactor);
-    this.scenarioEbitda = this.baseEbitda.map((value) => value * profitFactor);
-    this.scenarioFcff = this.baseFcff.map((value) => value * profitFactor);
+    const delayedRevenue = this.shiftSeries(this.baseRevenue, totalDelayYears);
+    const delayedEbitda = this.shiftSeries(this.baseEbitda, totalDelayYears);
+    const delayedFcff = this.shiftSeries(this.baseFcff, totalDelayYears);
+
+    this.scenarioRevenue = delayedRevenue.map(
+      (value) => value * revenueFactor * stageSlippagePenalty
+    );
+    this.scenarioEbitda = delayedEbitda.map(
+      (value) => value * profitFactor * scenarioScale
+    );
+    this.scenarioFcff = delayedFcff.map(
+      (value) => value * profitFactor * scenarioScale
+    );
 
     const scenarioRevenueTotal = this.total(this.scenarioRevenue);
     const scenarioEbitdaTotal = this.total(this.scenarioEbitda);
     const scenarioFcffTotal = this.total(this.scenarioFcff);
 
+    const delayDiscount = Math.pow(
+      1 + Math.max(0, 0.1 + this.discountRateShift),
+      totalDelayYears
+    );
     this.scenarioRnpv =
-      this.rnpv * revenueFactor * this.successProbMultiplier * discountFactor;
+      (this.rnpv *
+        revenueFactor *
+        this.successProbMultiplier *
+        discountFactor *
+        scenarioScale) /
+      Math.max(1, delayDiscount);
     this.scenarioEbitdaTotal = scenarioEbitdaTotal;
     this.scenarioRevenueDelta = scenarioRevenueTotal - this.baseRevenueTotal;
     this.scenarioFcffDelta = scenarioFcffTotal - this.baseFcffTotal;

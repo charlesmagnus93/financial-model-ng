@@ -19,6 +19,93 @@ export interface ValidationIssue {
   message: string;
 }
 
+export interface TablePayload {
+  index_name?: string;
+  index?: any[];
+  data?: Record<string, any[]>;
+}
+
+export interface BiotechVcRequestPayload {
+  exit_year: number;
+  target_irr: number;
+  investor_ownership_at_exit: number;
+  new_money: number;
+  exit_multiple?: number | null;
+}
+
+export interface BiotechWhatIfShockPayload {
+  revenue_multiplier: number;
+  cost_multiplier: number;
+  discount_shift: number;
+  success_prob_multiplier: number;
+  launch_delay_years: number;
+  stage_slippage_years: Record<string, number>;
+}
+
+export interface BiotechScenarioPayload {
+  name: string;
+  revenue_multiplier: number;
+  cost_multiplier: number;
+  discount_rate_shift: number;
+  success_prob_multiplier: number;
+  launch_delay_years: number;
+  stage_slippage_years: Record<string, number>;
+}
+
+export interface BiotechGoalSeekResponse {
+  revenue_multiplier: number;
+  achieved_rnpv?: number | null;
+  iterations: number;
+}
+
+export interface BiotechDiagnosticsResponse {
+  base_rnpv: number;
+  tornado: TablePayload;
+  spider: TablePayload;
+}
+
+export interface BiotechMonteCarloSimulationPayload {
+  n_sims: number;
+  revenue_sigma: number;
+  cost_sigma: number;
+  revenue_dist: string;
+  cost_dist: string;
+  revenue_min: number;
+  revenue_max: number;
+  cost_min: number;
+  cost_max: number;
+  revenue_cost_correlation?: number;
+  random_seed?: number | null;
+  alpha?: number;
+}
+
+export interface BiotechMonteCarloResponse {
+  summary: Record<string, number>;
+  simulations: TablePayload;
+}
+
+export interface BiotechForecastPayload {
+  metric: 'revenue' | 'ebitda';
+  method: 'ARIMA' | 'Prophet' | 'LSTM';
+  steps: number;
+}
+
+export interface BiotechForecastResponse {
+  metric: string;
+  method: string;
+  steps: number;
+  forecast: TablePayload;
+}
+
+export interface BiotechForecastCapabilitiesResponse {
+  models: Record<string, boolean>;
+}
+
+export interface BiotechReportBundleResponse {
+  chart_tables?: Record<string, TablePayload>;
+  warnings?: string[];
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -136,6 +223,101 @@ export class BiotechModelService {
           );
       })
     );
+  }
+
+  runVcMethod(vc: BiotechVcRequestPayload): Observable<Record<string, number>> {
+    const payload = {
+      inputs: this.getInputSnapshot(),
+      vc,
+    };
+    return this.api
+      .post<{ results?: Record<string, number> }>('/model/biotech_v2/vc', payload)
+      .pipe(map((response) => response?.results ?? {}));
+  }
+
+  runWhatIf(shock: BiotechWhatIfShockPayload): Observable<any> {
+    const payload = {
+      inputs: this.getInputSnapshot(),
+      shock,
+    };
+    return this.api.post('/model/biotech_v2/what-if', payload);
+  }
+
+  runScenarioAnalysis(
+    scenarios: BiotechScenarioPayload[],
+    ebitdaYearOffset = 0
+  ): Observable<TablePayload> {
+    const payload = {
+      inputs: this.getInputSnapshot(),
+      scenarios,
+      ebitda_year_offset: ebitdaYearOffset,
+    };
+    return this.api
+      .post<{ scenarios?: TablePayload }>('/model/biotech_v2/scenario', payload)
+      .pipe(map((response) => response?.scenarios ?? {}));
+  }
+
+  runGoalSeek(
+    targetRnpv: number,
+    tolerance = 1e-3,
+    maxIter = 20
+  ): Observable<BiotechGoalSeekResponse> {
+    const payload = {
+      inputs: this.getInputSnapshot(),
+      target_rnpv: Number(targetRnpv || 0),
+      tolerance,
+      max_iter: maxIter,
+    };
+    return this.api.post<BiotechGoalSeekResponse>('/model/biotech_v2/goal-seek', payload);
+  }
+
+  runDiagnostics(): Observable<BiotechDiagnosticsResponse> {
+    const payload = {
+      inputs: this.getInputSnapshot(),
+    };
+    return this.api.post<BiotechDiagnosticsResponse>('/model/biotech_v2/diagnostics', payload);
+  }
+
+  runMonteCarlo(
+    simulation: BiotechMonteCarloSimulationPayload
+  ): Observable<BiotechMonteCarloResponse> {
+    const payload = {
+      inputs: this.getInputSnapshot(),
+      simulation,
+    };
+    return this.api.post<BiotechMonteCarloResponse>(
+      '/model/biotech_v2/monte-carlo',
+      payload
+    );
+  }
+
+  getForecastCapabilities(): Observable<BiotechForecastCapabilitiesResponse> {
+    return this.api.get<BiotechForecastCapabilitiesResponse>(
+      '/model/biotech_v2/forecast-capabilities'
+    );
+  }
+
+  runForecast(payload: BiotechForecastPayload): Observable<BiotechForecastResponse> {
+    return this.api.post<BiotechForecastResponse>('/model/biotech_v2/forecast', {
+      inputs: this.getInputSnapshot(),
+      metric: payload.metric,
+      method: payload.method,
+      steps: Number(payload.steps ?? 10),
+    });
+  }
+
+  getReportBundleV2(): Observable<BiotechReportBundleResponse> {
+    const payload = {
+      inputs: this.getInputSnapshot(),
+    };
+    return this.api.post<BiotechReportBundleResponse>('/report/biotech_v2/bundle', payload);
+  }
+
+  prepareFinancialExcelModel(): Observable<Blob> {
+    const payload = {
+      inputs: this.getInputSnapshot(),
+    };
+    return this.api.postBlob('/report/biotech_v2/financial-excel', payload);
   }
 
   exportModelReport(

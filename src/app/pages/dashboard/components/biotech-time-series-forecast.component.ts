@@ -7,7 +7,11 @@ import { SliderModule } from 'primeng/slider';
 import { ButtonModule } from 'primeng/button';
 import { ChartConfiguration, ChartType } from 'chart.js';
 import { NgChartsModule } from 'ng2-charts';
-import { BiotechModelService } from '../../services/biotech-model.service';
+import { finalize, take } from 'rxjs';
+import {
+  BiotechModelService,
+  TablePayload,
+} from '../../services/biotech-model.service';
 import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format';
 
 @Component({
@@ -34,6 +38,7 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
           <p-select
             [options]="seriesOptions"
             [(ngModel)]="series"
+            (ngModelChange)="onSelectionChange()"
             optionLabel="label"
             optionValue="value"
             placeholder="Select series"
@@ -46,6 +51,7 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
           <p-select
             [options]="modelOptions"
             [(ngModel)]="model"
+            (ngModelChange)="onSelectionChange()"
             optionLabel="label"
             optionValue="value"
             placeholder="Select model"
@@ -56,25 +62,37 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
         <div class="flex flex-col gap-2">
           <div class="text-sm text-surface-400">Forecast steps</div>
           <div class="flex items-center justify-between text-xs text-surface-400">
-            <span>2</span>
-            <!-- <span>{{ steps }}</span> -->
-            <span>25</span>
+            <span>{{ horizonMin }}</span>
+            <span class="text-red-400">{{ steps | number }}</span>
+            <span>{{ horizonMax }}</span>
           </div>
-          <p-slider [(ngModel)]="steps" [min]="5" [max]="25" [step]="1"></p-slider>
+          <p-slider
+            [(ngModel)]="steps"
+            [min]="horizonMin"
+            [max]="horizonMax"
+            [step]="1"
+          ></p-slider>
         </div>
 
         <div class="flex items-center gap-3">
           <p-button
             label="Run time-series model"
             [outlined]="true"
+            [loading]="isLoading"
+            [disabled]="isLoading"
             (onClick)="runModel()"
           ></p-button>
         </div>
 
-        @if (!hasRun) {
+        @if (missingDependencyMessage) {
           <div class="rounded-lg bg-blue-300 px-4 py-3 text-sm text-blue-600">
-            Forecasting uses historical revenue. Current base rNPV:
-            <span class="font-semibold">{{ formatNumber(baseRnpv) }}</span>
+            {{ missingDependencyMessage }}
+          </div>
+        }
+
+        @if (errorMessage) {
+          <div class="rounded-lg bg-red-100 px-4 py-3 text-sm text-red-500">
+            {{ errorMessage }}
           </div>
         }
 
@@ -93,9 +111,11 @@ import { formatNumberCompact, formatNumberEnglish } from '@/utils/number-format'
   `,
 })
 export class BiotechTimeSeriesForecastComponent implements OnInit {
-  series = 'revenue';
-  model = 'ARIMA';
+  series: 'revenue' | 'ebitda' = 'revenue';
+  model: 'ARIMA' | 'Prophet' | 'LSTM' = 'ARIMA';
   steps = 10;
+  horizonMin = 5;
+  horizonMax = 10;
   seriesOptions = [
     { label: 'Revenue', value: 'revenue' },
     { label: 'EBITDA', value: 'ebitda' }
@@ -105,7 +125,10 @@ export class BiotechTimeSeriesForecastComponent implements OnInit {
     { label: 'Prophet', value: 'Prophet' },
     { label: 'LSTM', value: 'LSTM' },
   ];
-  baseRnpv = 0;
+  modelCapabilities: Record<string, boolean> = {};
+  missingDependencyMessage = '';
+  errorMessage = '';
+  isLoading = false;
   hasRun = false;
   chartType: ChartType = 'line';
   chartData: ChartConfiguration['data'] = { labels: [], datasets: [] };
@@ -135,59 +158,201 @@ export class BiotechTimeSeriesForecastComponent implements OnInit {
     },
     elements: {
       line: { tension: 0.15, borderWidth: 1.5 },
-      point: { radius: 0 },
+      point: { radius: 1.5 },
     },
   };
 
   constructor(private readonly biotechModelService: BiotechModelService) {}
 
   ngOnInit(): void {
-    const output = this.biotechModelService.getOutputSnapshot() ?? {};
-    this.baseRnpv = Number(output?.rnpv ?? 0);
+    this.refreshHorizonBounds();
+    this.loadForecastCapabilities();
   }
 
   formatNumber(value: number): string {
     return formatNumberEnglish(value);
   }
 
+  onSelectionChange(): void {
+    this.updateMissingDependencyMessage();
+    this.errorMessage = '';
+  }
+
   runModel(): void {
-    this.hasRun = true;
-    const output = this.biotechModelService.getOutputSnapshot() ?? {};
-    const consolidated = (output as any)?.consolidated ?? {};
-    const years = (consolidated.index as number[]) ?? [];
-    const data = consolidated.data ?? {};
-    const seriesValues = this.asNumberArray(data[this.series]);
-    const history = seriesValues.filter((v) => Number.isFinite(v));
-    const lastValue = history.length ? history[history.length - 1] : 0;
-    const horizon = Math.max(1, Math.floor(this.steps));
+    if (this.isLoading) {
+      return;
+    }
+    this.refreshHorizonBounds();
+    this.errorMessage = '';
+    const boundedSteps = Math.max(this.horizonMin, Math.min(this.horizonMax, Math.floor(this.steps)));
+    this.steps = boundedSteps;
+    this.isLoading = true;
 
-    const forecastLabels: string[] = [];
-    const forecastValues: number[] = [];
-    const lastYear = years.length ? years[years.length - 1] : new Date().getFullYear();
-    const monthLabels = ['April', 'July', 'October'];
+    this.biotechModelService
+      .runForecast({
+        metric: this.series,
+        method: this.model,
+        steps: boundedSteps,
+      })
+      .pipe(
+        take(1),
+        finalize(() => {
+          this.isLoading = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.steps = Number(response?.steps ?? boundedSteps);
+          this.applyForecast(response?.forecast);
+          this.hasRun = true;
+        },
+        error: (err) => {
+          this.hasRun = false;
+          this.chartData = { labels: [], datasets: [] };
+          this.errorMessage = this.resolveErrorMessage(err, 'Forecast failed.');
+        },
+      });
+  }
 
-    for (let i = 1; i <= horizon; i += 1) {
-      const year = lastYear + Math.floor((i - 1) / 3) + 1;
-      const month = monthLabels[(i - 1) % 3];
-      forecastLabels.push(`${year} ${month}`);
-      forecastValues.push(lastValue);
+  private loadForecastCapabilities(): void {
+    this.biotechModelService
+      .getForecastCapabilities()
+      .pipe(take(1))
+      .subscribe({
+        next: (response) => {
+          this.modelCapabilities = response?.models ?? {};
+          this.updateMissingDependencyMessage();
+        },
+        error: () => {
+          this.modelCapabilities = {};
+          this.updateMissingDependencyMessage();
+        },
+      });
+  }
+
+  private refreshHorizonBounds(): void {
+    const snapshot = this.biotechModelService.getInputSnapshot() ?? {};
+    const configured = Number(
+      snapshot?.model_config?.n_years ??
+        snapshot?.generalAssumptions?.numberOfYears ??
+        5
+    );
+    const boundedConfigured =
+      Number.isFinite(configured) && configured > 0 ? Math.floor(configured) : 5;
+    this.horizonMax = Math.max(5, boundedConfigured);
+    this.steps = Math.max(this.horizonMin, Math.min(this.horizonMax, this.steps || 10));
+  }
+
+  private updateMissingDependencyMessage(): void {
+    const supported = this.modelCapabilities?.[this.model];
+    if (supported !== false) {
+      this.missingDependencyMessage = '';
+      return;
+    }
+    const dependencyMap: Record<string, string> = {
+      ARIMA: 'statsmodels',
+      Prophet: 'prophet',
+      LSTM: 'tensorflow',
+    };
+    const dependency = dependencyMap[this.model] ?? this.model.toLowerCase();
+    this.missingDependencyMessage = `Install \`${dependency}\` to use the ${this.model} forecast model.`;
+  }
+
+  private applyForecast(payload?: TablePayload): void {
+    const rows = this.tablePayloadToRows(payload);
+    if (!rows.length || !payload?.data) {
+      this.chartData = { labels: [], datasets: [] };
+      this.hasRun = false;
+      return;
     }
 
+    const columns = Object.keys(payload.data);
+    const forecastColumn =
+      columns.find((column) =>
+        (payload.data?.[column] ?? []).some((value) => Number.isFinite(Number(value)))
+      ) ?? columns[0];
+    const values = rows.map((row) => this.toNumber(row[forecastColumn]));
+    const labels = rows.map((row, index) => this.resolveLabel(row['__index'], index));
+
     this.chartData = {
-      labels: forecastLabels,
+      labels,
       datasets: [
         {
-          data: forecastValues,
+          label: forecastColumn,
+          data: values,
           borderColor: '#93c5fd',
-          backgroundColor: 'transparent',
+          backgroundColor: 'rgba(147, 197, 253, 0.2)',
         },
       ],
     };
   }
 
-  private asNumberArray(values: unknown): number[] {
-    if (!Array.isArray(values)) return [];
-    return values.map((v) => Number(v ?? 0));
+  private tablePayloadToRows(payload?: TablePayload): Array<Record<string, unknown>> {
+    if (!payload || !payload.data || typeof payload.data !== 'object') {
+      return [];
+    }
+    const columns = Object.keys(payload.data);
+    if (!columns.length) {
+      return [];
+    }
+    const rowCount = Math.max(
+      0,
+      ...columns.map((column) =>
+        Array.isArray(payload.data?.[column]) ? payload.data[column].length : 0
+      )
+    );
+    const indexValues = Array.isArray(payload.index) ? payload.index : [];
+    const rows: Array<Record<string, unknown>> = [];
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+      const row: Record<string, unknown> = {
+        __index: rowIndex < indexValues.length ? indexValues[rowIndex] : rowIndex + 1,
+      };
+      for (const column of columns) {
+        const values = payload.data[column];
+        row[column] = Array.isArray(values) ? values[rowIndex] : undefined;
+      }
+      rows.push(row);
+    }
+    return rows;
   }
 
+  private resolveLabel(value: unknown, fallbackIndex: number): string {
+    if (value instanceof Date) {
+      return value.toISOString().slice(0, 10);
+    }
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+    return String(fallbackIndex + 1);
+  }
+
+  private toNumber(value: unknown): number {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+  }
+
+  private resolveErrorMessage(error: unknown, fallback: string): string {
+    if (error && typeof error === 'object') {
+      const maybeError = error as { message?: string; error?: unknown };
+      if (typeof maybeError.message === 'string' && maybeError.message.trim()) {
+        return maybeError.message;
+      }
+      if (typeof maybeError.error === 'string' && maybeError.error.trim()) {
+        return maybeError.error;
+      }
+      if (maybeError.error && typeof maybeError.error === 'object') {
+        const inner = maybeError.error as { detail?: string; message?: string };
+        if (typeof inner.detail === 'string' && inner.detail.trim()) {
+          return inner.detail;
+        }
+        if (typeof inner.message === 'string' && inner.message.trim()) {
+          return inner.message;
+        }
+      }
+    }
+    return fallback;
+  }
 }
