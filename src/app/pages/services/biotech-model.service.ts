@@ -102,6 +102,16 @@ export interface BiotechForecastCapabilitiesResponse {
 }
 
 export interface BiotechReportBundleResponse {
+  snapshot?: {
+    project_id?: string | null;
+    financial_snapshot?: Record<string, any> | null;
+  };
+  ai_config?: Record<string, any>;
+  last_report?: Record<string, any>;
+  financial_statements?: TablePayload | null;
+  financial_performance?: TablePayload | null;
+  financial_position?: TablePayload | null;
+  cash_flows?: TablePayload | null;
   chart_tables?: Record<string, TablePayload>;
   warnings?: string[];
 }
