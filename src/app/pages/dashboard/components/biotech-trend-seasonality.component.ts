@@ -18,6 +18,12 @@ interface SegmentationRow {
   fcffProxy: number;
 }
 
+interface DecompositionSeriesConfig {
+  key: 'observed' | 'trend' | 'seasonal' | 'resid';
+  label: string;
+  color: string;
+}
+
 @Component({
   standalone: true,
   selector: 'app-biotech-trend-seasonality',
@@ -100,6 +106,12 @@ export class BiotechTrendSeasonalityComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private isRefreshing = false;
   private pendingRefresh = false;
+  private readonly decompositionSeries: DecompositionSeriesConfig[] = [
+    { key: 'observed', label: 'Observed', color: '#93c5fd' },
+    { key: 'trend', label: 'Trend', color: '#ef4444' },
+    { key: 'seasonal', label: 'Seasonal', color: '#fca5a5' },
+    { key: 'resid', label: 'Residual', color: '#38bdf8' },
+  ];
 
   rows: SegmentationRow[] = [];
   hasDecomposition = false;
@@ -255,39 +267,24 @@ export class BiotechTrendSeasonalityComponent implements OnInit, OnDestroy {
     }
 
     const fallbackLabels = rows.map((_, index) => String(index + 1));
+    const dataBySeries: Record<DecompositionSeriesConfig['key'], Array<number | null>> = {
+      observed,
+      trend,
+      seasonal,
+      resid,
+    };
     this.hasDecomposition = true;
     this.trendChartData = {
       labels: labels.length === rows.length ? labels : fallbackLabels,
-      datasets: [
-        {
-          label: 'observed',
-          data: observed,
-          borderColor: '#93c5fd',
-          backgroundColor: 'transparent',
-          pointRadius: 2,
-        },
-        {
-          label: 'trend',
-          data: trend,
-          borderColor: '#ef4444',
-          backgroundColor: 'transparent',
-          pointRadius: 2,
-        },
-        {
-          label: 'seasonal',
-          data: seasonal,
-          borderColor: '#fca5a5',
-          backgroundColor: 'transparent',
-          pointRadius: 2,
-        },
-        {
-          label: 'resid',
-          data: resid,
-          borderColor: '#38bdf8',
-          backgroundColor: 'transparent',
-          pointRadius: 2,
-        },
-      ],
+      datasets: this.decompositionSeries.map((series) => ({
+        label: series.label,
+        data: dataBySeries[series.key],
+        borderColor: series.color,
+        backgroundColor: series.color,
+        pointBackgroundColor: series.color,
+        pointBorderColor: series.color,
+        pointRadius: 2,
+      })),
     };
   }
 
@@ -385,4 +382,3 @@ export class BiotechTrendSeasonalityComponent implements OnInit, OnDestroy {
     return values.reduce((sum, v) => sum + Number(v ?? 0), 0);
   }
 }
-
