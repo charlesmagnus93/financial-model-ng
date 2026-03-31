@@ -34,14 +34,14 @@ export const routes: Routes = [
             {
                 path: 'pharma-input-landing',
                 loadComponent: () =>
-                    import('./pages/dashboard/input-pharma-landing.component').then(
+                    import('./pages/models/pharma/input-pharma-landing.component').then(
                         (m) => m.InputPharmaLandingComponent
                     ),
             },
             {
                 path: 'pharma-results',
                 loadComponent: () =>
-                    import('./pages/dashboard/pharma-results.component').then(
+                    import('./pages/models/pharma/pharma-results.component').then(
                         (m) => m.PharmaResultsComponent
                     ),
                 canActivate: [ModelSetupGuard],
@@ -49,15 +49,30 @@ export const routes: Routes = [
             {
                 path: 'biotech-input-landing',
                 loadComponent: () =>
-                    import('./pages/dashboard/input-biotech-landing.component').then(
+                    import('./pages/models/biotech/input-biotech-landing.component').then(
                         (m) => m.InputBiotechLandingComponent
                     ),
             },
             {
                 path: 'biotech-results',
                 loadComponent: () =>
-                    import('./pages/dashboard/biotech-results.component').then(
+                    import('./pages/models/biotech/biotech-results.component').then(
                         (m) => m.BiotechResultsComponent
+                    ),
+                canActivate: [ModelSetupGuard],
+            },
+            {
+                path: 'cassava-ethanol-input-landing',
+                loadComponent: () =>
+                    import('./pages/models/cassava-ethanol/input-cassava-landing.component').then(
+                        (m) => m.InputCassavaLandingComponent
+                    ),
+            },
+            {
+                path: 'cassava-ethanol-results',
+                loadComponent: () =>
+                    import('./pages/models/cassava-ethanol/cassava-results.component').then(
+                        (m) => m.CassavaResultsComponent
                     ),
                 canActivate: [ModelSetupGuard],
             },

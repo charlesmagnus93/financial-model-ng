@@ -52,6 +52,8 @@ export interface BiotechScenarioPayload {
   stage_slippage_years: Record<string, number>;
 }
 
+export type BiotechScenarioPreset = BiotechScenarioPayload;
+
 export interface BiotechGoalSeekResponse {
   revenue_multiplier: number;
   achieved_rnpv?: number | null;
@@ -265,6 +267,12 @@ export class BiotechModelService {
     return this.api
       .post<{ scenarios?: TablePayload }>('/model/biotech_v2/scenario', payload)
       .pipe(map((response) => response?.scenarios ?? {}));
+  }
+
+  getScenarioPresets(): Observable<BiotechScenarioPreset[]> {
+    return this.api
+      .get<{ presets?: BiotechScenarioPreset[] }>('/model/biotech_v2/scenario-presets')
+      .pipe(map((response) => (Array.isArray(response?.presets) ? response.presets : [])));
   }
 
   runGoalSeek(

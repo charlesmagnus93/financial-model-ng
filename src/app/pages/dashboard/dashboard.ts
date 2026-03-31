@@ -227,6 +227,8 @@ export class Dashboard implements OnInit, OnDestroy {
         return '/dashboard/pharma-results';
       case 'biotech':
         return '/dashboard/biotech-results';
+      case 'cassava_ethanol':
+        return '/dashboard/cassava-ethanol-results';
       default:
         return null;
     }

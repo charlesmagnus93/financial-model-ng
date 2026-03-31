@@ -57,6 +57,7 @@ export class OursModelService {
       description: 'Cassava ethanol production and margin model template.',
       templateName: 'cassava-ethanol-model-template.xlsx',
       instructions: this.defaultInstructions,
+      createRoute: '/dashboard/cassava-ethanol-input-landing',
     },
     {
       code: 'broiler_chicken',
