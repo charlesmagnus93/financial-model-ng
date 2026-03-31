@@ -76,6 +76,45 @@
                 margin-right: 0.5rem;
             }
 
+            .layout-menuitem-badge {
+                margin-left: auto;
+                border-radius: 999px;
+                padding: 0.125rem 0.5rem;
+                font-size: 0.625rem;
+                font-weight: 700;
+                line-height: 1;
+                background: var(--surface-200);
+                color: var(--text-color);
+            }
+
+            .layout-menuitem-badge-dev {
+                background: rgba(245, 158, 11, 0.2);
+                color: #f59e0b;
+            }
+
+            .layout-menuitem-state-icon {
+                margin-left: auto;
+                font-size: 0.875rem;
+                color: var(--text-color);
+                opacity: 0.75;
+            }
+
+            .layout-menuitem-state-icon-dev {
+                color: #f59e0b;
+                opacity: 1;
+            }
+
+            &.layout-menuitem-disabled {
+                opacity: 0.6;
+                pointer-events: none;
+            }
+
+            &.layout-menuitem-coming-soon {
+                .layout-menuitem-text {
+                    letter-spacing: 0.01em;
+                }
+            }
+
             .layout-submenu-toggler {
                 font-size: 75%;
                 margin-left: auto;

@@ -15,15 +15,30 @@ import { LayoutService } from './service/layout.service';
     template: `
         <ng-container>
             <div *ngIf="root && item.visible !== false" class="layout-menuitem-root-text">{{ item.label }}</div>
-            <a *ngIf="(!item.routerLink || item.items) && item.visible !== false" [attr.href]="item.url" (click)="itemClick($event)" [ngClass]="item.styleClass" [attr.target]="item.target" tabindex="0" pRipple>
+            <a
+                *ngIf="(!item.routerLink || item.items) && item.visible !== false"
+                [attr.href]="item.url"
+                (click)="itemClick($event)"
+                [ngClass]="item.styleClass"
+                [class.layout-menuitem-disabled]="item.disabled"
+                [attr.aria-disabled]="item.disabled"
+                [attr.title]="item.title || item.tooltip"
+                [attr.target]="item.target"
+                tabindex="0"
+                pRipple
+            >
                 <i [ngClass]="item.icon" class="layout-menuitem-icon"></i>
                 <span class="layout-menuitem-text">{{ item.label }}</span>
+                <span *ngIf="item.badge" class="layout-menuitem-badge" [ngClass]="item.badgeStyleClass">{{ item.badge }}</span>
                 <i class="pi pi-fw pi-angle-down layout-submenu-toggler" *ngIf="item.items"></i>
             </a>
             <a
                 *ngIf="item.routerLink && !item.items && item.visible !== false"
                 (click)="itemClick($event)"
                 [ngClass]="item.styleClass"
+                [class.layout-menuitem-disabled]="item.disabled"
+                [attr.aria-disabled]="item.disabled"
+                [attr.title]="item.title || item.tooltip"
                 [routerLink]="item.routerLink"
                 routerLinkActive="active-route"
                 [routerLinkActiveOptions]="item.routerLinkActiveOptions || { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' }"
@@ -40,6 +55,8 @@ import { LayoutService } from './service/layout.service';
             >
                 <i [ngClass]="item.icon" class="layout-menuitem-icon"></i>
                 <span class="layout-menuitem-text">{{ item.label }}</span>
+                <span *ngIf="item.badge" class="layout-menuitem-badge" [ngClass]="item.badgeStyleClass">{{ item.badge }}</span>
+                <i *ngIf="item['stateIcon']" class="layout-menuitem-state-icon" [ngClass]="[item['stateIcon'], item['stateIconClass']]"></i>
                 <i class="pi pi-fw pi-angle-down layout-submenu-toggler" *ngIf="item.items"></i>
             </a>
 
@@ -122,7 +139,15 @@ export class AppMenuitem {
     }
 
     updateActiveStateFromRoute() {
-        let activeRoute = this.router.isActive(this.item.routerLink[0], { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' });
+        if (!this.item.routerLink || this.item.disabled) {
+            return;
+        }
+
+        const routeTarget = Array.isArray(this.item.routerLink)
+            ? this.router.createUrlTree(this.item.routerLink)
+            : this.item.routerLink;
+
+        let activeRoute = this.router.isActive(routeTarget, { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' });
 
         if (activeRoute) {
             this.layoutService.onMenuStateChange({ key: this.key, routeEvent: true });

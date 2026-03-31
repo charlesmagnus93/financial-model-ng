@@ -5,11 +5,15 @@ import { Signin } from './pages/signin/signin';
 import { AuthGuard } from './pages/services/auth.guard';
 import { Signup } from './pages/signup/signup';
 import { ModelSetupGuard } from './pages/services/model-setup.guard';
+import { ForgotPassword } from './pages/forgot-password/forgot-password';
+import { ResetPassword } from './pages/reset-password/reset-password';
 
 export const routes: Routes = [
     { path: '', component: Landing },
     { path: 'login', component: Signin },
     { path: 'signup', component: Signup },
+    { path: 'forgot-password', component: ForgotPassword },
+    { path: 'reset-password', component: ResetPassword },
     {
         path: 'dashboard',
         component: AppLayout,
@@ -56,6 +60,13 @@ export const routes: Routes = [
                         (m) => m.BiotechResultsComponent
                     ),
                 canActivate: [ModelSetupGuard],
+            },
+            {
+                path: 'models/:code',
+                loadComponent: () =>
+                    import('./pages/dashboard/ours-model-detail.component').then(
+                        (m) => m.OursModelDetailComponent
+                    ),
             },
         ]
     },

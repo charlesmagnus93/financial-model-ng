@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, model, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { TabsModule } from 'primeng/tabs';
@@ -68,7 +68,7 @@ import { AuthService } from '../services/auth.service';
               <p class="text-sm text-surface-600">{{ model.description }}</p>
               <div class="mt-auto">
                 <p-button
-                  label="Create"
+                  label="Select"
                   (click)="selectModel(model)"
                 ></p-button>
               </div>
@@ -125,7 +125,7 @@ import { AuthService } from '../services/auth.service';
 export class Dashboard implements OnInit, OnDestroy {
   searchTerm = '';
   showModelPicker = false;
-  availableModels: ModelOption[] = AVAILABLE_MODELS;
+  availableModels: ModelOption[] = AVAILABLE_MODELS.filter((model) => model.isAvailable);
   private readonly subscriptionReturnRouteKey = 'subscription_return_route';
 
   private queryParamSub?: Subscription;
@@ -194,7 +194,8 @@ export class Dashboard implements OnInit, OnDestroy {
     localStorage.setItem('selected_model', model.code);
     localStorage.removeItem('model_setup_complete');
     this.showModelPicker = false;
-    this.router.navigate([model.route]);
+    // this.router.navigate([`/dashboard/${model.route}`]);
+    this.router.navigate([`/dashboard/models/${model.code}`]);
   }
 
   private redirectAfterSubscription(): void {

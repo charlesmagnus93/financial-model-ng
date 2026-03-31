@@ -5,11 +5,30 @@ import { tap } from 'rxjs/operators';
 import { ApiService } from './api.service';
 import { AuthRes, User } from "../../models/user.model";
 
+interface ForgotPasswordRes {
+  message?: string;
+  [key: string]: any;
+}
+
+interface ResetPasswordRes {
+  message?: string;
+  [key: string]: any;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   user: WritableSignal<User | null> = signal(this.getUser());
+
+  // Default auth endpoints (adjust here when backend routes are finalized).
+  private readonly authEndpoints = {
+    signin: '/auth/login',
+    signup: '/auth/register',
+    googleSignin: '/auth/google',
+    forgotPassword: '/auth/password/forgot',
+    resetPassword: '/auth/password/reset'
+  } as const;
 
   constructor(
     private apiService: ApiService,
@@ -27,7 +46,7 @@ export class AuthService {
     // Backend expects email/password (not username) for login
     const credentials = { email, password };
 
-    return this.apiService.post('/auth/login', credentials).pipe(
+    return this.apiService.post(this.authEndpoints.signin, credentials).pipe(
       tap((response: AuthRes) => {
         // console.log('Signin response:', response);
         // Store token in localStorage if provided
@@ -49,7 +68,7 @@ export class AuthService {
 
   signup(email: string, password: string, username: string | null): Observable<AuthRes> {
     const credentials = { email, password, name: username };
-    return this.apiService.post('/auth/register', credentials).pipe(
+    return this.apiService.post(this.authEndpoints.signup, credentials).pipe(
       tap((response: AuthRes) => {
         // console.log('Signup response:', response);
         // Store token in localStorage if provided
@@ -70,13 +89,14 @@ export class AuthService {
    * @returns Observable with authentication response
    */
   signinWithGoogle(idToken: string): Observable<any> {
-    const credentials = { idToken };
+    const credentials = { id_token: idToken };
 
-    return this.apiService.post('/auth/google-signin', credentials).pipe(
+    return this.apiService.post(this.authEndpoints.googleSignin, credentials).pipe(
       tap((response: any) => {
         // Store token in localStorage if provided
-        if (response.token) {
-          localStorage.setItem('authToken', response.token);
+        const accessToken = response.access_token ?? response.token;
+        if (accessToken) {
+          localStorage.setItem('authToken', accessToken);
           localStorage.setItem('authProvider', 'google');
           // Store expiration time (default to 30 days for OAuth)
           const expirationTime = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
@@ -88,6 +108,23 @@ export class AuthService {
         }
       })
     );
+  }
+
+  /**
+   * Request password reset email
+   */
+  requestPasswordReset(email: string): Observable<ForgotPasswordRes> {
+    return this.apiService.post(this.authEndpoints.forgotPassword, { email });
+  }
+
+  /**
+   * Update password with token
+   */
+  resetPassword(token: string, password: string): Observable<ResetPasswordRes> {
+    return this.apiService.post(this.authEndpoints.resetPassword, {
+      token,
+      password
+    });
   }
 
   /**

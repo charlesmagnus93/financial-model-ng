@@ -23,54 +23,62 @@ import { AVAILABLE_MODELS, ModelOption } from '@/pages/dashboard/model-options';
   </ul> `,
 })
 export class AppMenu {
-
-  private readonly modelIcons: Record<string, string> = {
-    pharma: 'pi pi-fw pi-heart-fill',
-    biotech: 'pi pi-fw pi-microchip',
-    microbrewery: 'pi pi-fw pi-building',
-    goat_farming: 'pi pi-fw pi-home',
-    cassava_ethanol: 'pi pi-fw pi-bolt',
-    broiler_chicken: 'pi pi-fw pi-shopping-bag',
-  };
-
   availableModels: ModelOption[] = AVAILABLE_MODELS;
   model: MenuItem[] = [];
 
   ngOnInit() {
+    const readyModels = this.availableModels.filter((entry) => entry.isAvailable);
+    const inDevelopmentModels = this.availableModels.filter((entry) => !entry.isAvailable);
+
     this.model = [
       {
-        label: 'Ours NumQuants Models',
-        icon: 'pi pi-fw pi-th-large',
-        routerLink: ['/dashboard'],
+        label: 'Home',
         items: [
-          { label: 'Pharmaceuticals', icon: 'pi pi-fw pi-heart-fill' },
-          { label: 'Biotech', icon: 'pi pi-fw pi-microchip' },
-          { label: 'Microbrewery', icon: 'pi pi-fw pi-building' },
-          { label: 'Goat Farming', icon: 'pi pi-fw pi-home' },
-          { label: 'Cassava Ethanol', icon: 'pi pi-fw pi-bolt' },
-          { label: 'Broiler Chicken', icon: 'pi pi-fw pi-shopping-bag' },
+          {
+            label: 'Dashboard',
+            icon: 'pi pi-fw pi-home',
+            routerLink: ['/dashboard'],
+          },
+          // {
+          //   label: 'Profile',
+          //   icon: 'pi pi-fw pi-user',
+          //   routerLink: ['/dashboard/profile'],
+          // },
         ],
       },
       {
-        label: 'Yours Models',
+        label: `Available Models (${readyModels.length})`,
         items: [
-          ...this.availableModels.map((model) => this.toMenuItem(model)),
-          // {
-          //   label: 'Add New Model',
-          //   icon: 'pi pi-fw pi-plus',
-          //   routerLink: ['/dashboard'],
-          //   queryParams: { section: 'add-model' },
-          // },
+          ...readyModels.map((model) => this.toMenuItem(model)),
+        ],
+      },
+      {
+        label: `In Coming (${inDevelopmentModels.length})`,
+        items: [
+          ...inDevelopmentModels.map((model) => this.toMenuItem(model)),
         ],
       },
     ];
   }
 
   private toMenuItem(model: ModelOption): MenuItem {
+    const baseLabel = model.name.replace(/ Model$/i, '');
+    if (!model.isAvailable) {
+      return {
+        label: baseLabel,
+        icon: model.icon || 'pi pi-fw pi-circle',
+        disabled: true,
+        title: 'In development',
+        stateIcon: 'pi pi-wrench',
+        stateIconClass: 'layout-menuitem-state-icon-dev',
+        styleClass: 'layout-menuitem-coming-soon',
+      };
+    }
+
     return {
-      label: model.name.replace(/ Model$/i, ''),
-      icon: this.modelIcons[model.code] || 'pi pi-fw pi-circle',
-      routerLink: [model.route],
+      label: baseLabel,
+      icon: model.icon || 'pi pi-fw pi-circle',
+      routerLink: ['/dashboard/models', model.code],
       command: () => this.selectModel(model),
     };
   }
