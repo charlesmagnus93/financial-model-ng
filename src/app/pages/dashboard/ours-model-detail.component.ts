@@ -33,7 +33,7 @@ import { OursModelMeta, OursModelService } from '../services/ours-model.service'
 
       <div class="flex flex-col gap-2">
         <div class="text-sm font-semibold">Model creation instructions</div>
-        <ol class="list-decimal pl-5 text-sm text-surface-300">
+        <ol class="list-decimal pl-5 text-sm text-surface-400">
           <li *ngFor="let step of model?.instructions">{{ step }}</li>
         </ol>
       </div>
