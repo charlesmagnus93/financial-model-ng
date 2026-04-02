@@ -14,7 +14,7 @@ import { PharmaModelService } from '../../services/pharma-model.service';
       <p class="text-sm text-surface-400">{{ interpretation }}</p>
 
       <div class="overflow-auto">
-        <p-table [value]="rows" showGridlines responsiveLayout="scroll">
+        <p-table [value]="rows" showGridlines [size]="'small'" class="text-sm" responsiveLayout="scroll">
           <ng-template pTemplate="header">
             <tr>
               @for (col of columns; track col) {

@@ -28,6 +28,7 @@ interface DiscountRateRow {
           [value]="rows"
           responsiveLayout="scroll"
           class="text-sm"
+          [size]="'small'"
           [tableStyle]="{ 'min-width': '900px' }"
         >
           <ng-template pTemplate="header">

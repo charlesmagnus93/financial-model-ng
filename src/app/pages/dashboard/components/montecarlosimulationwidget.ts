@@ -140,7 +140,7 @@ interface SummaryRow {
           </div>
         </div>
 
-        <p-table showGridlines [value]="summaryRows" class="shadow-none" responsiveLayout="scroll">
+        <p-table showGridlines [value]="summaryRows" [size]="'small'" class="text-sm" responsiveLayout="scroll">
           <ng-template pTemplate="header">
             <tr>
               <th>Metric</th>

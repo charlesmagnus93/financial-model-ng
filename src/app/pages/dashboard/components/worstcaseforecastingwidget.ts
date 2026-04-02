@@ -26,6 +26,8 @@ interface WorstRow {
         [value]="rows"
         showGridlines
         class="shadow-none"
+        [size]="'small'"
+        class="text-sm"
         [tableStyle]="{ 'min-width': '40rem' }"
         responsiveLayout="scroll"
       >

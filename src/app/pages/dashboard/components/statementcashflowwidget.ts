@@ -30,6 +30,7 @@ interface CashFlowRow {
           [value]="rows"
           responsiveLayout="scroll"
           class="text-sm"
+          [size]="'small'"
           [tableStyle]="{ 'min-width': '1600px' }"
         >
           <ng-template pTemplate="header">
