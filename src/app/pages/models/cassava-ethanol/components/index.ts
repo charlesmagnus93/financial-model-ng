@@ -1,1 +1,9 @@
 export { CassavaTableEditorComponent } from './cassava-table-editor.component';
+export { CassavaAssumptionsSectionComponent } from './cassava-assumptions-section.component';
+export { CassavaGlobalSectionComponent } from './cassava-global-section.component';
+export { CassavaCapexSectionComponent } from './cassava-capex-section.component';
+export { CassavaProductionSectionComponent } from './cassava-production-section.component';
+export { CassavaCostsSectionComponent } from './cassava-costs-section.component';
+export { CassavaWorkingCapitalSectionComponent } from './cassava-working-capital-section.component';
+export { CassavaFinancialSectionComponent } from './cassava-financial-section.component';
+export { CassavaOtherAssumptionsSectionComponent } from './cassava-other-assumptions-section.component';

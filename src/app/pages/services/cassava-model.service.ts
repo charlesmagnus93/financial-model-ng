@@ -4,7 +4,6 @@ import {
   Observable,
   catchError,
   map,
-  shareReplay,
   switchMap,
   tap,
   throwError,
@@ -65,8 +64,6 @@ export class CassavaModelService {
   input$ = this.inputSubject.asObservable();
   output$ = this.outputSubject.asObservable();
 
-  private defaultsRequest?: Observable<CassavaInputsPayload>;
-
   constructor(private api: ApiService) {
     this.loadFromStorage();
   }
@@ -100,13 +97,17 @@ export class CassavaModelService {
   }
 
   loadDefaults(): Observable<void> {
-    if (!this.defaultsRequest) {
-      this.defaultsRequest = this.api
-        .get<CassavaInputsPayload>('/inputs/cassava_ethanol/default')
-        .pipe(shareReplay(1));
-    }
-    return this.defaultsRequest.pipe(
-      tap((defaults) => this.setInput(defaults)),
+    return this.loadDefaultsForScenario('FARM_ONLY');
+  }
+
+  loadDefaultsForScenario(scenario: string): Observable<void> {
+    const normalizedScenario = this.normalizeScenario(scenario);
+    return this.api.get<CassavaInputsPayload>('/inputs/cassava_ethanol/default').pipe(
+      tap((defaults) => {
+        const payload = this.deepClone(defaults ?? {});
+        payload.scenario = normalizedScenario;
+        this.setInput(payload);
+      }),
       map(() => undefined),
     );
   }
@@ -243,5 +244,15 @@ export class CassavaModelService {
     } catch {
       return value;
     }
+  }
+
+  private normalizeScenario(value: string | null | undefined): string {
+    const scenario = String(value || 'FARM_ONLY')
+      .trim()
+      .toUpperCase();
+    if (scenario === 'BUY_ONLY' || scenario === 'HYBRID') {
+      return scenario;
+    }
+    return 'FARM_ONLY';
   }
 }
