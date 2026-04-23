@@ -55,59 +55,21 @@ export const AVAILABLE_MODELS: ModelOption[] = [
     isAvailable: true,
   },
   {
-    id: 'broiler-chicken-model',
-    code: "broiler_chicken",
-    name: 'Broiler Chicken Model',
-    icon: 'pi pi-fw pi-shopping-bag',
-    description: 'Input assumptions, forecasts, and dashboards for Broiler Chicken.',
-    route: 'broiler-chicken-input-landing',
+    id: 'chicken-farming-model',
+    code: "chicken_farming",
+    name: 'Chicken farming Model',
+    icon: 'pi pi-fw pi-warehouse',
+    description: 'Input assumptions, forecasts, and dashboards for Chicken farming.',
+    route: 'chicken-farming-input-landing',
+    isAvailable: false,
+  },
+  {
+    id: 'solar-farm-model',
+    code: "solar_farm",
+    name: 'Solar farm Model',
+    icon: 'pi pi-fw pi-sun',
+    description: 'Input assumptions, forecasts, and dashboards for Solar farm.',
+    route: 'solar-farm-input-landing',
     isAvailable: false,
   },
 ];
-
- /* export const AVAILABLE_MODELS: ModelOption[] = [
-  {
-    id: 'pharma-model',
-    code: "pharma",
-    name: 'Pharmaceutical Model',
-    description: 'Input assumptions, forecasts, and dashboards for pharma.',
-    route: '/dashboard/pharma-input-landing',
-  },
-  {
-    id: 'biotech-model',
-    code: "biotech",
-    name: 'Biotech Model',
-    description: 'Input assumptions, forecasts, and dashboards for biotech.',
-    route: '/dashboard/biotech-input-landing',
-  },
-  // {
-  //   id: 'microbrewery-model',
-  //   code: "microbrewery",
-  //   name: 'Microbrewery Model',
-  //   description: 'Input assumptions, forecasts, and dashboards for Microbrewerys.',
-  //   route: '/dashboard/microbrewery-input-landing',
-  // },
-  // {
-  //   id: 'goat-farming-model',
-  //   code: "goat_farming",
-  //   name: 'Goat Farming Model',
-  //   description: 'Input assumptions, forecasts, and dashboards for Goat Farming.',
-  //   route: '/dashboard/goat-farming-input-landing',
-  // },
-  // {
-  //   id: 'cassava-ethanol-model',
-  //   code: "cassava_ethanol",
-  //   name: 'Cassava Ethanol Model',
-  //   description: 'Input assumptions, forecasts, and dashboards for Cassava Ethanol.',
-  //   route: '/dashboard/cassava-ethanol-input-landing',
-  // },
-  // {
-  //   id: 'broiler-chicken-model',
-  //   code: "broiler_chicken",
-  //   name: 'Broiler Chicken Model',
-  //   description: 'Input assumptions, forecasts, and dashboards for Broiler Chicken.',
-  //   route: '/dashboard/broiler-chicken-input-landing',
-  // },
-]; */
-
-

@@ -60,10 +60,17 @@ export class OursModelService {
       createRoute: '/dashboard/cassava-ethanol-input-landing',
     },
     {
-      code: 'broiler_chicken',
-      name: 'Broiler Chicken',
-      description: 'Broiler chicken farm planning template.',
-      templateName: 'broiler-chicken-model-template.xlsx',
+      code: 'chicken_farming',
+      name: 'Chicken farming',
+      description: 'Chicken farming farm planning template.',
+      templateName: 'chicken-farming-model-template.xlsx',
+      instructions: this.defaultInstructions,
+    },
+    {
+      code: 'solar_farm',
+      name: 'Solar farm',
+      description: 'Solar farm investment and cash flow template.',
+      templateName: 'solar-farm-model-template.xlsx',
       instructions: this.defaultInstructions,
     },
   ];

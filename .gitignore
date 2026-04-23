@@ -28,6 +28,7 @@ cmd
 # input.json
 *output.json
 api_contract.md
+*.http
 
 # Visual Studio Code
 .vscode/*

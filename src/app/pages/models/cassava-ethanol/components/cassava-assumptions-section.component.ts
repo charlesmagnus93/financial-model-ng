@@ -2,8 +2,8 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { TableModule } from 'primeng/table';
 import {
   CassavaInputsPayload,
@@ -23,52 +23,31 @@ interface RowOption {
   label: string;
 }
 
+interface SelectOption<T = string> {
+  label: string;
+  value: T;
+}
+
 @Component({
   selector: 'app-cassava-assumptions-section',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonModule, SelectModule, TableModule],
+  imports: [CommonModule, FormsModule, InputNumberModule, SelectModule, TableModule],
   template: `
     <div class="flex flex-col gap-6">
       <div class="flex flex-col gap-4">
         <div class="grid grid-cols-12 gap-4 items-end">
           <div class="col-span-12 md:col-span-4 flex flex-col gap-2">
             <label class="text-xs text-surface-500">Scenario</label>
-            <select
-              class="p-inputtext p-component w-full"
+            <p-select
+              [options]="scenarioOptions"
               [ngModel]="selectedScenario"
               (ngModelChange)="onScenarioChange($event)"
-            >
-              @for (scenario of scenarios; track scenario) {
-                <option [value]="scenario">{{ scenario }}</option>
-              }
-            </select>
-          </div>
-          <div class="col-span-12 md:col-span-8 flex flex-wrap gap-2 md:justify-end">
-            <p-button
-              label="Load defaults"
-              icon="pi pi-download"
-              severity="secondary"
-              [disabled]="isLoadingDefaults"
-              (click)="reloadDefaults()"
-            ></p-button>
-            <p-button
-              label="Apply scenario"
-              icon="pi pi-check"
-              severity="contrast"
-              [disabled]="isLoadingDefaults"
-              (click)="applyScenario()"
-            ></p-button>
+              optionLabel="label"
+              optionValue="value"
+              class="w-full"
+            ></p-select>
           </div>
         </div>
-
-        @if (isLoadingDefaults) {
-          <div class="text-xs text-surface-500">Loading defaults...</div>
-        }
-        @if (loadErrorMessage) {
-          <div class="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-            {{ loadErrorMessage }}
-          </div>
-        }
       </div>
 
       <div class="flex flex-col gap-4">
@@ -76,18 +55,16 @@ interface RowOption {
         <div class="grid grid-cols-12 gap-4">
           <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
             <label class="text-xs text-surface-500">Projection start year</label>
-            <input
-              type="number"
-              class="p-inputtext p-component w-full"
+            <p-inputnumber
+              [showButtons]="true"
               [ngModel]="projection.start_year"
               (ngModelChange)="onProjectionNumberChange('start_year', $event)"
             />
           </div>
           <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
             <label class="text-xs text-surface-500">Projection end year</label>
-            <input
-              type="number"
-              class="p-inputtext p-component w-full"
+            <p-inputnumber
+              [showButtons]="true"
               [ngModel]="projection.end_year"
               (ngModelChange)="onProjectionNumberChange('end_year', $event)"
             />
@@ -165,11 +142,10 @@ interface RowOption {
           @for (field of keyAssumptionFields; track field.parameter) {
             <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
               <label class="text-xs text-surface-500">{{ field.label }}</label>
-              <input
-                type="number"
+              <p-inputnumber
+                [showButtons]="true"
                 step="0.0001"
                 min="0"
-                class="p-inputtext p-component w-full"
                 [ngModel]="keyAssumptionValue(field.parameter)"
                 (ngModelChange)="onKeyAssumptionChange(field.parameter, $event)"
               />
@@ -201,10 +177,9 @@ interface RowOption {
 
               <div class="flex flex-col gap-2">
                 <label class="text-xs text-surface-500">Adjustment step (tons)</label>
-                <input
-                  type="number"
+                <p-inputnumber
+                  [showButtons]="true"
                   min="0"
-                  class="p-inputtext p-component w-full"
                   [ngModel]="productionStepTon"
                   (ngModelChange)="onProductionStepChange($event)"
                 />
@@ -212,11 +187,10 @@ interface RowOption {
 
               <div class="flex flex-col gap-2">
                 <div class="text-xs text-surface-500">Selected Cassava ton</div>
-                <input
-                  type="number"
+                <p-inputnumber
+                  [showButtons]="true"
                   min="0"
                   [step]="1"
-                  class="p-inputtext p-component w-full"
                   [ngModel]="selectedCassavaTon"
                   (ngModelChange)="onSelectedCassavaTonChange($event)"
                 />
@@ -239,29 +213,27 @@ interface RowOption {
             @if (tableKeys.length) {
               <div class="flex flex-col gap-2">
                 <label class="text-xs text-surface-500">Select table</label>
-                <select
-                  class="p-inputtext p-component w-full"
+                <p-select
+                  [options]="tableOptions"
                   [ngModel]="selectedTableKey"
                   (ngModelChange)="onSelectedTableChange($event)"
-                >
-                  @for (tableKey of tableKeys; track tableKey) {
-                    <option [value]="tableKey">{{ tableDisplayName(tableKey) }}</option>
-                  }
-                </select>
+                  optionLabel="label"
+                  optionValue="value"
+                  class="w-full"
+                ></p-select>
               </div>
 
               @if (selectedTableRowOptions.length) {
                 <div class="flex flex-col gap-2">
                   <label class="text-xs text-surface-500">Select row</label>
-                  <select
-                    class="p-inputtext p-component w-full"
+                  <p-select
+                    [options]="selectedTableRowOptions"
                     [ngModel]="selectedRowIndex"
                     (ngModelChange)="onSelectedRowChange($event)"
-                  >
-                    @for (row of selectedTableRowOptions; track row.index) {
-                      <option [ngValue]="row.index">{{ row.label }}</option>
-                    }
-                  </select>
+                    optionLabel="label"
+                    optionValue="index"
+                    class="w-full"
+                  ></p-select>
                 </div>
 
                 <div class="grid grid-cols-12 gap-4">
@@ -274,7 +246,7 @@ interface RowOption {
                       readonly
                     />
                   </div>
-                  <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                  <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
                     <label class="text-xs text-surface-500">Value</label>
                     <input
                       type="text"
@@ -283,7 +255,7 @@ interface RowOption {
                       (ngModelChange)="onSelectedRowValueChange($event)"
                     />
                   </div>
-                  <div class="col-span-12 md:col-span-6 flex flex-col gap-2">
+                  <div class="col-span-12 md:col-span-3 flex flex-col gap-2">
                     <label class="text-xs text-surface-500">Units</label>
                     <input
                       type="text"
@@ -314,6 +286,7 @@ interface RowOption {
                 [size]="'small'"
                 class="text-sm"
                 responsiveLayout="scroll"
+                [scrollable]="true"
                 [value]="productionMonthlyRows"
                 [tableStyle]="{ 'min-width': '36rem' }"
                 scrollHeight="200px"
@@ -353,6 +326,7 @@ interface RowOption {
                 class="shadow-none"
                 [size]="'small'"
                 class="text-sm"
+                [scrollable]="true"
                 responsiveLayout="scroll"
                 [value]="productionAnnualRows"
                 [tableStyle]="{ 'min-width': '36rem' }"
@@ -447,8 +421,6 @@ export class CassavaAssumptionsSectionComponent implements OnInit, OnDestroy {
 
   payload: CassavaInputsPayload = {};
   selectedScenario: CassavaScenario = 'FARM_ONLY';
-  isLoadingDefaults = false;
-  loadErrorMessage = '';
 
   selectedMonthlyRowIndex = 0;
   productionStepTon = 100;
@@ -464,13 +436,6 @@ export class CassavaAssumptionsSectionComponent implements OnInit, OnDestroy {
     this.inputSub = this.cassavaModelService.input$.subscribe((input) => {
       this.applySnapshot(input);
     });
-
-    const snapshot = this.cassavaModelService.getInputSnapshot();
-    if (this.hasPayloadData(snapshot)) {
-      this.applySnapshot(snapshot);
-      return;
-    }
-    this.reloadDefaults();
   }
 
   ngOnDestroy(): void {
@@ -526,6 +491,17 @@ export class CassavaAssumptionsSectionComponent implements OnInit, OnDestroy {
       const label = this.normalizeMonthLabel(rawValue, index);
       return { index, label };
     });
+  }
+
+  get scenarioOptions(): Array<SelectOption<CassavaScenario>> {
+    return this.scenarios.map((scenario) => ({ label: scenario, value: scenario }));
+  }
+
+  get tableOptions(): Array<SelectOption<string>> {
+    return this.tableKeys.map((tableKey) => ({
+      label: this.tableDisplayName(tableKey),
+      value: tableKey,
+    }));
   }
 
   get selectedCassavaTon(): number {
@@ -628,32 +604,12 @@ export class CassavaAssumptionsSectionComponent implements OnInit, OnDestroy {
 
   onScenarioChange(value: string): void {
     this.selectedScenario = this.normalizeScenario(value);
-  }
-
-  reloadDefaults(): void {
-    if (this.isLoadingDefaults) {
-      return;
-    }
-    this.isLoadingDefaults = true;
-    this.loadErrorMessage = '';
-
-    this.cassavaModelService.loadDefaultsForScenario(this.selectedScenario).subscribe({
-      next: () => {
-        this.isLoadingDefaults = false;
-      },
-      error: (error) => {
-        this.loadErrorMessage =
-          error?.error?.detail ||
-          error?.message ||
-          'Unable to load cassava defaults.';
-        this.isLoadingDefaults = false;
-      },
-    });
-  }
-
-  applyScenario(): void {
     this.payload.scenario = this.selectedScenario;
     this.syncInput();
+  }
+
+  getSelectedScenario(): CassavaScenario {
+    return this.selectedScenario;
   }
 
   onProjectionNumberChange(
@@ -1148,14 +1104,6 @@ export class CassavaAssumptionsSectionComponent implements OnInit, OnDestroy {
     return String(value)
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (match) => match.toUpperCase());
-  }
-
-  private hasPayloadData(payload: CassavaInputsPayload | null | undefined): boolean {
-    if (!payload) {
-      return false;
-    }
-    const tables = payload.tables;
-    return !!tables && Object.keys(tables).length > 0;
   }
 
   private normalizeScenario(value: string | null | undefined): CassavaScenario {
